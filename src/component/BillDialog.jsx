@@ -10,6 +10,24 @@ import {
 } from "@mui/material";
 
 const BillDialog = ({ bill, onClose }) => {
+  const extraChargeEntries = bill?.extraCharges
+    ? [
+        { label: "Rickshaw", value: Number(bill.extraCharges.rickshaw || 0) },
+        { label: "Bus", value: Number(bill.extraCharges.bus || 0) },
+        { label: "Other", value: Number(bill.extraCharges.other || 0) },
+      ].filter((entry) => entry.value > 0)
+    : [];
+
+  const subtotalAmount = Number(
+    bill?.subtotalAmount ||
+      bill?.items?.reduce(
+        (sum, item) => sum + Number(item.totalPrice || 0),
+        0
+      ) ||
+      0
+  );
+  const extraTotal = Number(bill?.extraCharges?.total || 0);
+
   return (
     <Dialog open={!!bill} onClose={onClose} fullWidth maxWidth="sm">
       <DialogTitle sx={{ pb: 1 }}>Invoice Preview</DialogTitle>
@@ -52,11 +70,32 @@ const BillDialog = ({ bill, onClose }) => {
                   </Grid>
                 </Grid>
               ))}
+
+              {extraChargeEntries.map((entry) => (
+                <Grid container key={`extra-${entry.label}`} spacing={1}>
+                  <Grid item xs={7}>
+                    <Typography sx={{ fontWeight: 600 }}>
+                      {entry.label} Cost
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={5} textAlign="right">
+                    <Typography sx={{ fontWeight: 700 }}>
+                      Rs. {entry.value.toFixed(2)}
+                    </Typography>
+                  </Grid>
+                </Grid>
+              ))}
             </Stack>
 
             <Divider />
 
-            <Box sx={{ textAlign: "right" }}>
+            <Box sx={{ textAlign: "right", display: "grid", gap: 0.5 }}>
+              <Typography variant="body2" color="text.secondary">
+                Subtotal: Rs. {subtotalAmount.toFixed(2)}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Extra Cost: Rs. {extraTotal.toFixed(2)}
+              </Typography>
               <Typography variant="body2" color="text.secondary">
                 Final Amount
               </Typography>

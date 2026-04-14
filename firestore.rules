@@ -44,6 +44,13 @@ service cloud.firestore {
         allow update: if isShopMember(shopId);
         allow delete: if isShopOwner(shopId);
       }
+
+      match /customers/{customerId} {
+        allow read: if isShopMember(shopId);
+        allow create: if isShopMember(shopId);
+        allow update: if isShopMember(shopId);
+        allow delete: if isShopOwner(shopId);
+      }
     }
   }
 }

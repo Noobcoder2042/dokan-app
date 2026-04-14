@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   Box,
@@ -36,7 +36,12 @@ import jsPDF from "jspdf";
 import "jspdf-autotable";
 import CustomerDetails from "./CustomerDetails";
 import { useShop } from "../context/ShopContext";
-import { saveBillForShop, subscribeToShopBills } from "../services/shopData";
+import {
+  saveBillForShop,
+  subscribeToShopBills,
+  subscribeToShopCustomers,
+  upsertCustomerForShop,
+} from "../services/shopData";
 
 const Calculator = () => {
   const [itemName, setItemName] = useState("");
@@ -55,6 +60,7 @@ const Calculator = () => {
   const [customerAddress, setCustomerAddress] = useState("");
   const [savedBills, setSavedBills] = useState([]);
   const [customerOptions, setCustomerOptions] = useState([]);
+  const [customerOptionsFromBills, setCustomerOptionsFromBills] = useState([]);
   const [extraCharges, setExtraCharges] = useState({
     rickshaw: "",
     bus: "",
@@ -67,6 +73,7 @@ const Calculator = () => {
   const itemNameRef = useRef(null);
   const itemPriceRef = useRef(null);
   const quantityRef = useRef(null);
+  const lastSavedSignatureRef = useRef("");
 
   const handleItemNameChange = (event) => setItemName(event.target.value);
   const handleItemPriceChange = (event) => setItemPrice(event.target.value);
@@ -109,6 +116,25 @@ const Calculator = () => {
 
   const calculateGrandTotal = () =>
     calculateTotalBill() + calculateExtraChargesTotal();
+
+  const buildCurrentBillSignature = () => {
+    return JSON.stringify({
+      shopId: activeShopId,
+      customerName: customerName.trim(),
+      customerPhone: customerPhone.trim(),
+      customerAddress: customerAddress.trim(),
+      items: items.map((item) => ({
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity,
+        priceUnit: item.priceUnit,
+        quantityUnit: item.quantityUnit,
+        totalPrice: item.totalPrice,
+      })),
+      extraCharges,
+      totalAmount: Number(calculateGrandTotal().toFixed(2)),
+    });
+  };
 
   const addItem = (usePreviousName = false) => {
     if (itemPrice <= 0 || quantity <= 0) {
@@ -222,14 +248,14 @@ const Calculator = () => {
     currentItems,
     totalAmount
   ) => {
-    try {
-      const date = new Date();
-      const formattedDate = date.toLocaleDateString("en-IN", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-      });
+    const date = new Date();
+    const formattedDate = date.toLocaleDateString("en-IN", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
 
+    try {
       await saveBillForShop(shopId, {
         name: currentCustomerName,
         phoneNumber: currentCustomerPhone,
@@ -256,9 +282,39 @@ const Calculator = () => {
         items: currentItems,
       });
     } catch (error) {
-      console.error("Error adding document: ", error);
-      openToast("Bill saved locally but Firebase save failed", "error");
+      console.error("Error saving bill: ", error);
+      openToast("Bill save failed. Please try again.", "error");
+      return;
     }
+
+    try {
+      await upsertCustomerForShop(shopId, {
+        name: currentCustomerName,
+        phoneNumber: currentCustomerPhone,
+        address: customerAddress,
+        lastBilledAt: date.toISOString(),
+      });
+    } catch (error) {
+      console.error("Error syncing customer: ", error);
+      openToast("Bill saved, but customer info sync failed", "warning");
+    }
+  };
+
+  const ensureBillSaved = async () => {
+    const signature = buildCurrentBillSignature();
+    if (lastSavedSignatureRef.current === signature) {
+      return;
+    }
+
+    await saveBillToFirebase(
+      activeShopId,
+      customerName,
+      customerPhone,
+      items,
+      calculateGrandTotal()
+    );
+
+    lastSavedSignatureRef.current = signature;
   };
 
   const generatePDF = async () => {
@@ -342,8 +398,7 @@ const Calculator = () => {
     doc.setFont("helvetica", "normal");
     doc.save(`invoice_${new Date().toISOString()}.pdf`);
 
-    const totalAmount = calculateGrandTotal();
-    await saveBillToFirebase(activeShopId, customerName, customerPhone, items, totalAmount);
+    await ensureBillSaved();
     openToast("Bill generated successfully");
   };
 
@@ -403,9 +458,24 @@ const Calculator = () => {
     openToast("Bill deleted successfully", "error");
   };
 
-  const printThermalBill = () => {
+  const printThermalBill = async () => {
     if (!items.length) {
       openToast("Add at least one item before printing", "error");
+      return;
+    }
+
+    if (
+      verifiedItems.length !== items.length ||
+      verifiedItems.some((itemVerified) => !itemVerified)
+    ) {
+      openToast("Verify every item before printing", "error");
+      return;
+    }
+
+    try {
+      await ensureBillSaved();
+    } catch (error) {
+      openToast("Could not save bill before printing", "error");
       return;
     }
 
@@ -420,8 +490,27 @@ const Calculator = () => {
         (item) => `
           <tr>
             <td>${item.name}</td>
+            <td>${item.price} ${item.priceUnit}</td>
             <td>${item.quantity} ${item.quantityUnit}</td>
             <td>Rs. ${item.totalPrice.toFixed(2)}</td>
+          </tr>
+        `
+      )
+      .join("");
+
+    const extraChargeEntries = [
+      { label: "Rickshaw", value: Number(extraCharges.rickshaw || 0) },
+      { label: "Bus", value: Number(extraCharges.bus || 0) },
+      { label: "Other", value: Number(extraCharges.other || 0) },
+    ].filter((entry) => entry.value > 0);
+
+    const extraRows = extraChargeEntries
+      .map(
+        (entry) => `
+          <tr>
+            <td>${entry.label}</td>
+            <td>-</td>
+            <td>Rs. ${entry.value.toFixed(2)}</td>
           </tr>
         `
       )
@@ -453,12 +542,18 @@ const Calculator = () => {
             <thead>
               <tr>
                 <th>Item</th>
+                <th>Price</th>
                 <th>Qty</th>
                 <th>Total</th>
               </tr>
             </thead>
-            <tbody>${rows}</tbody>
+            <tbody>
+              ${rows}
+              ${extraRows}
+            </tbody>
           </table>
+          <div class="meta">Subtotal: Rs. ${calculateTotalBill().toFixed(2)}</div>
+          <div class="meta">Extra Cost: Rs. ${calculateExtraChargesTotal().toFixed(2)}</div>
           <div class="total">Total: Rs. ${calculateGrandTotal().toFixed(2)}</div>
         </body>
       </html>
@@ -474,6 +569,14 @@ const Calculator = () => {
   }, [draftsStorageKey]);
 
   useEffect(() => {
+    const unsubscribe = subscribeToShopCustomers(activeShopId, (customers) => {
+      setCustomerOptions(customers);
+    });
+
+    return () => unsubscribe();
+  }, [activeShopId]);
+
+  useEffect(() => {
     const unsubscribe = subscribeToShopBills(activeShopId, (bills) => {
       const uniqueCustomers = new Map();
 
@@ -483,6 +586,7 @@ const Calculator = () => {
         const key = `${bill.name}-${bill.phoneNumber || ""}`;
         if (!uniqueCustomers.has(key)) {
           uniqueCustomers.set(key, {
+            id: key,
             name: bill.name,
             phoneNumber: bill.phoneNumber || "",
             address: bill.address || "",
@@ -490,11 +594,27 @@ const Calculator = () => {
         }
       });
 
-      setCustomerOptions(Array.from(uniqueCustomers.values()));
+      setCustomerOptionsFromBills(Array.from(uniqueCustomers.values()));
     });
 
     return () => unsubscribe();
   }, [activeShopId]);
+
+  const mergedCustomerOptions = useMemo(() => {
+    const merged = new Map();
+
+    customerOptionsFromBills.forEach((customer) => {
+      const key = `${customer.name}-${customer.phoneNumber || ""}`;
+      merged.set(key, customer);
+    });
+
+    customerOptions.forEach((customer) => {
+      const key = `${customer.name}-${customer.phoneNumber || ""}`;
+      merged.set(key, customer);
+    });
+
+    return Array.from(merged.values());
+  }, [customerOptions, customerOptionsFromBills]);
 
   return (
     <Stack spacing={3}>
@@ -525,7 +645,7 @@ const Calculator = () => {
               sx={{ bgcolor: "rgba(255,255,255,0.14)", color: "white" }}
             />
             <Chip
-              label={`${customerOptions.length} customers`}
+              label={`${mergedCustomerOptions.length} customers`}
               sx={{ bgcolor: "rgba(255,255,255,0.14)", color: "white" }}
             />
             <Chip
@@ -553,7 +673,7 @@ const Calculator = () => {
                     customerName={customerName}
                     customerPhone={customerPhone}
                     customerAddress={customerAddress}
-                    customerOptions={customerOptions}
+                    customerOptions={mergedCustomerOptions}
                     onNameChange={handleCustomerNameChange}
                     onPhoneChange={handleCustomerPhoneChange}
                     onAddressChange={handleCustomerAddressChange}

@@ -30,7 +30,11 @@ const CustomerDetails = ({
           value={selectedCustomer}
           inputValue={customerName}
           getOptionLabel={(option) =>
-            typeof option === "string" ? option : option.name || ""
+            typeof option === "string"
+              ? option
+              : option.phoneNumber
+                ? `${option.name || ""} (${option.phoneNumber})`
+                : option.name || ""
           }
           isOptionEqualToValue={(option, value) =>
             option.name === value.name &&
@@ -40,6 +44,19 @@ const CustomerDetails = ({
           onInputChange={(_, value, reason) => {
             if (reason === "input") {
               onNameChange(value);
+
+              const exactMatches = customerOptions.filter(
+                (option) =>
+                  (option.name || "").toLowerCase() === value.trim().toLowerCase()
+              );
+
+              if (exactMatches.length === 1) {
+                onCustomerSelect(exactMatches[0]);
+              } else if (exactMatches.length > 1) {
+                // Ambiguous name: force explicit selection so we don't autofill wrong phone/address.
+                onPhoneChange("");
+                onAddressChange("");
+              }
             }
           }}
           onChange={(_, value) => {

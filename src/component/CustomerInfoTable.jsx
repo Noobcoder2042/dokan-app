@@ -1,5 +1,6 @@
 import {
   Avatar,
+  IconButton,
   Paper,
   Table,
   TableBody,
@@ -9,8 +10,11 @@ import {
   TableRow,
   Typography,
 } from "@mui/material";
+import VisibilityRoundedIcon from "@mui/icons-material/VisibilityRounded";
+import EditRoundedIcon from "@mui/icons-material/EditRounded";
+import DeleteRoundedIcon from "@mui/icons-material/DeleteRounded";
 
-const CustomerInfoTable = ({ customers }) => {
+const CustomerInfoTable = ({ customers, onView, onEdit, onDelete }) => {
   if (!customers.length) {
     return (
       <Paper sx={{ p: 4, textAlign: "center" }}>
@@ -33,6 +37,7 @@ const CustomerInfoTable = ({ customers }) => {
             <TableCell>Name</TableCell>
             <TableCell>Mobile</TableCell>
             <TableCell>Address</TableCell>
+            <TableCell align="right">Action</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
@@ -60,6 +65,21 @@ const CustomerInfoTable = ({ customers }) => {
               </TableCell>
               <TableCell>{customer.phoneNumber || "-"}</TableCell>
               <TableCell>{customer.address || "-"}</TableCell>
+              <TableCell align="right">
+                <IconButton onClick={() => onView?.(customer)} aria-label="view customer">
+                  <VisibilityRoundedIcon />
+                </IconButton>
+                <IconButton onClick={() => onEdit?.(customer)} aria-label="edit customer">
+                  <EditRoundedIcon />
+                </IconButton>
+                <IconButton
+                  onClick={() => onDelete?.(customer)}
+                  aria-label="delete customer"
+                  color="error"
+                >
+                  <DeleteRoundedIcon />
+                </IconButton>
+              </TableCell>
             </TableRow>
           ))}
         </TableBody>

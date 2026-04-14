@@ -1,4 +1,5 @@
 import {
+  IconButton,
   Button,
   Chip,
   Paper,
@@ -11,8 +12,10 @@ import {
   Typography,
 } from "@mui/material";
 import PreviewIcon from "@mui/icons-material/Preview";
+import EditRoundedIcon from "@mui/icons-material/EditRounded";
+import DeleteRoundedIcon from "@mui/icons-material/DeleteRounded";
 
-const BillsTable = ({ bills, onPreview }) => {
+const BillsTable = ({ bills, onPreview, onEdit, onDelete }) => {
   if (!bills.length) {
     return (
       <Paper sx={{ p: 4, textAlign: "center" }}>
@@ -65,13 +68,19 @@ const BillsTable = ({ bills, onPreview }) => {
                 <Chip label="Paid" size="small" color="success" variant="outlined" />
               </TableCell>
               <TableCell align="right">
-                <Button
-                  onClick={() => onPreview(bill)}
-                  startIcon={<PreviewIcon />}
-                  variant="text"
-                >
+                <Button onClick={() => onPreview(bill)} startIcon={<PreviewIcon />} variant="text">
                   Preview
                 </Button>
+                <IconButton onClick={() => onEdit?.(bill)} aria-label="edit bill">
+                  <EditRoundedIcon />
+                </IconButton>
+                <IconButton
+                  onClick={() => onDelete?.(bill)}
+                  aria-label="delete bill"
+                  color="error"
+                >
+                  <DeleteRoundedIcon />
+                </IconButton>
               </TableCell>
             </TableRow>
           ))}
