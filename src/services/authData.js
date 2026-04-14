@@ -10,6 +10,8 @@ import { auth, db } from "../Firebase/firebase";
 
 const googleProvider = new GoogleAuthProvider();
 
+const buildDefaultShopId = (uid) => `shop-${uid}`;
+
 // 1. Email/Password Signup
 export const registerWithEmail = async (email, password, userData) => {
   const userCredential = await createUserWithEmailAndPassword(
@@ -24,6 +26,7 @@ export const registerWithEmail = async (email, password, userData) => {
     ...userData,
     email: user.email,
     uid: user.uid,
+    currentShopId: buildDefaultShopId(user.uid),
     role: "shop_owner",
     createdAt: serverTimestamp(),
   });
@@ -43,6 +46,22 @@ export const loginWithEmail = async (email, password) => {
 // 3. Google Login
 export const loginWithGoogle = async () => {
   const result = await signInWithPopup(auth, googleProvider);
+  const user = result.user;
+
+  await setDoc(
+    doc(db, "users", user.uid),
+    {
+      uid: user.uid,
+      email: user.email || "",
+      name: user.displayName || "",
+      role: "shop_owner",
+      currentShopId: buildDefaultShopId(user.uid),
+      updatedAt: serverTimestamp(),
+      createdAt: serverTimestamp(),
+    },
+    { merge: true }
+  );
+
   return result.user;
 };
 
@@ -51,4 +70,26 @@ export const getUserProfile = async (uid) => {
   return docSnap.exists() ? docSnap.data() : null;
 };
 
-export const logoutUser = () => signOut(auth);
+const clearSessionLocalState = () => {
+  const keysToDelete = [];
+
+  for (let index = 0; index < localStorage.length; index += 1) {
+    const key = localStorage.key(index);
+    if (!key) continue;
+
+    if (
+      key.startsWith("savedBills-") ||
+      key.startsWith("dashboard-show-stats-") ||
+      key.startsWith("active-shop-id-")
+    ) {
+      keysToDelete.push(key);
+    }
+  }
+
+  keysToDelete.forEach((key) => localStorage.removeItem(key));
+};
+
+export const logoutUser = async () => {
+  await signOut(auth);
+  clearSessionLocalState();
+};

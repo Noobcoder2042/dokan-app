@@ -15,19 +15,23 @@ const DEFAULT_SHOP = {
 
 const ShopContext = createContext(null);
 
-const SHOP_STORAGE_KEY = "active-shop-id";
-
 export const ShopProvider = ({ children }) => {
-  const { profile, authLoading } = useAuth();
-  const [activeShopId, setActiveShopId] = useState(() => {
-    return localStorage.getItem(SHOP_STORAGE_KEY) || DEFAULT_SHOP.id;
-  });
+  const { profile, authLoading, user } = useAuth();
+  const shopStorageKey = `active-shop-id-${user?.uid || "guest"}`;
+  const defaultShopId = user?.uid ? `shop-${user.uid}` : DEFAULT_SHOP.id;
+  const [activeShopId, setActiveShopId] = useState(DEFAULT_SHOP.id);
   const [shop, setShop] = useState({ ...DEFAULT_SHOP, id: activeShopId });
   const [shopLoading, setShopLoading] = useState(true);
 
   useEffect(() => {
-    localStorage.setItem(SHOP_STORAGE_KEY, activeShopId);
-  }, [activeShopId]);
+    if (!user?.uid) return;
+    localStorage.setItem(shopStorageKey, activeShopId);
+  }, [activeShopId, shopStorageKey, user?.uid]);
+
+  useEffect(() => {
+    const persistedShopId = localStorage.getItem(shopStorageKey);
+    setActiveShopId(persistedShopId || defaultShopId);
+  }, [defaultShopId, shopStorageKey]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -37,10 +41,10 @@ export const ShopProvider = ({ children }) => {
       return;
     }
 
-    if (!profile?.currentShopId && !profile && activeShopId !== DEFAULT_SHOP.id) {
-      setActiveShopId(DEFAULT_SHOP.id);
+    if (!profile?.currentShopId && activeShopId !== defaultShopId) {
+      setActiveShopId(defaultShopId);
     }
-  }, [activeShopId, authLoading, profile]);
+  }, [activeShopId, authLoading, defaultShopId, profile]);
 
   useEffect(() => {
     const shopRef = doc(db, "shops", activeShopId);
@@ -50,6 +54,7 @@ export const ShopProvider = ({ children }) => {
         const initialShop = {
           ...DEFAULT_SHOP,
           id: activeShopId,
+          ownerUid: user?.uid || null,
           createdAt: new Date().toISOString(),
         };
         await setDoc(shopRef, initialShop);
@@ -67,7 +72,7 @@ export const ShopProvider = ({ children }) => {
     });
 
     return () => unsubscribe();
-  }, [activeShopId]);
+  }, [activeShopId, user?.uid]);
 
   const value = useMemo(
     () => ({

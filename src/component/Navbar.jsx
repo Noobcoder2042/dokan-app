@@ -9,7 +9,6 @@ import {
 } from "@mui/material";
 import ReceiptLongRoundedIcon from "@mui/icons-material/ReceiptLongRounded";
 import DashboardRoundedIcon from "@mui/icons-material/DashboardRounded";
-import StorefrontRoundedIcon from "@mui/icons-material/StorefrontRounded";
 import SettingsRoundedIcon from "@mui/icons-material/SettingsRounded";
 import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
 import { Link, useLocation } from "react-router-dom";
@@ -62,16 +61,18 @@ const Navbar = () => {
             sx={{
               width: 44,
               height: 44,
-              borderRadius: 3,
-              display: "grid",
-              placeItems: "center",
-              background:
-                "linear-gradient(135deg, rgba(29, 78, 216, 1) 0%, rgba(15, 118, 110, 0.95) 100%)",
-              color: "white",
+              borderRadius: 1,
+              overflow: "hidden",
+              bgcolor: "white",
               boxShadow: "0 14px 24px rgba(29, 78, 216, 0.25)",
             }}
           >
-            <StorefrontRoundedIcon />
+            <Box
+              component="img"
+              src="/branding/dokan pro logo sm.png"
+              alt="Dokan Pro"
+              sx={{ width: "100%", height: "100%", objectFit: "cover" }}
+            />
           </Box>
           <Box>
             <Typography variant="h6">{shop.name || "Dokan Pro"}</Typography>

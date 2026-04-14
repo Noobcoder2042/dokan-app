@@ -8,6 +8,7 @@ import {
   query,
   setDoc,
   updateDoc,
+  where,
 } from "firebase/firestore";
 import { db } from "../Firebase/firebase";
 
@@ -43,20 +44,31 @@ const buildCustomerId = (customer) => {
   return `customer-${Date.now()}`;
 };
 
-export const subscribeToShopBills = (shopId, onData, onError) => {
+export const subscribeToShopBills = (shopId, userId, onData, onError) => {
+  if (!shopId || !userId) {
+    onData([]);
+    return () => {};
+  }
+
   const billsQuery = query(
     getShopBillsCollection(shopId),
-    orderBy("createdAt", "desc")
+    where("userId", "==", userId)
   );
 
   return onSnapshot(
     billsQuery,
     (snapshot) => {
-      const bills = snapshot.docs.map((billDoc) => ({
-        id: billDoc.id,
-        ...billDoc.data(),
-        items: billDoc.data().items || [],
-      }));
+      const bills = snapshot.docs
+        .map((billDoc) => ({
+          id: billDoc.id,
+          ...billDoc.data(),
+          items: billDoc.data().items || [],
+        }))
+        .sort((a, b) => {
+          const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          return bTime - aTime;
+        });
       onData(bills);
     },
     onError

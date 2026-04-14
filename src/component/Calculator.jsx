@@ -36,6 +36,7 @@ import jsPDF from "jspdf";
 import "jspdf-autotable";
 import CustomerDetails from "./CustomerDetails";
 import { useShop } from "../context/ShopContext";
+import { useAuth } from "../context/AuthContext";
 import {
   saveBillForShop,
   subscribeToShopBills,
@@ -67,8 +68,9 @@ const Calculator = () => {
     other: "",
   });
   const [verifiedItems, setVerifiedItems] = useState([]);
+  const { user } = useAuth();
   const { activeShopId, shop } = useShop();
-  const draftsStorageKey = `savedBills-${activeShopId}`;
+  const draftsStorageKey = `savedBills-${activeShopId}-${user?.uid || "guest"}`;
 
   const itemNameRef = useRef(null);
   const itemPriceRef = useRef(null);
@@ -257,6 +259,7 @@ const Calculator = () => {
 
     try {
       await saveBillForShop(shopId, {
+        userId: user.uid,
         name: currentCustomerName,
         phoneNumber: currentCustomerPhone,
         address: customerAddress,
@@ -284,7 +287,7 @@ const Calculator = () => {
     } catch (error) {
       console.error("Error saving bill: ", error);
       openToast("Bill save failed. Please try again.", "error");
-      return;
+      throw error;
     }
 
     try {
@@ -301,6 +304,10 @@ const Calculator = () => {
   };
 
   const ensureBillSaved = async () => {
+    if (!user?.uid) {
+      throw new Error("User is not authenticated");
+    }
+
     const signature = buildCurrentBillSignature();
     if (lastSavedSignatureRef.current === signature) {
       return;
@@ -577,7 +584,12 @@ const Calculator = () => {
   }, [activeShopId]);
 
   useEffect(() => {
-    const unsubscribe = subscribeToShopBills(activeShopId, (bills) => {
+    if (!user?.uid) {
+      setCustomerOptionsFromBills([]);
+      return () => {};
+    }
+
+    const unsubscribe = subscribeToShopBills(activeShopId, user.uid, (bills) => {
       const uniqueCustomers = new Map();
 
       bills.forEach((bill) => {
@@ -598,7 +610,7 @@ const Calculator = () => {
     });
 
     return () => unsubscribe();
-  }, [activeShopId]);
+  }, [activeShopId, user?.uid]);
 
   const mergedCustomerOptions = useMemo(() => {
     const merged = new Map();

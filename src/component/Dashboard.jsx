@@ -28,6 +28,7 @@ import BillsTable from "./BillsTable";
 import CustomerInfoTable from "./CustomerInfoTable";
 import StatsCards from "./StatsCards";
 import { useShop } from "../context/ShopContext";
+import { useAuth } from "../context/AuthContext";
 import {
   deleteBillForShop,
   deleteCustomerForShop,
@@ -60,6 +61,7 @@ const getBillDate = (bill) => {
 };
 
 const Dashboard = () => {
+  const { user } = useAuth();
   const [bills, setBills] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [loadingBills, setLoadingBills] = useState(true);
@@ -71,8 +73,9 @@ const Dashboard = () => {
   const [dateFilter, setDateFilter] = useState("today");
   const [customStartDate, setCustomStartDate] = useState("");
   const [customEndDate, setCustomEndDate] = useState("");
+  const dashboardStatsStorageKey = `dashboard-show-stats-${user?.uid || "guest"}`;
   const [showStats, setShowStats] = useState(() => {
-    const savedValue = localStorage.getItem("dashboard-show-stats");
+    const savedValue = localStorage.getItem(dashboardStatsStorageKey);
     return savedValue ? JSON.parse(savedValue) : true;
   });
 
@@ -97,8 +100,15 @@ const Dashboard = () => {
   };
 
   useEffect(() => {
+    if (!user?.uid) {
+      setBills([]);
+      setLoadingBills(false);
+      return () => {};
+    }
+
     const unsubscribe = subscribeToShopBills(
       activeShopId,
+      user.uid,
       (data) => {
         setBills(data);
         setLoadingBills(false);
@@ -110,7 +120,7 @@ const Dashboard = () => {
     );
 
     return () => unsubscribe();
-  }, [activeShopId]);
+  }, [activeShopId, user?.uid]);
 
   useEffect(() => {
     const unsubscribe = subscribeToShopCustomers(
@@ -129,8 +139,13 @@ const Dashboard = () => {
   }, [activeShopId]);
 
   useEffect(() => {
-    localStorage.setItem("dashboard-show-stats", JSON.stringify(showStats));
-  }, [showStats]);
+    localStorage.setItem(dashboardStatsStorageKey, JSON.stringify(showStats));
+  }, [dashboardStatsStorageKey, showStats]);
+
+  useEffect(() => {
+    const savedValue = localStorage.getItem(dashboardStatsStorageKey);
+    setShowStats(savedValue ? JSON.parse(savedValue) : true);
+  }, [dashboardStatsStorageKey]);
 
   const normalizedSearch = search.trim();
   const numericSearch = normalizedSearch.replace(/[^\d+]/g, "");
