@@ -11,13 +11,20 @@ service cloud.firestore {
     }
 
     function isShopMember(shopId) {
-      return signedIn() &&
-        exists(/databases/$(database)/documents/shops/$(shopId)/members/$(request.auth.uid));
+      return signedIn() && (
+        (exists(/databases/$(database)/documents/shops/$(shopId)) &&
+          get(/databases/$(database)/documents/shops/$(shopId)).data.ownerUid == request.auth.uid) ||
+        exists(/databases/$(database)/documents/shops/$(shopId)/members/$(request.auth.uid))
+      );
     }
 
     function isShopOwner(shopId) {
-      return signedIn() &&
-        get(/databases/$(database)/documents/shops/$(shopId)/members/$(request.auth.uid)).data.role == "owner";
+      return signedIn() && (
+        (exists(/databases/$(database)/documents/shops/$(shopId)) &&
+          get(/databases/$(database)/documents/shops/$(shopId)).data.ownerUid == request.auth.uid) ||
+        (exists(/databases/$(database)/documents/shops/$(shopId)/members/$(request.auth.uid)) &&
+          get(/databases/$(database)/documents/shops/$(shopId)/members/$(request.auth.uid)).data.role == "owner")
+      );
     }
 
     match /users/{userId} {
@@ -55,6 +62,30 @@ service cloud.firestore {
         allow create: if isShopMember(shopId);
         allow update: if isShopMember(shopId);
         allow delete: if isShopOwner(shopId);
+      }
+
+      match /categories/{categoryId} {
+        allow read, create, update, delete: if isShopMember(shopId);
+      }
+
+      match /subcategories/{subcategoryId} {
+        allow read, create, update, delete: if isShopMember(shopId);
+      }
+
+      match /items/{itemId} {
+        allow read, create, update, delete: if isShopMember(shopId);
+      }
+
+      match /inventoryCategories/{categoryId} {
+        allow read, create, update, delete: if isShopMember(shopId);
+
+        match /subcategories/{subcategoryId} {
+          allow read, create, update, delete: if isShopMember(shopId);
+
+          match /items/{itemId} {
+            allow read, create, update, delete: if isShopMember(shopId);
+          }
+        }
       }
     }
   }

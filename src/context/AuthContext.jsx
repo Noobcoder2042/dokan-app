@@ -2,8 +2,6 @@ import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "../Firebase/firebase";
 import {
-  registerWithEmail,
-  loginWithEmail,
   loginWithGoogle,
   logoutUser,
   getUserProfile,
@@ -45,8 +43,6 @@ export const AuthProvider = ({ children }) => {
       user,
       profile,
       authLoading,
-      loginWithEmail,
-      registerWithEmail,
       loginWithGoogle,
       logoutUser,
       refreshProfile: async () => {

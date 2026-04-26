@@ -47,7 +47,10 @@ export const ShopProvider = ({ children }) => {
   }, [activeShopId, authLoading, defaultShopId, profile]);
 
   useEffect(() => {
+    if (!user?.uid || !activeShopId) return () => {};
+
     const shopRef = doc(db, "shops", activeShopId);
+    const userRef = doc(db, "users", user.uid);
 
     const unsubscribe = onSnapshot(shopRef, async (snapshot) => {
       if (!snapshot.exists()) {
@@ -58,21 +61,63 @@ export const ShopProvider = ({ children }) => {
           createdAt: new Date().toISOString(),
         };
         await setDoc(shopRef, initialShop);
+        await setDoc(
+          doc(db, "shops", activeShopId, "members", user.uid),
+          {
+            uid: user.uid,
+            role: "owner",
+            createdAt: new Date().toISOString(),
+          },
+          { merge: true }
+        );
         setShop(initialShop);
         setShopLoading(false);
         return;
       }
 
+      const existingShop = snapshot.data() || {};
+      if (existingShop.ownerUid === user.uid) {
+        await setDoc(
+          doc(db, "shops", activeShopId, "members", user.uid),
+          {
+            uid: user.uid,
+            role: "owner",
+            createdAt: new Date().toISOString(),
+          },
+          { merge: true }
+        );
+      }
+
       setShop({
         id: snapshot.id,
         ...DEFAULT_SHOP,
-        ...snapshot.data(),
+        ...existingShop,
       });
+      setShopLoading(false);
+    }, async (error) => {
+      console.error("Shop subscription failed:", error);
+
+      if (error?.code === "permission-denied" && activeShopId !== defaultShopId) {
+        try {
+          await setDoc(
+            userRef,
+            {
+              currentShopId: defaultShopId,
+              updatedAt: new Date().toISOString(),
+            },
+            { merge: true }
+          );
+        } catch (profilePatchError) {
+          console.error("Failed to patch profile shop id:", profilePatchError);
+        }
+        setActiveShopId(defaultShopId);
+      }
+
       setShopLoading(false);
     });
 
     return () => unsubscribe();
-  }, [activeShopId, user?.uid]);
+  }, [activeShopId, defaultShopId, user?.uid]);
 
   const value = useMemo(
     () => ({

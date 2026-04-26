@@ -9,6 +9,7 @@ import {
 } from "@mui/material";
 import ReceiptLongRoundedIcon from "@mui/icons-material/ReceiptLongRounded";
 import DashboardRoundedIcon from "@mui/icons-material/DashboardRounded";
+import StoreRoundedIcon from "@mui/icons-material/StoreRounded";
 import SettingsRoundedIcon from "@mui/icons-material/SettingsRounded";
 import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
 import { Link, useLocation } from "react-router-dom";
@@ -25,6 +26,11 @@ const navItems = [
     label: "Dashboard",
     to: "/dashboard",
     icon: <DashboardRoundedIcon fontSize="small" />,
+  },
+  {
+    label: "Inventory",
+    to: "/inventory",
+    icon: <StoreRoundedIcon fontSize="small" />,
   },
   {
     label: "Settings",

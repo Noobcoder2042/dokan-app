@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  Autocomplete,
   Alert,
   Box,
   Button,
@@ -38,9 +39,10 @@ import CustomerDetails from "./CustomerDetails";
 import { useShop } from "../context/ShopContext";
 import { useAuth } from "../context/AuthContext";
 import {
-  saveBillForShop,
+  saveBillAndConsumeStockForShop,
   subscribeToShopBills,
   subscribeToShopCustomers,
+  subscribeToShopInventoryItems,
   upsertCustomerForShop,
 } from "../services/shopData";
 
@@ -62,6 +64,8 @@ const Calculator = () => {
   const [savedBills, setSavedBills] = useState([]);
   const [customerOptions, setCustomerOptions] = useState([]);
   const [customerOptionsFromBills, setCustomerOptionsFromBills] = useState([]);
+  const [historicalItemNames, setHistoricalItemNames] = useState([]);
+  const [inventoryItemOptions, setInventoryItemOptions] = useState([]);
   const [extraCharges, setExtraCharges] = useState({
     rickshaw: "",
     bus: "",
@@ -119,6 +123,25 @@ const Calculator = () => {
   const calculateGrandTotal = () =>
     calculateTotalBill() + calculateExtraChargesTotal();
 
+  const normalizeValue = (value) =>
+    (value || "").toString().trim().toLowerCase();
+
+  const itemQtyToPieceQty = (qty, unit) =>
+    unit === "dozen" ? Number(qty || 0) * 12 : Number(qty || 0);
+
+  const stockToPieceQty = (stockQty, stockUnit) =>
+    stockUnit === "dozen" ? Number(stockQty || 0) * 12 : Number(stockQty || 0);
+
+  const findInventoryItemByName = (name) => {
+    const normalizedName = normalizeValue(name);
+    if (!normalizedName) return null;
+    return (
+      inventoryItemOptions.find(
+        (entry) => normalizeValue(entry.name) === normalizedName
+      ) || null
+    );
+  };
+
   const buildCurrentBillSignature = () => {
     return JSON.stringify({
       shopId: activeShopId,
@@ -149,6 +172,26 @@ const Calculator = () => {
     const pricePerUnit = priceUnit === "dozen" ? price / 12 : price;
     const totalQuantity = quantityUnit === "dozen" ? qty * 12 : qty;
     const totalPrice = pricePerUnit * totalQuantity;
+    const inventoryMatch = findInventoryItemByName(itemName);
+
+    if (inventoryMatch) {
+      const availablePieceQty = stockToPieceQty(
+        inventoryMatch.stockQty,
+        inventoryMatch.stockUnit
+      );
+      if (!Number.isNaN(availablePieceQty)) {
+        const requestedPieceQty = itemQtyToPieceQty(qty, quantityUnit);
+        if (requestedPieceQty > availablePieceQty) {
+          openToast(
+            `Insufficient stock. Available: ${Number(
+              inventoryMatch.stockQty || 0
+            ).toFixed(2)} ${inventoryMatch.stockUnit || "piece"}`,
+            "error"
+          );
+          return;
+        }
+      }
+    }
 
     const newItem = {
       name: itemName,
@@ -157,6 +200,8 @@ const Calculator = () => {
       priceUnit,
       quantityUnit,
       totalPrice,
+      inventoryItemId: inventoryMatch?.id || "",
+      inventoryStockUnit: inventoryMatch?.stockUnit || "piece",
     };
 
     setItems([...items, newItem]);
@@ -187,8 +232,29 @@ const Calculator = () => {
     const pricePerUnit = priceUnit === "dozen" ? price / 12 : price;
     const totalQuantity = quantityUnit === "dozen" ? qty * 12 : qty;
     const totalPrice = pricePerUnit * totalQuantity;
+    const inventoryMatch = findInventoryItemByName(itemName);
+
+    if (inventoryMatch) {
+      const availablePieceQty = stockToPieceQty(
+        inventoryMatch.stockQty,
+        inventoryMatch.stockUnit
+      );
+      if (!Number.isNaN(availablePieceQty)) {
+        const requestedPieceQty = itemQtyToPieceQty(qty, quantityUnit);
+        if (requestedPieceQty > availablePieceQty) {
+          openToast(
+            `Insufficient stock. Available: ${Number(
+              inventoryMatch.stockQty || 0
+            ).toFixed(2)} ${inventoryMatch.stockUnit || "piece"}`,
+            "error"
+          );
+          return;
+        }
+      }
+    }
 
     const updatedItems = [...items];
+    const previousItem = updatedItems[editingIndex] || {};
     updatedItems[editingIndex] = {
       name: itemName,
       price,
@@ -196,6 +262,9 @@ const Calculator = () => {
       priceUnit,
       quantityUnit,
       totalPrice,
+      inventoryItemId: inventoryMatch?.id || previousItem.inventoryItemId || "",
+      inventoryStockUnit:
+        inventoryMatch?.stockUnit || previousItem.inventoryStockUnit || "piece",
     };
 
     setItems(updatedItems);
@@ -257,8 +326,21 @@ const Calculator = () => {
       year: "numeric",
     });
 
+    const stockRequests = currentItems.reduce((acc, entry) => {
+      const itemId = entry.inventoryItemId || findInventoryItemByName(entry.name)?.id;
+      if (!itemId) return acc;
+      acc.push({
+        itemId,
+        itemName: entry.name,
+        pieceQty: itemQtyToPieceQty(entry.quantity, entry.quantityUnit),
+      });
+      return acc;
+    }, []);
+
     try {
-      await saveBillForShop(shopId, {
+      await saveBillAndConsumeStockForShop(
+        shopId,
+        {
         userId: user.uid,
         name: currentCustomerName,
         phoneNumber: currentCustomerPhone,
@@ -283,10 +365,16 @@ const Calculator = () => {
             verifiedItems.every(Boolean),
         },
         items: currentItems,
-      });
+      },
+      stockRequests
+      );
     } catch (error) {
       console.error("Error saving bill: ", error);
-      openToast("Bill save failed. Please try again.", "error");
+      if (String(error?.message || "").toLowerCase().includes("insufficient stock")) {
+        openToast(error.message, "error");
+      } else {
+        openToast("Bill save failed. Please try again.", "error");
+      }
       throw error;
     }
 
@@ -586,11 +674,13 @@ const Calculator = () => {
   useEffect(() => {
     if (!user?.uid) {
       setCustomerOptionsFromBills([]);
+      setHistoricalItemNames([]);
       return () => {};
     }
 
     const unsubscribe = subscribeToShopBills(activeShopId, user.uid, (bills) => {
       const uniqueCustomers = new Map();
+      const uniqueItemNames = new Set();
 
       bills.forEach((bill) => {
         if (!bill.name) return;
@@ -604,10 +694,34 @@ const Calculator = () => {
             address: bill.address || "",
           });
         }
+
+        (bill.items || []).forEach((billItem) => {
+          const normalizedItemName = (billItem.name || "").trim();
+          if (normalizedItemName) uniqueItemNames.add(normalizedItemName);
+        });
       });
 
       setCustomerOptionsFromBills(Array.from(uniqueCustomers.values()));
+      setHistoricalItemNames(Array.from(uniqueItemNames));
     });
+
+    return () => unsubscribe();
+  }, [activeShopId, user?.uid]);
+
+  useEffect(() => {
+    if (!user?.uid || !activeShopId) {
+      setInventoryItemOptions([]);
+      return () => {};
+    }
+
+    const unsubscribe = subscribeToShopInventoryItems(
+      activeShopId,
+      (inventoryItems) => setInventoryItemOptions(inventoryItems),
+      (error) => {
+        console.error("Inventory suggestions subscribe failed:", error);
+        setInventoryItemOptions([]);
+      }
+    );
 
     return () => unsubscribe();
   }, [activeShopId, user?.uid]);
@@ -627,6 +741,22 @@ const Calculator = () => {
 
     return Array.from(merged.values());
   }, [customerOptions, customerOptionsFromBills]);
+
+  const itemNameOptions = useMemo(() => {
+    const names = new Set();
+
+    inventoryItemOptions.forEach((item) => {
+      const normalizedItemName = (item.name || "").trim();
+      if (normalizedItemName) names.add(normalizedItemName);
+    });
+
+    historicalItemNames.forEach((name) => {
+      const normalizedName = (name || "").trim();
+      if (normalizedName) names.add(normalizedName);
+    });
+
+    return Array.from(names);
+  }, [historicalItemNames, inventoryItemOptions]);
 
   return (
     <Stack spacing={3}>
@@ -704,13 +834,27 @@ const Calculator = () => {
 
                 <Grid container spacing={2}>
                   <Grid item xs={12}>
-                    <TextField
-                      label="Item Name"
+                    <Autocomplete
+                      freeSolo
+                      options={itemNameOptions}
                       value={itemName}
-                      onChange={handleItemNameChange}
-                      onKeyPress={(event) => handleKeyPress(event, itemPriceRef)}
-                      fullWidth
-                      inputRef={itemNameRef}
+                      inputValue={itemName}
+                      onInputChange={(_, value) => setItemName(value)}
+                      onChange={(_, value) => {
+                        if (typeof value === "string") {
+                          setItemName(value);
+                          return;
+                        }
+                        if (value) setItemName(value);
+                      }}
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          label="Item Name"
+                          fullWidth
+                          inputRef={itemNameRef}
+                        />
+                      )}
                     />
                   </Grid>
                   <Grid item xs={12} sm={6}>

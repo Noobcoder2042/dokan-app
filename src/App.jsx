@@ -10,6 +10,7 @@ import {
 import AuthScreen from "./component/AuthScreen";
 import Calculator from "./component/Calculator";
 import Dashboard from "./component/Dashboard";
+import Inventory from "./component/Inventory";
 import Navbar from "./component/Navbar";
 import ShopSettings from "./component/ShopSettings";
 import { useAuth } from "./context/AuthContext";
@@ -33,7 +34,7 @@ const theme = createTheme({
     },
   },
   shape: {
-    borderRadius: 18,
+    borderRadius: 2,
   },
   typography: {
     fontFamily: `"Segoe UI", "Inter", "Arial", sans-serif`,
@@ -71,7 +72,7 @@ const theme = createTheme({
       },
       styleOverrides: {
         root: {
-          borderRadius: 14,
+          borderRadius: 10,
           paddingInline: 18,
           minHeight: 42,
         },
@@ -80,7 +81,7 @@ const theme = createTheme({
     MuiOutlinedInput: {
       styleOverrides: {
         root: {
-          borderRadius: 14,
+          borderRadius: 10,
           backgroundColor: "#ffffff",
         },
       },
@@ -88,7 +89,7 @@ const theme = createTheme({
     MuiCard: {
       styleOverrides: {
         root: {
-          borderRadius: 22,
+          borderRadius: 14,
         },
       },
     },
@@ -142,6 +143,7 @@ const App = () => {
             <Routes>
               <Route path="/" element={<Calculator />} />
               <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/inventory" element={<Inventory />} />
               <Route path="/settings" element={<ShopSettings />} />
             </Routes>
           </Container>

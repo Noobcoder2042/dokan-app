@@ -4,12 +4,7 @@ import {
   Box,
   Button,
   Card,
-  Checkbox,
-  Divider,
-  FormControlLabel,
-  Link,
   Stack,
-  TextField,
   Typography,
 } from "@mui/material";
 import GoogleIcon from "@mui/icons-material/Google";
@@ -19,32 +14,8 @@ import DashboardRoundedIcon from "@mui/icons-material/DashboardRounded";
 import { useAuth } from "../context/AuthContext";
 
 const AuthScreen = () => {
-  const { loginWithEmail, registerWithEmail, loginWithGoogle } = useAuth();
-  const [mode, setMode] = useState("login");
+  const { loginWithGoogle } = useAuth();
   const [error, setError] = useState("");
-
-  const [formData, setFormData] = useState({
-    email: "",
-    password: "",
-    name: "",
-    shopName: "",
-  });
-
-  const handleAuth = async () => {
-    setError("");
-    try {
-      if (mode === "login") {
-        await loginWithEmail(formData.email, formData.password);
-      } else {
-        await registerWithEmail(formData.email, formData.password, {
-          name: formData.name,
-          shopName: formData.shopName,
-        });
-      }
-    } catch (err) {
-      setError(err.message);
-    }
-  };
 
   const handleGoogle = async () => {
     try {
@@ -164,16 +135,14 @@ const AuthScreen = () => {
         >
           <Box sx={{ width: "100%" }}>
             <Typography variant="h4" sx={{ fontWeight: 700 }}>
-              {mode === "login" ? "Welcome Back" : "Create Account"}
+              Welcome to Dokan Pro
             </Typography>
             <Typography
               variant="body2"
               color="text.secondary"
               sx={{ mt: 1, mb: 3.5 }}
             >
-              {mode === "login"
-                ? "Log in to your account to continue"
-                : "Create your account to start billing with Dokan Pro"}
+              Sign in with Google to access your billing workspace.
             </Typography>
 
             {error && (
@@ -183,89 +152,14 @@ const AuthScreen = () => {
             )}
 
             <Stack spacing={2}>
-              {mode === "register" ? (
-                <>
-                  <TextField
-                    label="Owner Name"
-                    fullWidth
-                    onChange={(e) =>
-                      setFormData({ ...formData, name: e.target.value })
-                    }
-                  />
-                  <TextField
-                    label="Shop Name"
-                    fullWidth
-                    onChange={(e) =>
-                      setFormData({ ...formData, shopName: e.target.value })
-                    }
-                  />
-                </>
-              ) : null}
-
-              <TextField
-                label="Username or Email"
-                placeholder="e.g. owner@shop.com"
-                fullWidth
-                value={formData.email}
-                onChange={(e) =>
-                  setFormData({ ...formData, email: e.target.value })
-                }
-              />
-              <TextField
-                label="Password"
-                type="password"
-                placeholder="********"
-                fullWidth
-                value={formData.password}
-                onChange={(e) =>
-                  setFormData({ ...formData, password: e.target.value })
-                }
-              />
-
-              {mode === "login" ? (
-                <Stack
-                  direction="row"
-                  justifyContent="space-between"
-                  alignItems="center"
-                >
-                  <FormControlLabel
-                    control={<Checkbox size="small" />}
-                    label={<Typography variant="body2">Remember me</Typography>}
-                  />
-                  <Link
-                    href="#"
-                    underline="hover"
-                    sx={{ fontWeight: 600, fontSize: 14 }}
-                    onClick={(event) => event.preventDefault()}
-                  >
-                    Forgot password?
-                  </Link>
-                </Stack>
-              ) : null}
-
-              <Button variant="contained" onClick={handleAuth} size="large">
-                {mode === "login" ? "Secure Login" : "Register"}
-              </Button>
-
-              <Divider>OR</Divider>
-
               <Button
-                variant="outlined"
+                variant="contained"
                 startIcon={<GoogleIcon />}
                 onClick={handleGoogle}
                 size="large"
                 fullWidth
               >
                 Continue with Google
-              </Button>
-
-              <Button
-                variant="text"
-                onClick={() => setMode(mode === "login" ? "register" : "login")}
-              >
-                {mode === "login"
-                  ? "Need a shop? Register"
-                  : "Have an account? Login"}
               </Button>
 
               <Typography

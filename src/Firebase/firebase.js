@@ -2,6 +2,7 @@
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
+import { getStorage } from "firebase/storage";
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
 
@@ -10,7 +11,7 @@ const firebaseConfig = {
   apiKey: "AIzaSyA5tfS9ceOknq7fRvMB__SGfMU_aUa48zA",
   authDomain: "dokan-app-56585.firebaseapp.com",
   projectId: "dokan-app-56585",
-  storageBucket: "dokan-app-56585.appspot.com",
+  storageBucket: "dokan-app-56585.firebasestorage.app",
   messagingSenderId: "556501176148",
   appId: "1:556501176148:web:e6aa623394017bf34ec2c1",
 };
@@ -19,5 +20,6 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
+const storage = getStorage(app);
 
-export { auth, db };
+export { auth, db, storage };
