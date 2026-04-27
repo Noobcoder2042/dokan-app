@@ -60,6 +60,27 @@ const getBillDate = (bill) => {
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 };
 
+const normalizePhone = (value) => (value || "").toString().replace(/[^\d]/g, "");
+const normalizeText = (value) => (value || "").toString().trim().toLowerCase();
+
+const getCustomerDedupKey = (customer) => {
+  const phoneKey = normalizePhone(customer.phoneNumber);
+  if (phoneKey) return `phone:${phoneKey}`;
+
+  const nameKey = normalizeText(customer.name);
+  const addressKey = normalizeText(customer.address);
+  return `name:${nameKey}|address:${addressKey}`;
+};
+
+const parseDateValue = (value) => {
+  if (!value) return 0;
+  if (typeof value?.toDate === "function") {
+    return value.toDate().getTime();
+  }
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? 0 : parsed.getTime();
+};
+
 const Dashboard = () => {
   const { user } = useAuth();
   const [bills, setBills] = useState([]);
@@ -296,6 +317,79 @@ const Dashboard = () => {
     }
   };
 
+  const handleDeleteDuplicateCustomers = async () => {
+    const groups = customers.reduce((acc, customer) => {
+      const key = getCustomerDedupKey(customer);
+      if (!acc.has(key)) acc.set(key, []);
+      acc.get(key).push(customer);
+      return acc;
+    }, new Map());
+
+    const duplicateGroups = Array.from(groups.values()).filter(
+      (group) => group.length > 1
+    );
+
+    if (!duplicateGroups.length) {
+      openToast("No duplicate customers found");
+      return;
+    }
+
+    setActionLoading(true);
+    try {
+      let deletedCount = 0;
+
+      for (const group of duplicateGroups) {
+        const sorted = [...group].sort((a, b) => {
+          const aTime = Math.max(
+            parseDateValue(a.updatedAt),
+            parseDateValue(a.lastBilledAt),
+            parseDateValue(a.createdAt)
+          );
+          const bTime = Math.max(
+            parseDateValue(b.updatedAt),
+            parseDateValue(b.lastBilledAt),
+            parseDateValue(b.createdAt)
+          );
+          return bTime - aTime;
+        });
+
+        const keeper = sorted[0];
+        const duplicates = sorted.slice(1);
+
+        const mergedName =
+          keeper.name || duplicates.find((entry) => entry.name)?.name || "";
+        const mergedPhone =
+          keeper.phoneNumber || duplicates.find((entry) => entry.phoneNumber)?.phoneNumber || "";
+        const mergedAddress =
+          keeper.address || duplicates.find((entry) => entry.address)?.address || "";
+
+        if (
+          mergedName !== (keeper.name || "") ||
+          mergedPhone !== (keeper.phoneNumber || "") ||
+          mergedAddress !== (keeper.address || "")
+        ) {
+          await updateCustomerForShop(activeShopId, keeper.id, {
+            name: mergedName,
+            phoneNumber: mergedPhone,
+            address: mergedAddress,
+          });
+        }
+
+        for (const duplicate of duplicates) {
+          await deleteCustomerForShop(activeShopId, duplicate.id);
+          deletedCount += 1;
+        }
+      }
+
+      openToast(`Removed ${deletedCount} duplicate customer record(s)`);
+    } catch (error) {
+      console.error(error);
+      openToast("Could not delete duplicate customers", "error");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const confirmTitle =
     confirmState.type === "deleteBill" || confirmState.type === "deleteCustomer"
       ? "Delete"
@@ -444,6 +538,19 @@ const Dashboard = () => {
                 />
               )}
             />
+
+            {activeTab === "customers" ? (
+              <Stack direction="row" justifyContent="flex-end">
+                <Button
+                  variant="outlined"
+                  color="warning"
+                  onClick={handleDeleteDuplicateCustomers}
+                  disabled={actionLoading || !customers.length}
+                >
+                  Delete Duplicate Customers
+                </Button>
+              </Stack>
+            ) : null}
           </Stack>
         </CardContent>
       </Card>
