@@ -155,6 +155,8 @@ export const saveBillAndConsumeStockForShop = async (
   }, new Map());
 
   await runTransaction(db, async (transaction) => {
+    const stockUpdates = [];
+
     for (const request of normalizedRequests.values()) {
       const itemRef = doc(db, "shops", shopId, "items", request.itemId);
       const snapshot = await transaction.get(itemRef);
@@ -173,11 +175,20 @@ export const saveBillAndConsumeStockForShop = async (
         );
       }
 
-      transaction.update(itemRef, {
+      stockUpdates.push({
+        itemRef,
         stockQty: Number((stockQty - deductQty).toFixed(4)),
         updatedAt: new Date().toISOString(),
       });
     }
+
+    // Firestore transaction rule: all reads must happen before any write.
+    stockUpdates.forEach((entry) => {
+      transaction.update(entry.itemRef, {
+        stockQty: entry.stockQty,
+        updatedAt: entry.updatedAt,
+      });
+    });
 
     transaction.set(billRef, bill);
   });

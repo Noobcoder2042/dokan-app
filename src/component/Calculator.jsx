@@ -142,6 +142,17 @@ const Calculator = () => {
     );
   };
 
+  const applyInventoryAutofill = (name) => {
+    setItemName(name);
+    const inventoryMatch = findInventoryItemByName(name);
+    if (!inventoryMatch) return;
+
+    if (inventoryMatch.price !== undefined && inventoryMatch.price !== null) {
+      setItemPrice(String(inventoryMatch.price));
+      setPriceUnit("piece");
+    }
+  };
+
   const buildCurrentBillSignature = () => {
     return JSON.stringify({
       shopId: activeShopId,
@@ -842,10 +853,10 @@ const Calculator = () => {
                       onInputChange={(_, value) => setItemName(value)}
                       onChange={(_, value) => {
                         if (typeof value === "string") {
-                          setItemName(value);
+                          applyInventoryAutofill(value);
                           return;
                         }
-                        if (value) setItemName(value);
+                        if (value) applyInventoryAutofill(value);
                       }}
                       renderInput={(params) => (
                         <TextField
