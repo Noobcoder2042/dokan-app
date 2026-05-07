@@ -1,0 +1,15 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Inventory images are stored under shops/{shopId}/inventory/...
+    // Only signed-in users can read/write for now.
+    match /shops/{shopId}/inventory/{allPaths=**} {
+      allow read, write: if request.auth != null;
+    }
+
+    // Block everything else by default.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

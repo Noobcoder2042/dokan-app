@@ -1,0 +1,116 @@
+import { Autocomplete, Grid, TextField } from "@mui/material";
+
+const CustomerDetails = ({
+  customerName,
+  customerPhone,
+  customerAddress,
+  customerOptions,
+  onNameChange,
+  onPhoneChange,
+  onAddressChange,
+  onCustomerSelect,
+  nameInputRef,
+  phoneInputRef,
+  addressInputRef,
+  onNameKeyDown,
+  onPhoneKeyDown,
+  onAddressKeyDown,
+}) => {
+  const selectedCustomer =
+    customerOptions.find(
+      (option) =>
+        option.name === customerName &&
+        option.phoneNumber === customerPhone &&
+        (option.address || "") === customerAddress
+    ) ||
+    customerOptions.find((option) => option.name === customerName) ||
+    null;
+
+  return (
+    <>
+      <Grid item xs={12}>
+        <Autocomplete
+          freeSolo
+          fullWidth
+          options={customerOptions}
+          value={selectedCustomer}
+          inputValue={customerName}
+          getOptionLabel={(option) =>
+            typeof option === "string"
+              ? option
+              : option.phoneNumber
+                ? `${option.name || ""} (${option.phoneNumber})`
+                : option.name || ""
+          }
+          isOptionEqualToValue={(option, value) =>
+            option.name === value.name &&
+            option.phoneNumber === value.phoneNumber &&
+            (option.address || "") === (value.address || "")
+          }
+          onInputChange={(_, value, reason) => {
+            if (reason === "input") {
+              onNameChange(value);
+
+              const exactMatches = customerOptions.filter(
+                (option) =>
+                  (option.name || "").toLowerCase() === value.trim().toLowerCase()
+              );
+
+              if (exactMatches.length === 1) {
+                onCustomerSelect(exactMatches[0]);
+              } else if (exactMatches.length > 1) {
+                // Ambiguous name: force explicit selection so we don't autofill wrong phone/address.
+                onPhoneChange("");
+                onAddressChange("");
+              }
+            }
+          }}
+          onChange={(_, value) => {
+            if (typeof value === "string") {
+              onNameChange(value);
+              return;
+            }
+
+            if (value) {
+              onCustomerSelect(value);
+            }
+          }}
+          renderInput={(params) => (
+            <TextField
+              {...params}
+              label="Customer Name"
+              helperText="Pick an existing customer to auto-fill mobile and address."
+              fullWidth
+              inputRef={nameInputRef}
+              onKeyDown={onNameKeyDown}
+            />
+          )}
+        />
+      </Grid>
+
+      <Grid item xs={12} sm={6}>
+        <TextField
+          label="Customer Phone"
+          value={customerPhone}
+          onChange={(event) => onPhoneChange(event.target.value)}
+          onKeyDown={onPhoneKeyDown}
+          inputRef={phoneInputRef}
+          fullWidth
+        />
+      </Grid>
+
+      <Grid item xs={12} sm={6}>
+        <TextField
+          label="Customer Address"
+          value={customerAddress}
+          onChange={(event) => onAddressChange(event.target.value)}
+          onKeyDown={onAddressKeyDown}
+          inputRef={addressInputRef}
+          fullWidth
+        />
+      </Grid>
+    </>
+  );
+};
+
+export default CustomerDetails;
