@@ -332,10 +332,19 @@ const Calculator = () => {
   };
 
   const handleEnterAddItem = (event) => {
+    if (event.ctrlKey) return;
     if (event.key !== "Enter") return;
     event.preventDefault();
     if (!itemName || !itemPrice || !quantity) return;
     addItem(false);
+  };
+
+  // Keyboard shortcut: Ctrl + Enter adds item and keeps same item name for fast repeat billing.
+  const handleAddMoreShortcut = (event) => {
+    if (!(event.ctrlKey && event.key === "Enter")) return;
+    event.preventDefault();
+    if (!itemName || !itemPrice || !quantity) return;
+    addItem(true);
   };
 
   // Keyboard flow: Ctrl + Right Arrow toggles both units together.
@@ -366,6 +375,15 @@ const Calculator = () => {
       ),
     );
   };
+
+  const getVerifiedItemCount = () =>
+    items.reduce(
+      (count, _, index) => count + (verifiedItems[index] === true ? 1 : 0),
+      0
+    );
+
+  const allItemsVerified = () =>
+    items.length > 0 && items.every((_, index) => verifiedItems[index] === true);
 
   const saveBillToFirebase = async (
     shopId,
@@ -484,11 +502,11 @@ const Calculator = () => {
       return;
     }
 
-    if (
-      verifiedItems.length !== items.length ||
-      verifiedItems.some((itemVerified) => !itemVerified)
-    ) {
-      openToast("Verify every item before generating the bill", "error");
+    if (!allItemsVerified()) {
+      openToast(
+        `Verify every item before generating the bill (${getVerifiedItemCount()}/${items.length})`,
+        "error"
+      );
       return;
     }
 
@@ -623,11 +641,11 @@ const Calculator = () => {
       return;
     }
 
-    if (
-      verifiedItems.length !== items.length ||
-      verifiedItems.some((itemVerified) => !itemVerified)
-    ) {
-      openToast("Verify every item before printing", "error");
+    if (!allItemsVerified()) {
+      openToast(
+        `Verify every item before printing (${getVerifiedItemCount()}/${items.length})`,
+        "error"
+      );
       return;
     }
 
@@ -686,6 +704,18 @@ const Calculator = () => {
     const nextBills = JSON.parse(localStorage.getItem(draftsStorageKey)) || [];
     setSavedBills(nextBills);
   }, [draftsStorageKey]);
+
+  // Keep verification state aligned with current item count to avoid false
+  // "verify every item" blocks when stale arrays are loaded from drafts.
+  useEffect(() => {
+    setVerifiedItems((current) => {
+      if (current.length === items.length) return current;
+      if (current.length < items.length) {
+        return [...current, ...Array(items.length - current.length).fill(false)];
+      }
+      return current.slice(0, items.length);
+    });
+  }, [items.length]);
 
   // Load persistent item-name history once per active shop/user context.
   useEffect(() => {
@@ -930,6 +960,7 @@ const Calculator = () => {
                           fullWidth
                           inputRef={itemNameRef}
                           onKeyDown={(event) => {
+                            handleAddMoreShortcut(event);
                             handleUnitShortcut(event);
                             handleKeyPress(event, itemPriceRef);
                           }}
@@ -944,6 +975,7 @@ const Calculator = () => {
                       value={itemPrice}
                       onChange={handleItemPriceChange}
                       onKeyDown={(event) => {
+                        handleAddMoreShortcut(event);
                         handleUnitShortcut(event);
                         handleKeyPress(event, quantityRef);
                       }}
@@ -958,6 +990,7 @@ const Calculator = () => {
                         value={priceUnit}
                         onChange={handlePriceUnitChange}
                         onKeyDown={(event) => {
+                          handleAddMoreShortcut(event);
                           handleUnitShortcut(event);
                           handleKeyPress(event, quantityRef);
                         }}
@@ -975,6 +1008,7 @@ const Calculator = () => {
                       value={quantity}
                       onChange={handleQuantityChange}
                       onKeyDown={(event) => {
+                        handleAddMoreShortcut(event);
                         handleUnitShortcut(event);
                         handleEnterAddItem(event);
                       }}
@@ -989,6 +1023,7 @@ const Calculator = () => {
                         value={quantityUnit}
                         onChange={handleQuantityUnitChange}
                         onKeyDown={(event) => {
+                          handleAddMoreShortcut(event);
                           handleUnitShortcut(event);
                           handleEnterAddItem(event);
                         }}
