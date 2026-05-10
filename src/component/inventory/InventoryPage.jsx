@@ -4,8 +4,12 @@ import {
   Button,
   Card,
   CardContent,
+  FormControl,
   Grid,
+  InputLabel,
+  MenuItem,
   Paper,
+  Select,
   Stack,
   TextField,
   Typography,
@@ -132,6 +136,7 @@ const InventoryContent = () => {
   const [items, setItems] = useState([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
+  const [sortBy, setSortBy] = useState("name-asc");
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerMode, setDrawerMode] = useState("create");
@@ -219,7 +224,7 @@ const InventoryContent = () => {
 
   const filteredItems = useMemo(() => {
     const term = normalizeText(searchTerm);
-    return items.filter((item) => {
+    const filtered = items.filter((item) => {
       const byCategory = selectedCategoryId
         ? item.categoryId === selectedCategoryId
         : true;
@@ -238,7 +243,41 @@ const InventoryContent = () => {
         subcategoryName.includes(term)
       );
     });
-  }, [categoriesById, items, searchTerm, selectedCategoryId, subcategoriesById]);
+
+    const sorted = [...filtered];
+    sorted.sort((a, b) => {
+      const nameA = normalizeText(a.name);
+      const nameB = normalizeText(b.name);
+      const priceA = Number(a.price || 0);
+      const priceB = Number(b.price || 0);
+      const stockA = Number(a.stockQty || 0);
+      const stockB = Number(b.stockQty || 0);
+      const createdA = parseDate(a.createdAt)?.getTime() || 0;
+      const createdB = parseDate(b.createdAt)?.getTime() || 0;
+
+      switch (sortBy) {
+        case "name-desc":
+          return nameB.localeCompare(nameA);
+        case "price-asc":
+          return priceA - priceB;
+        case "price-desc":
+          return priceB - priceA;
+        case "stock-asc":
+          return stockA - stockB;
+        case "stock-desc":
+          return stockB - stockA;
+        case "newest":
+          return createdB - createdA;
+        case "oldest":
+          return createdA - createdB;
+        case "name-asc":
+        default:
+          return nameA.localeCompare(nameB);
+      }
+    });
+
+    return sorted;
+  }, [categoriesById, items, searchTerm, selectedCategoryId, sortBy, subcategoriesById]);
 
   const recentItems = useMemo(() => {
     return [...items]
@@ -782,6 +821,23 @@ const InventoryContent = () => {
             onChange={(event) => setSearchTerm(event.target.value)}
             sx={{ flex: 1 }}
           />
+          <FormControl size="small" sx={{ minWidth: 180 }}>
+            <InputLabel>Sort</InputLabel>
+            <Select
+              value={sortBy}
+              label="Sort"
+              onChange={(event) => setSortBy(event.target.value)}
+            >
+              <MenuItem value="name-asc">Name (A-Z)</MenuItem>
+              <MenuItem value="name-desc">Name (Z-A)</MenuItem>
+              <MenuItem value="price-asc">Price (Low-High)</MenuItem>
+              <MenuItem value="price-desc">Price (High-Low)</MenuItem>
+              <MenuItem value="stock-asc">Stock (Low-High)</MenuItem>
+              <MenuItem value="stock-desc">Stock (High-Low)</MenuItem>
+              <MenuItem value="newest">Newest</MenuItem>
+              <MenuItem value="oldest">Oldest</MenuItem>
+            </Select>
+          </FormControl>
           <CategoryFilter
             categories={categories}
             selectedCategoryId={selectedCategoryId}

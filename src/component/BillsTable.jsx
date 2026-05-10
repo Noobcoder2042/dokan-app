@@ -14,8 +14,15 @@ import {
 import PreviewIcon from "@mui/icons-material/Preview";
 import EditRoundedIcon from "@mui/icons-material/EditRounded";
 import DeleteRoundedIcon from "@mui/icons-material/DeleteRounded";
+import WhatsAppIcon from "@mui/icons-material/WhatsApp";
 
-const BillsTable = ({ bills, onPreview, onEdit, onDelete }) => {
+const BillsTable = ({
+  bills,
+  onPreview,
+  onEdit,
+  onDelete,
+  onWhatsApp,
+}) => {
   if (!bills.length) {
     return (
       <Paper sx={{ p: 4, textAlign: "center" }}>
@@ -28,14 +35,14 @@ const BillsTable = ({ bills, onPreview, onEdit, onDelete }) => {
   }
 
   return (
-    <TableContainer
-      component={Paper}
+    <Paper
       sx={{
         border: "1px solid rgba(148, 163, 184, 0.14)",
-        overflowX: "auto",
+        overflow: "hidden",
       }}
     >
-      <Table sx={{ minWidth: 720 }}>
+      <TableContainer sx={{ maxHeight: 560, overflowX: "auto" }}>
+      <Table sx={{ minWidth: 720 }} size="small" stickyHeader>
         <TableHead>
           <TableRow>
             <TableCell>Name</TableCell>
@@ -75,6 +82,13 @@ const BillsTable = ({ bills, onPreview, onEdit, onDelete }) => {
                   <EditRoundedIcon />
                 </IconButton>
                 <IconButton
+                  onClick={() => onWhatsApp?.(bill)}
+                  aria-label="send whatsapp"
+                  color="success"
+                >
+                  <WhatsAppIcon />
+                </IconButton>
+                <IconButton
                   onClick={() => onDelete?.(bill)}
                   aria-label="delete bill"
                   color="error"
@@ -86,7 +100,8 @@ const BillsTable = ({ bills, onPreview, onEdit, onDelete }) => {
           ))}
         </TableBody>
       </Table>
-    </TableContainer>
+      </TableContainer>
+    </Paper>
   );
 };
 

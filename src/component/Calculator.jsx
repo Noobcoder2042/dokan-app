@@ -33,6 +33,7 @@ import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import ClearIcon from "@mui/icons-material/Clear";
 import PrintIcon from "@mui/icons-material/Print";
+import WhatsAppIcon from "@mui/icons-material/WhatsApp";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
 import CustomerDetails from "./CustomerDetails";
@@ -78,6 +79,7 @@ const Calculator = () => {
   const { activeShopId, shop } = useShop();
   const draftsStorageKey = `savedBills-${activeShopId}-${user?.uid || "guest"}`;
   const itemHistoryStorageKey = `item-history-${activeShopId}-${user?.uid || "guest"}`;
+  const offlineBillQueueStorageKey = `offline-bill-queue-${activeShopId}-${user?.uid || "guest"}`;
 
   const itemNameRef = useRef(null);
   const itemPriceRef = useRef(null);
@@ -126,6 +128,19 @@ const Calculator = () => {
     setSnackbarOpen(true);
   };
 
+  const sendWhatsAppFromBilling = () => {
+    const cleanDigits = (customerPhone || "").replace(/[^\d]/g, "");
+    if (!cleanDigits) {
+      openToast("Customer phone number is required for WhatsApp", "error");
+      return;
+    }
+
+    const phoneForWhatsApp = cleanDigits.length === 10 ? `91${cleanDigits}` : cleanDigits;
+    const message = `Thank you ${customerName || "Customer"} for shopping with us 🙏\nVisit again 😊`;
+    const whatsappUrl = `https://wa.me/${phoneForWhatsApp}?text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, "_blank", "noopener,noreferrer");
+  };
+
   const resetForm = (usePreviousName = false) => {
     if (!usePreviousName) setItemName("");
     setItemPrice("");
@@ -166,6 +181,16 @@ const Calculator = () => {
     );
   };
 
+  const findInventoryItemByCode = (code) => {
+    const normalizedCode = normalizeValue(code);
+    if (!normalizedCode) return null;
+    return (
+      inventoryItemOptions.find(
+        (entry) => normalizeValue(entry.code) === normalizedCode,
+      ) || null
+    );
+  };
+
   // Autofill pulls unit from inventory stockUnit so billing unit stays consistent.
   const applyInventoryAutofill = (name) => {
     setItemName(name);
@@ -197,6 +222,100 @@ const Calculator = () => {
       extraCharges,
       totalAmount: calculateRoundedGrandTotal(),
     });
+  };
+
+  const getOfflineBillQueue = () => {
+    const parsed = JSON.parse(localStorage.getItem(offlineBillQueueStorageKey) || "[]");
+    return Array.isArray(parsed) ? parsed : [];
+  };
+
+  const setOfflineBillQueue = (queue) => {
+    localStorage.setItem(offlineBillQueueStorageKey, JSON.stringify(queue));
+  };
+
+  const buildStockRequests = (currentItems) =>
+    currentItems.reduce((acc, entry) => {
+      const itemId = entry.inventoryItemId || findInventoryItemByName(entry.name)?.id;
+      if (!itemId) return acc;
+      acc.push({
+        itemId,
+        itemName: entry.name,
+        pieceQty: itemQtyToPieceQty(entry.quantity, entry.quantityUnit),
+      });
+      return acc;
+    }, []);
+
+  const buildBillPayload = (
+    shopId,
+    currentCustomerName,
+    currentCustomerPhone,
+    currentItems,
+    totalAmount,
+    createdAtIso = new Date().toISOString(),
+  ) => {
+    const date = new Date(createdAtIso);
+    const formattedDate = date.toLocaleDateString("en-IN", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
+    const formattedTime = date.toLocaleTimeString("en-IN", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    });
+
+    return {
+      userId: user.uid,
+      name: currentCustomerName,
+      phoneNumber: currentCustomerPhone,
+      address: customerAddress,
+      shopId,
+      shopName: shop.name || "Demo Shop",
+      date: formattedDate,
+      time: formattedTime,
+      createdAt: createdAtIso,
+      totalAmount: Number(totalAmount),
+      subtotalAmount: Number(calculateTotalBill()),
+      extraCharges: {
+        ...extraCharges,
+        total: Number(calculateExtraChargesTotal()),
+      },
+      verification: {
+        totalItems: currentItems.length,
+        verifiedItems: verifiedItems.filter(Boolean).length,
+        completed:
+          currentItems.length > 0 &&
+          verifiedItems.length === currentItems.length &&
+          verifiedItems.every(Boolean),
+      },
+      items: currentItems,
+    };
+  };
+
+  const queueBillForOfflineSync = ({
+    signature,
+    shopId,
+    currentCustomerName,
+    currentCustomerPhone,
+    currentItems,
+    totalAmount,
+  }) => {
+    const createdAtIso = new Date().toISOString();
+    const pendingBill = {
+      signature,
+      createdAtIso,
+      customerName: currentCustomerName,
+      customerPhone: currentCustomerPhone,
+      customerAddress,
+      items: currentItems,
+      totalAmount,
+    };
+
+    const existingQueue = getOfflineBillQueue();
+    if (existingQueue.some((entry) => entry.signature === signature)) return;
+    setOfflineBillQueue([...existingQueue, pendingBill]);
+    lastSavedSignatureRef.current = signature;
   };
 
   const addItem = (usePreviousName = false) => {
@@ -391,63 +510,21 @@ const Calculator = () => {
     currentCustomerPhone,
     currentItems,
     totalAmount,
+    createdAtIso = new Date().toISOString(),
   ) => {
-    const date = new Date();
-    const formattedDate = date.toLocaleDateString("en-IN", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    });
-
-    const stockRequests = currentItems.reduce((acc, entry) => {
-      const itemId =
-        entry.inventoryItemId || findInventoryItemByName(entry.name)?.id;
-      if (!itemId) return acc;
-      acc.push({
-        itemId,
-        itemName: entry.name,
-        pieceQty: itemQtyToPieceQty(entry.quantity, entry.quantityUnit),
-      });
-      return acc;
-    }, []);
-
-    const formattedTime = date.toLocaleTimeString("en-IN", {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: true,
-    });
+    const date = new Date(createdAtIso);
+    const stockRequests = buildStockRequests(currentItems);
+    const billPayload = buildBillPayload(
+      shopId,
+      currentCustomerName,
+      currentCustomerPhone,
+      currentItems,
+      totalAmount,
+      createdAtIso,
+    );
 
     try {
-      await saveBillAndConsumeStockForShop(
-        shopId,
-        {
-          userId: user.uid,
-          name: currentCustomerName,
-          phoneNumber: currentCustomerPhone,
-          address: customerAddress,
-          shopId,
-          shopName: shop.name || "Demo Shop",
-          date: formattedDate,
-          time: formattedTime,
-          createdAt: date.toISOString(),
-          totalAmount: Number(totalAmount),
-          subtotalAmount: Number(calculateTotalBill()),
-          extraCharges: {
-            ...extraCharges,
-            total: Number(calculateExtraChargesTotal()),
-          },
-          verification: {
-            totalItems: currentItems.length,
-            verifiedItems: verifiedItems.filter(Boolean).length,
-            completed:
-              currentItems.length > 0 &&
-              verifiedItems.length === currentItems.length &&
-              verifiedItems.every(Boolean),
-          },
-          items: currentItems,
-        },
-        stockRequests,
-      );
+      await saveBillAndConsumeStockForShop(shopId, billPayload, stockRequests);
     } catch (error) {
       console.error("Error saving bill: ", error);
       if (
@@ -467,7 +544,7 @@ const Calculator = () => {
         name: currentCustomerName,
         phoneNumber: currentCustomerPhone,
         address: customerAddress,
-        lastBilledAt: date.toISOString(),
+        lastBilledAt: createdAtIso,
       });
     } catch (error) {
       console.error("Error syncing customer: ", error);
@@ -649,17 +726,42 @@ const Calculator = () => {
       return;
     }
 
-    try {
-      await ensureBillSaved();
-    } catch (error) {
-      openToast("Could not save bill before printing", "error");
-      return;
-    }
-
+    // Open popup first so user gets immediate feedback and browser popup blockers are less likely.
     const printWindow = window.open("", "_blank", "width=420,height=720");
     if (!printWindow) {
       openToast("Allow popups to print the thermal bill", "error");
       return;
+    }
+    printWindow.document.write(`
+      <html>
+        <head><title>Preparing Thermal Bill</title></head>
+        <body style="font-family: Arial, sans-serif; padding: 12px;">Preparing print...</body>
+      </html>
+    `);
+    printWindow.document.close();
+
+    try {
+      await ensureBillSaved();
+    } catch (error) {
+      // Allow printing when internet is down so shop workflow does not stop.
+      if (!navigator.onLine) {
+        queueBillForOfflineSync({
+          signature: buildCurrentBillSignature(),
+          shopId: activeShopId,
+          currentCustomerName: customerName,
+          currentCustomerPhone: customerPhone,
+          currentItems: items,
+          totalAmount: calculateRoundedGrandTotal(),
+        });
+        openToast(
+          "Printed offline. Bill queued and will auto-sync when internet returns.",
+          "warning"
+        );
+      } else {
+        printWindow.close();
+        openToast("Could not save bill before printing", "error");
+        return;
+      }
     }
 
     const extraChargeEntries = [
@@ -730,6 +832,44 @@ const Calculator = () => {
 
     return () => unsubscribe();
   }, [activeShopId]);
+
+  useEffect(() => {
+    if (!user?.uid || !activeShopId) return undefined;
+
+    const syncOfflineBills = async () => {
+      if (!navigator.onLine) return;
+      const queue = getOfflineBillQueue();
+      if (!queue.length) return;
+
+      const remaining = [];
+      let syncedCount = 0;
+
+      for (const pending of queue) {
+        try {
+          await saveBillToFirebase(
+            activeShopId,
+            pending.customerName || "",
+            pending.customerPhone || "",
+            pending.items || [],
+            Number(pending.totalAmount || 0),
+            pending.createdAtIso,
+          );
+          syncedCount += 1;
+        } catch (error) {
+          remaining.push(pending);
+        }
+      }
+
+      setOfflineBillQueue(remaining);
+      if (syncedCount > 0) {
+        openToast(`${syncedCount} offline bill(s) synced`, "success");
+      }
+    };
+
+    syncOfflineBills();
+    window.addEventListener("online", syncOfflineBills);
+    return () => window.removeEventListener("online", syncOfflineBills);
+  }, [activeShopId, user?.uid]);
 
   useEffect(() => {
     if (!user?.uid) {
@@ -807,24 +947,32 @@ const Calculator = () => {
   }, [customerOptions, customerOptionsFromBills]);
 
   const itemNameOptions = useMemo(() => {
-    const names = new Set();
+    const byName = new Map();
 
     inventoryItemOptions.forEach((item) => {
-      const normalizedItemName = (item.name || "").trim();
-      if (normalizedItemName) names.add(normalizedItemName);
+      const cleanedName = (item.name || "").trim();
+      if (!cleanedName) return;
+      byName.set(cleanedName.toLowerCase(), {
+        name: cleanedName,
+        code: (item.code || "").trim(),
+      });
     });
 
     historicalItemNames.forEach((name) => {
-      const normalizedName = (name || "").trim();
-      if (normalizedName) names.add(normalizedName);
+      const cleanedName = (name || "").trim();
+      if (!cleanedName) return;
+      const key = cleanedName.toLowerCase();
+      if (!byName.has(key)) byName.set(key, { name: cleanedName, code: "" });
     });
 
     localItemNameHistory.forEach((name) => {
-      const normalizedName = (name || "").trim();
-      if (normalizedName) names.add(normalizedName);
+      const cleanedName = (name || "").trim();
+      if (!cleanedName) return;
+      const key = cleanedName.toLowerCase();
+      if (!byName.has(key)) byName.set(key, { name: cleanedName, code: "" });
     });
 
-    return Array.from(names);
+    return Array.from(byName.values());
   }, [historicalItemNames, inventoryItemOptions, localItemNameHistory]);
 
   return (
@@ -943,23 +1091,50 @@ const Calculator = () => {
                     <Autocomplete
                       freeSolo
                       options={itemNameOptions}
-                      value={itemName}
                       inputValue={itemName}
-                      onInputChange={(_, value) => setItemName(value)}
+                      getOptionLabel={(option) =>
+                        typeof option === "string" ? option : option.name
+                      }
+                      filterOptions={(options, state) => {
+                        const term = normalizeValue(state.inputValue);
+                        if (!term) return options.slice(0, 100);
+                        return options.filter((option) => {
+                          const optionName = normalizeValue(option.name);
+                          const optionCode = normalizeValue(option.code);
+                          return optionName.includes(term) || optionCode.includes(term);
+                        });
+                      }}
+                      onInputChange={(_, value) => {
+                        setItemName(value);
+                        const codeMatch = findInventoryItemByCode(value);
+                        if (codeMatch) applyInventoryAutofill(codeMatch.name);
+                      }}
                       onChange={(_, value) => {
                         if (typeof value === "string") {
                           applyInventoryAutofill(value);
                           return;
                         }
-                        if (value) applyInventoryAutofill(value);
+                        if (value?.name) applyInventoryAutofill(value.name);
                       }}
+                      renderOption={(props, option) => (
+                        <li {...props}>
+                          {option.name}
+                          {option.code ? ` (${option.code})` : ""}
+                        </li>
+                      )}
                       renderInput={(params) => (
                         <TextField
                           {...params}
-                          label="Item Name"
+                          label="Item Name or Code"
                           fullWidth
                           inputRef={itemNameRef}
                           onKeyDown={(event) => {
+                            if (event.key === "Enter") {
+                              const codeMatch = findInventoryItemByCode(itemName);
+                              if (codeMatch) {
+                                applyInventoryAutofill(codeMatch.name);
+                              }
+                            }
                             handleAddMoreShortcut(event);
                             handleUnitShortcut(event);
                             handleKeyPress(event, itemPriceRef);
@@ -1159,9 +1334,22 @@ const Calculator = () => {
                   </Typography>
                 </Paper>
 
+                <Paper
+                  variant="outlined"
+                  sx={{
+                    position: "sticky",
+                    bottom: 10,
+                    zIndex: 5,
+                    p: 1.25,
+                    borderRadius: 2,
+                    borderColor: "rgba(148,163,184,0.26)",
+                    bgcolor: "rgba(255,255,255,0.94)",
+                    backdropFilter: "blur(8px)",
+                  }}
+                >
                 <Stack
                   direction={{ xs: "column", sm: "row", lg: "column" }}
-                  spacing={1.5}
+                  spacing={1}
                 >
                   <Button
                     variant="contained"
@@ -1192,7 +1380,17 @@ const Calculator = () => {
                   >
                     Save for Later
                   </Button>
+                  <Button
+                    variant="outlined"
+                    color="success"
+                    startIcon={<WhatsAppIcon />}
+                    onClick={sendWhatsAppFromBilling}
+                    disabled={!customerName || !customerPhone}
+                  >
+                    WhatsApp
+                  </Button>
                 </Stack>
+                </Paper>
               </Stack>
             </CardContent>
           </Card>

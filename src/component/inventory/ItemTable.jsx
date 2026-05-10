@@ -74,15 +74,16 @@ const ItemTable = ({
 
   return (
     <>
-      <TableContainer
-        component={Paper}
+      <Paper
         sx={{
           borderRadius: 3,
           border: "1px solid rgba(148, 163, 184, 0.2)",
           boxShadow: "0 12px 28px rgba(15, 23, 42, 0.06)",
+          overflow: "hidden",
         }}
       >
-        <Table size="small">
+        <TableContainer sx={{ maxHeight: 560 }}>
+        <Table size="small" stickyHeader>
           <TableHead>
             <TableRow>
               <TableCell>Item</TableCell>
@@ -147,7 +148,8 @@ const ItemTable = ({
             ))}
           </TableBody>
         </Table>
-      </TableContainer>
+        </TableContainer>
+      </Paper>
 
       <Menu anchorEl={menuAnchor} open={Boolean(menuAnchor)} onClose={closeMenu}>
         <MenuItem

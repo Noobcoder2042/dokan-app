@@ -7,6 +7,7 @@ import {
   Toolbar,
   Typography,
 } from "@mui/material";
+import { useEffect, useState } from "react";
 import ReceiptLongRoundedIcon from "@mui/icons-material/ReceiptLongRounded";
 import DashboardRoundedIcon from "@mui/icons-material/DashboardRounded";
 import StoreRoundedIcon from "@mui/icons-material/StoreRounded";
@@ -49,6 +50,20 @@ const Navbar = () => {
   const location = useLocation();
   const { shop } = useShop();
   const { logoutUser, profile } = useAuth();
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
 
   return (
     <AppBar
@@ -117,8 +132,8 @@ const Navbar = () => {
           })}
 
           <Chip
-            label="Mobile Ready"
-            color="secondary"
+            label={isOnline ? "Online Sync" : "Offline Mode"}
+            color={isOnline ? "secondary" : "warning"}
             variant="outlined"
             sx={{ display: { xs: "none", md: "inline-flex" } }}
           />

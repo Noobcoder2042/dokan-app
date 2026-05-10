@@ -14,6 +14,7 @@ import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
 import PrintRoundedIcon from "@mui/icons-material/PrintRounded";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
+import { buildThermalBillHtml } from "./calculator/thermalPrint";
 
 const downloadPdfBill = (bill) => {
   if (!bill) return;
@@ -76,78 +77,36 @@ const downloadPdfBill = (bill) => {
 const printPreviousBill = (bill) => {
   if (!bill) return;
 
-  const printWindow = window.open("", "_blank", "width=900,height=900");
+  const printWindow = window.open("", "_blank", "width=420,height=720");
   if (!printWindow) return;
 
-  const itemRows = (bill.items || [])
-    .map(
-      (item) => `
-        <tr>
-          <td>${item.name || "-"}</td>
-          <td>${item.quantity || 0} ${item.quantityUnit || "piece"}</td>
-          <td>${item.price || 0} ${item.priceUnit || "piece"}</td>
-          <td>${Number(item.totalPrice || 0).toFixed(2)}</td>
-        </tr>
-      `
-    )
-    .join("");
-
-  const extraRows = bill?.extraCharges
+  const extraChargeEntries = bill?.extraCharges
     ? [
         { label: "Colie", value: Number(bill.extraCharges.rickshaw || 0) },
         { label: "Bus", value: Number(bill.extraCharges.bus || 0) },
         { label: "Other", value: Number(bill.extraCharges.other || 0) },
       ]
         .filter((entry) => entry.value > 0)
-        .map(
-          (entry) => `
-            <tr>
-              <td>${entry.label} Cost</td>
-              <td>-</td>
-              <td>-</td>
-              <td>${entry.value.toFixed(2)}</td>
-            </tr>
-          `
-        )
-        .join("")
-    : "";
+    : [];
 
-  printWindow.document.write(`
-    <html>
-      <head>
-        <title>Print Bill</title>
-        <style>
-          body { font-family: Arial, sans-serif; color: #111827; padding: 16px; }
-          .meta { margin: 2px 0; }
-          table { width: 100%; border-collapse: collapse; margin-top: 12px; }
-          th, td { border-bottom: 1px solid #d1d5db; text-align: left; padding: 8px 6px; }
-          .total { margin-top: 12px; text-align: right; font-size: 20px; font-weight: 700; }
-        </style>
-      </head>
-      <body>
-        <h2>${bill.shopName || "Shop"} - Invoice</h2>
-        <div class="meta">Date: ${bill.date || "-"}</div>
-        <div class="meta">Customer: ${bill.name || "-"}</div>
-        <div class="meta">Phone: ${bill.phoneNumber || "-"}</div>
-        ${bill.address ? `<div class="meta">Address: ${bill.address}</div>` : ""}
-        <table>
-          <thead>
-            <tr>
-              <th>Item</th>
-              <th>Qty</th>
-              <th>Price</th>
-              <th>Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${itemRows}
-            ${extraRows}
-          </tbody>
-        </table>
-        <div class="total">${Math.round(Number(bill.totalAmount || 0))}</div>
-      </body>
-    </html>
-  `);
+  const thermalHtml = buildThermalBillHtml({
+    heading: "Duplicate Copy",
+    printerWidth: "80mm",
+    billDate: bill.date || "",
+    billTime: bill.time || "",
+    customerName: bill.name || "",
+    customerPhone: bill.phoneNumber || "",
+    customerAddress: bill.address || "",
+    items: bill.items || [],
+    extraChargeEntries,
+    subtotal:
+      bill.subtotalAmount ||
+      (bill.items || []).reduce((sum, item) => sum + Number(item.totalPrice || 0), 0),
+    extraTotal: bill?.extraCharges?.total || 0,
+    grandTotal: bill.totalAmount || 0,
+  });
+
+  printWindow.document.write(thermalHtml);
 
   printWindow.document.close();
   printWindow.focus();

@@ -27,6 +27,7 @@ import PrintIcon from "@mui/icons-material/Print";
 import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
+import { buildThermalBillHtml } from "./calculator/thermalPrint";
 import BillDialog from "./BillDialog";
 import BillsTable from "./BillsTable";
 import CustomerInfoTable from "./CustomerInfoTable";
@@ -122,6 +123,24 @@ const Dashboard = () => {
 
   const openToast = (message, severity = "success") => {
     setToast({ open: true, message, severity });
+  };
+
+  const handleSendBillWhatsApp = (bill) => {
+    const rawPhone = (bill?.phoneNumber || "").toString().trim();
+    const cleanedDigits = rawPhone.replace(/[^\d]/g, "");
+
+    if (!cleanedDigits) {
+      openToast("Customer phone number is missing", "error");
+      return;
+    }
+
+    const phoneForWhatsApp =
+      cleanedDigits.length === 10 ? `91${cleanedDigits}` : cleanedDigits;
+    const customerName = bill?.name || "Customer";
+    const message = `Thank you ${customerName} for shopping with us 🙏\nVisit again 😊`;
+
+    const whatsappUrl = `https://wa.me/${phoneForWhatsApp}?text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, "_blank", "noopener,noreferrer");
   };
 
   useEffect(() => {
@@ -357,7 +376,7 @@ const Dashboard = () => {
       return;
     }
 
-    const printWindow = window.open("", "_blank", "width=900,height=900");
+    const printWindow = window.open("", "_blank", "width=420,height=760");
     if (!printWindow) {
       openToast("Allow popups to print bills", "error");
       return;
@@ -365,40 +384,37 @@ const Dashboard = () => {
 
     const sections = filteredByDateBills
       .map((bill, index) => {
-        const itemsRows = (bill.items || [])
-          .map(
-            (item) => `
-              <tr>
-                <td>${item.name || "-"}</td>
-                <td>${item.quantity || 0} ${item.quantityUnit || "piece"}</td>
-                <td>${item.price || 0} ${item.priceUnit || "piece"}</td>
-                <td>Rs. ${Number(item.totalPrice || 0).toFixed(2)}</td>
-              </tr>
-            `
-          )
-          .join("");
+        const extraChargeEntries = bill?.extraCharges
+          ? [
+              { label: "Colie", value: Number(bill.extraCharges.rickshaw || 0) },
+              { label: "Bus", value: Number(bill.extraCharges.bus || 0) },
+              { label: "Other", value: Number(bill.extraCharges.other || 0) },
+            ].filter((entry) => entry.value > 0)
+          : [];
+
+        const thermalHtml = buildThermalBillHtml({
+          heading: "Duplicate Copy",
+          printerWidth: "80mm",
+          billDate: bill.date || "",
+          billTime: bill.time || "",
+          customerName: bill.name || "",
+          customerPhone: bill.phoneNumber || "",
+          customerAddress: bill.address || "",
+          items: bill.items || [],
+          extraChargeEntries,
+          subtotal:
+            bill?.subtotalAmount ||
+            (bill.items || []).reduce((sum, item) => sum + Number(item.totalPrice || 0), 0),
+          extraTotal: bill?.extraCharges?.total || 0,
+          grandTotal: bill.totalAmount || 0,
+        });
+
+        const bodyMatch = thermalHtml.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+        const innerBody = bodyMatch ? bodyMatch[1] : thermalHtml;
 
         return `
           <section class="bill ${index < filteredByDateBills.length - 1 ? "page-break" : ""}">
-            <h2>Invoice</h2>
-            <div class="meta">Date: ${bill.date || "-"}</div>
-            <div class="meta">Customer: ${bill.name || "-"}</div>
-            <div class="meta">Phone: ${bill.phoneNumber || "-"}</div>
-            ${bill.address ? `<div class="meta">Address: ${bill.address}</div>` : ""}
-            <table>
-              <thead>
-                <tr>
-                  <th>Item</th>
-                  <th>Qty</th>
-                  <th>Price</th>
-                  <th>Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${itemsRows}
-              </tbody>
-            </table>
-            <div class="total">Total: Rs. ${Number(bill.totalAmount || 0).toFixed(2)}</div>
+            ${innerBody}
           </section>
         `;
       })
@@ -409,13 +425,9 @@ const Dashboard = () => {
         <head>
           <title>Print Bills</title>
           <style>
-            body { font-family: Arial, sans-serif; padding: 16px; color: #111827; }
-            h2 { margin: 0 0 8px; }
-            .meta { font-size: 14px; margin: 2px 0; }
-            table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-            th, td { border-bottom: 1px solid #d1d5db; padding: 8px 4px; font-size: 14px; text-align: left; }
-            .total { margin-top: 10px; font-size: 16px; font-weight: 700; text-align: right; }
-            .bill { margin-bottom: 18px; }
+            @page { size: 80mm auto; margin: 0; }
+            body { margin: 0; padding: 4px; font-family: Arial, sans-serif; color: #000; }
+            .bill { width: 100%; max-width: 72mm; margin: 0 auto 8px auto; }
             .page-break { page-break-after: always; }
           </style>
         </head>
@@ -744,6 +756,7 @@ const Dashboard = () => {
           onPreview={setSelectedBill}
           onEdit={(bill) => setEditingBill({ ...bill })}
           onDelete={(bill) => openConfirm("deleteBill", bill)}
+          onWhatsApp={handleSendBillWhatsApp}
         />
       ) : (
         <CustomerInfoTable

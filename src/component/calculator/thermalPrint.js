@@ -1,5 +1,6 @@
 export const buildThermalBillHtml = ({
   printerWidth = "80mm",
+  heading = "",
   billDate = "",
   billTime = "",
   customerName = "",
@@ -79,6 +80,14 @@ export const buildThermalBillHtml = ({
             letter-spacing: 1px;
           }
 
+          .copy-heading {
+            text-align: center;
+            font-size: 13px;
+            font-weight: 700;
+            margin-bottom: 4px;
+            letter-spacing: 0.4px;
+          }
+
           .meta-row {
             display: flex;
             justify-content: space-between;
@@ -150,6 +159,7 @@ export const buildThermalBillHtml = ({
       </head>
 
       <body>
+        ${heading ? `<div class="copy-heading">${heading}</div>` : ""}
 
         <div class="meta-row">
           <div class="meta-left">

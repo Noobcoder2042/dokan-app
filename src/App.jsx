@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
+import { useEffect, useState } from "react";
 import {
   Box,
   CircularProgress,
@@ -15,6 +16,7 @@ import ErrorBoundary from "./component/ErrorBoundary";
 import Inventory from "./component/Inventory";
 import Navbar from "./component/Navbar";
 import ShopSettings from "./component/ShopSettings";
+import SplashScreen from "./component/SplashScreen";
 import { useAuth } from "./context/AuthContext";
 
 const theme = createTheme({
@@ -100,6 +102,21 @@ const theme = createTheme({
 
 const App = () => {
   const { authLoading, user } = useAuth();
+  const [showSplash, setShowSplash] = useState(true);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setShowSplash(false), 1200);
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  if (showSplash) {
+    return (
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <SplashScreen />
+      </ThemeProvider>
+    );
+  }
 
   if (authLoading) {
     return (
