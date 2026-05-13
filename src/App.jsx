@@ -17,6 +17,7 @@ import Inventory from "./component/Inventory";
 import Navbar from "./component/Navbar";
 import ShopSettings from "./component/ShopSettings";
 import SplashScreen from "./component/SplashScreen";
+import UserGuide from "./component/UserGuide";
 import { useAuth } from "./context/AuthContext";
 
 const theme = createTheme({
@@ -87,6 +88,33 @@ const theme = createTheme({
         root: {
           borderRadius: 10,
           backgroundColor: "#ffffff",
+        },
+      },
+    },
+    MuiInputBase: {
+      defaultProps: {
+        inputProps: {
+          onWheel: (e) => e.target.blur(),
+          onKeyDown: (e) => {
+            if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+              e.preventDefault();
+            }
+          },
+        },
+      },
+      styleOverrides: {
+        input: {
+          '&[type="number"]': {
+            MozAppearance: "textfield",
+          },
+          '&[type="number"]::-webkit-outer-spin-button': {
+            WebkitAppearance: "none",
+            margin: 0,
+          },
+          '&[type="number"]::-webkit-inner-spin-button': {
+            WebkitAppearance: "none",
+            margin: 0,
+          },
         },
       },
     },
@@ -165,6 +193,7 @@ const App = () => {
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/inventory" element={<Inventory />} />
                 <Route path="/analysis" element={<Analysis />} />
+                <Route path="/guide" element={<UserGuide />} />
                 <Route path="/settings" element={<ShopSettings />} />
                 <Route path="*" element={<Dashboard />} />
               </Routes>

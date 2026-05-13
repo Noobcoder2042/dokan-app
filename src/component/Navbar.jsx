@@ -13,6 +13,7 @@ import DashboardRoundedIcon from "@mui/icons-material/DashboardRounded";
 import StoreRoundedIcon from "@mui/icons-material/StoreRounded";
 import SettingsRoundedIcon from "@mui/icons-material/SettingsRounded";
 import InsightsRoundedIcon from "@mui/icons-material/InsightsRounded";
+import HelpOutlineRoundedIcon from "@mui/icons-material/HelpOutlineRounded";
 import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
 import { Link, useLocation } from "react-router-dom";
 import { useShop } from "../context/ShopContext";
@@ -43,6 +44,11 @@ const navItems = [
     label: "Settings",
     to: "/settings",
     icon: <SettingsRoundedIcon fontSize="small" />,
+  },
+  {
+    label: "Guide",
+    to: "/guide",
+    icon: <HelpOutlineRoundedIcon fontSize="small" />,
   },
 ];
 
@@ -110,8 +116,8 @@ const Navbar = () => {
         </Stack>
 
         <Stack direction="row" spacing={1} alignItems="center">
-          {navItems.map((item) => {
-            const isActive = location.pathname === item.to;
+        {navItems.map((item) => {
+          const isActive = location.pathname === item.to;
 
             return (
               <Button

@@ -1,0 +1,172 @@
+import {
+  Card,
+  CardContent,
+  Grid,
+  Paper,
+  Stack,
+  Typography,
+} from "@mui/material";
+import StoreRoundedIcon from "@mui/icons-material/StoreRounded";
+import ReceiptLongRoundedIcon from "@mui/icons-material/ReceiptLongRounded";
+import Inventory2RoundedIcon from "@mui/icons-material/Inventory2Rounded";
+import InsightsRoundedIcon from "@mui/icons-material/InsightsRounded";
+import PrintRoundedIcon from "@mui/icons-material/PrintRounded";
+import BackupRoundedIcon from "@mui/icons-material/BackupRounded";
+import WifiOffRoundedIcon from "@mui/icons-material/WifiOffRounded";
+import TaskAltRoundedIcon from "@mui/icons-material/TaskAltRounded";
+
+const guideCards = [
+  {
+    title: "First Setup",
+    icon: <StoreRoundedIcon />,
+    steps: [
+      "Open Settings and add your shop name, phone number, and address.",
+      "Save settings once so bills and backups use the right shop details.",
+    ],
+  },
+  {
+    title: "Add Inventory",
+    icon: <Inventory2RoundedIcon />,
+    steps: [
+      "Go to Inventory and create categories, subcategories, and items.",
+      "Add item code, price, stock quantity, and low-stock limit for faster billing.",
+    ],
+  },
+  {
+    title: "Make A Bill",
+    icon: <ReceiptLongRoundedIcon />,
+    steps: [
+      "Open Billing, select or type customer details, then add items by name or code.",
+      "Check every item, add transport charges if needed, then generate or print the bill.",
+    ],
+  },
+  {
+    title: "Print And WhatsApp",
+    icon: <PrintRoundedIcon />,
+    steps: [
+      "Use Thermal Print for 80mm receipt printers.",
+      "Use WhatsApp to send a quick thank-you message to the customer phone number.",
+    ],
+  },
+  {
+    title: "Check Sales",
+    icon: <InsightsRoundedIcon />,
+    steps: [
+      "Use Dashboard to search bills and customer records.",
+      "Use Analysis to see total sales, average bill value, top items, and best customers.",
+    ],
+  },
+  {
+    title: "Backup And Restore",
+    icon: <BackupRoundedIcon />,
+    steps: [
+      "Use Settings Data Actions before deleting old bills, customers, or inventory.",
+      "Keep the downloaded ZIP safe. Import the JSON file if you need to restore data later.",
+    ],
+  },
+];
+
+const UserGuide = () => (
+  <Stack spacing={3}>
+    <Paper
+      sx={{
+        p: { xs: 2.5, md: 3.5 },
+        borderRadius: 6,
+        background:
+          "linear-gradient(135deg, rgba(255,255,255,0.96) 0%, rgba(239,246,255,0.98) 52%, rgba(236,253,245,0.96) 100%)",
+        border: "1px solid rgba(148, 163, 184, 0.12)",
+      }}
+    >
+      <Stack
+        direction={{ xs: "column", sm: "row" }}
+        justifyContent="space-between"
+        spacing={1.5}
+      >
+        <div>
+          <Typography variant="h4">User Guide</Typography>
+          <Typography variant="body1" color="text.secondary" sx={{ mt: 1 }}>
+            A quick tour for running daily shop work from setup to backup.
+          </Typography>
+        </div>
+        <Stack
+          direction="row"
+          spacing={1}
+          alignItems="center"
+          sx={{
+            px: 1.5,
+            py: 1,
+            borderRadius: 2,
+            bgcolor: "rgba(236, 253, 245, 0.8)",
+            color: "success.dark",
+            width: "fit-content",
+            height: "fit-content",
+          }}
+        >
+          <TaskAltRoundedIcon fontSize="small" />
+          <Typography variant="body2" fontWeight={700}>
+            Start here
+          </Typography>
+        </Stack>
+      </Stack>
+    </Paper>
+
+    <Grid container spacing={2}>
+      {guideCards.map((entry) => (
+        <Grid item xs={12} md={6} lg={4} key={entry.title}>
+          <Card sx={{ height: "100%" }}>
+            <CardContent sx={{ p: 2.5 }}>
+              <Stack spacing={1.5}>
+                <Stack direction="row" spacing={1.25} alignItems="center">
+                  <Stack
+                    sx={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: 2,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "primary.main",
+                      bgcolor: "rgba(219, 234, 254, 0.9)",
+                    }}
+                  >
+                    {entry.icon}
+                  </Stack>
+                  <Typography variant="h6">{entry.title}</Typography>
+                </Stack>
+                <Stack spacing={0.8}>
+                  {entry.steps.map((step, index) => (
+                    <Typography key={step} variant="body2" color="text.secondary">
+                      {index + 1}. {step}
+                    </Typography>
+                  ))}
+                </Stack>
+              </Stack>
+            </CardContent>
+          </Card>
+        </Grid>
+      ))}
+    </Grid>
+
+    <Paper
+      variant="outlined"
+      sx={{
+        p: 2.5,
+        borderRadius: 3,
+        borderColor: "rgba(245, 158, 11, 0.28)",
+        bgcolor: "rgba(255, 251, 235, 0.75)",
+      }}
+    >
+      <Stack direction="row" spacing={1.25} alignItems="flex-start">
+        <WifiOffRoundedIcon color="warning" />
+        <div>
+          <Typography fontWeight={800}>Offline Tip</Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.4 }}>
+            If internet drops during billing, print work can continue. Keep the app open
+            and reconnect later so pending bills can sync.
+          </Typography>
+        </div>
+      </Stack>
+    </Paper>
+  </Stack>
+);
+
+export default UserGuide;
