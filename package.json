@@ -16,6 +16,7 @@
     "@mui/material": "^5.16.6",
     "file-saver": "^2.0.5",
     "firebase": "^10.12.5",
+    "fuse.js": "^7.3.0",
     "jspdf": "^2.5.1",
     "jspdf-autotable": "^3.8.2",
     "jszip": "^3.10.1",

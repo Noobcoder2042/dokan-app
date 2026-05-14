@@ -158,7 +158,7 @@ const BillDialog = ({ bill, onClose }) => {
             <Divider />
 
             <Stack spacing={1.5}>
-              {bill.items.map((item, index) => (
+              {(bill.items || []).map((item, index) => (
                 <Grid container key={index} spacing={1}>
                   <Grid item xs={7}>
                     <Typography sx={{ fontWeight: 600 }}>{item.name}</Typography>

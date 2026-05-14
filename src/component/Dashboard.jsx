@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import {
   Alert,
   Autocomplete,
@@ -14,6 +14,7 @@ import {
   MenuItem,
   Paper,
   Snackbar,
+  Skeleton,
   Stack,
   Tab,
   Tabs,
@@ -25,8 +26,10 @@ import VisibilityOffRoundedIcon from "@mui/icons-material/VisibilityOffRounded";
 import VisibilityRoundedIcon from "@mui/icons-material/VisibilityRounded";
 import PrintIcon from "@mui/icons-material/Print";
 import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
+import FileDownloadRoundedIcon from "@mui/icons-material/FileDownloadRounded";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
+import Fuse from "fuse.js";
 import { buildThermalBillHtml } from "./calculator/thermalPrint";
 import BillDialog from "./BillDialog";
 import BillsTable from "./BillsTable";
@@ -96,7 +99,9 @@ const Dashboard = () => {
   const [search, setSearch] = useState("");
   const [selectedBill, setSelectedBill] = useState(null);
   const [activeTab, setActiveTab] = useState("bills");
+  const [customerTabLoading, setCustomerTabLoading] = useState(false);
   const [dateFilter, setDateFilter] = useState("today");
+  const [customerRecentFilter, setCustomerRecentFilter] = useState("all");
   const [customStartDate, setCustomStartDate] = useState("");
   const [customEndDate, setCustomEndDate] = useState("");
   const dashboardStatsStorageKey = `dashboard-show-stats-${user?.uid || "guest"}`;
@@ -124,6 +129,8 @@ const Dashboard = () => {
   const openToast = (message, severity = "success") => {
     setToast({ open: true, message, severity });
   };
+
+  const cleanPhone = (value) => (value || "").toString().replace(/[^\d]/g, "");
 
   const handleSendBillWhatsApp = (bill) => {
     const rawPhone = (bill?.phoneNumber || "").toString().trim();
@@ -191,7 +198,15 @@ const Dashboard = () => {
     setShowStats(savedValue ? JSON.parse(savedValue) : true);
   }, [dashboardStatsStorageKey]);
 
+  useEffect(() => {
+    if (activeTab !== "customers") return undefined;
+    setCustomerTabLoading(true);
+    const timer = setTimeout(() => setCustomerTabLoading(false), 450);
+    return () => clearTimeout(timer);
+  }, [activeTab]);
+
   const normalizedSearch = search.trim();
+  const deferredSearch = useDeferredValue(normalizedSearch);
   const numericSearch = normalizedSearch.replace(/[^\d+]/g, "");
   const isPhoneSearch =
     activeTab === "bills" &&
@@ -232,7 +247,7 @@ const Dashboard = () => {
   }, [bills, customEndDate, customStartDate, dateFilter]);
 
   const filteredBills = useMemo(() => {
-    if (!normalizedSearch) return filteredByDateBills;
+    if (!deferredSearch) return filteredByDateBills;
 
     if (isPhoneSearch) {
       return filteredByDateBills.filter((bill) =>
@@ -240,10 +255,18 @@ const Dashboard = () => {
       );
     }
 
-    return filteredByDateBills.filter((bill) =>
-      bill.name?.toLowerCase().includes(normalizedSearch.toLowerCase())
-    );
-  }, [filteredByDateBills, isPhoneSearch, normalizedSearch, numericSearch]);
+    const fuse = new Fuse(filteredByDateBills, {
+      includeScore: true,
+      threshold: 0.35,
+      ignoreLocation: true,
+      keys: [
+        { name: "name", weight: 0.65 },
+        { name: "phoneNumber", weight: 0.25 },
+        { name: "address", weight: 0.1 },
+      ],
+    });
+    return fuse.search(deferredSearch).map((result) => result.item);
+  }, [deferredSearch, filteredByDateBills, isPhoneSearch, numericSearch]);
 
   const mergedCustomers = useMemo(() => {
     const fromCustomers = new Map();
@@ -269,20 +292,88 @@ const Dashboard = () => {
     return Array.from(fromCustomers.values());
   }, [bills, customers]);
 
-  const filteredCustomers = useMemo(() => {
-    if (!normalizedSearch) return mergedCustomers;
+  const customersWithStats = useMemo(() => {
+    const statsByKey = new Map();
 
-    return mergedCustomers.filter(
-      (customer) =>
-        customer.name?.toLowerCase().includes(normalizedSearch.toLowerCase()) ||
-        customer.phoneNumber?.includes(normalizedSearch) ||
-        customer.address?.toLowerCase().includes(normalizedSearch.toLowerCase())
-    );
-  }, [mergedCustomers, normalizedSearch]);
+    bills.forEach((bill) => {
+      const phone = cleanPhone(bill.phoneNumber);
+      const name = normalizeText(bill.name);
+      const key = phone ? `phone:${phone}` : `name:${name}`;
+      const current = statsByKey.get(key) || {
+        totalBills: 0,
+        totalSpend: 0,
+        lastBillTs: 0,
+      };
+      current.totalBills += 1;
+      current.totalSpend += Number(bill.totalAmount || 0);
+      current.lastBillTs = Math.max(
+        current.lastBillTs,
+        parseDateValue(bill.createdAt || bill.date),
+      );
+      statsByKey.set(key, current);
+    });
+
+    return mergedCustomers.map((customer) => {
+      const key = cleanPhone(customer.phoneNumber)
+        ? `phone:${cleanPhone(customer.phoneNumber)}`
+        : `name:${normalizeText(customer.name)}`;
+      const stats = statsByKey.get(key) || {
+        totalBills: 0,
+        totalSpend: 0,
+        lastBillTs: 0,
+      };
+
+      return {
+        ...customer,
+        totalBills: stats.totalBills,
+        totalSpend: stats.totalSpend,
+        lastBillTs: stats.lastBillTs,
+        lastBillDate: stats.lastBillTs
+          ? new Date(stats.lastBillTs).toLocaleDateString("en-IN")
+          : "-",
+      };
+    });
+  }, [bills, mergedCustomers]);
+
+  const filteredCustomers = useMemo(() => {
+    const byRecency =
+      customerRecentFilter === "all"
+        ? customersWithStats
+        : customersWithStats.filter((customer) => {
+            if (!customer.lastBillTs) return false;
+            const days = Number(customerRecentFilter);
+            const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
+            return customer.lastBillTs >= cutoff;
+          });
+
+    if (!deferredSearch) return byRecency;
+
+    const deferredPhoneSearch = deferredSearch.replace(/[^\d]/g, "");
+    const isCustomerPhoneSearch =
+      deferredPhoneSearch.length >= 3 && /^\d+$/.test(deferredPhoneSearch);
+    if (isCustomerPhoneSearch) {
+      return byRecency.filter((customer) =>
+        cleanPhone(customer.phoneNumber).includes(deferredPhoneSearch),
+      );
+    }
+
+    const fuse = new Fuse(byRecency, {
+      includeScore: true,
+      threshold: 0.35,
+      ignoreLocation: true,
+      minMatchCharLength: 2,
+      keys: [
+        { name: "name", weight: 0.55 },
+        { name: "phoneNumber", weight: 0.35 },
+        { name: "address", weight: 0.1 },
+      ],
+    });
+    return fuse.search(deferredSearch, { limit: 200 }).map((result) => result.item);
+  }, [customerRecentFilter, customersWithStats, deferredSearch]);
 
   const smartCustomerOptions = useMemo(() => {
-    if (activeTab !== "bills") return mergedCustomers;
-    if (!normalizedSearch) return mergedCustomers;
+    if (activeTab !== "bills") return mergedCustomers.slice(0, 120);
+    if (!deferredSearch) return mergedCustomers.slice(0, 120);
 
     if (isPhoneSearch) {
       return mergedCustomers.filter((customer) =>
@@ -290,10 +381,33 @@ const Dashboard = () => {
       );
     }
 
-    return mergedCustomers.filter((customer) =>
-      customer.name?.toLowerCase().includes(normalizedSearch.toLowerCase())
-    );
-  }, [activeTab, mergedCustomers, isPhoneSearch, normalizedSearch, numericSearch]);
+    const fuse = new Fuse(mergedCustomers, {
+      includeScore: true,
+      threshold: 0.35,
+      ignoreLocation: true,
+      keys: [{ name: "name", weight: 1 }],
+    });
+    return fuse.search(deferredSearch).map((result) => result.item).slice(0, 120);
+  }, [activeTab, deferredSearch, mergedCustomers, isPhoneSearch, numericSearch]);
+
+  const customerTabTypoSuggestions = useMemo(() => {
+    if (activeTab !== "customers") return [];
+    if (!normalizedSearch || normalizedSearch.length < 3) return [];
+    if (!filteredCustomers.length) return [];
+
+    const lowerQuery = normalizedSearch.toLowerCase();
+    const hasDirectNameMatch = filteredCustomers.some((customer) => {
+      const name = (customer.name || "").toLowerCase();
+      return name === lowerQuery || name.startsWith(lowerQuery);
+    });
+    if (hasDirectNameMatch) return [];
+
+    return filteredCustomers
+      .map((customer) => customer.name)
+      .filter(Boolean)
+      .filter((name, index, list) => list.indexOf(name) === index)
+      .slice(0, 3);
+  }, [activeTab, filteredCustomers, normalizedSearch]);
 
   const handleDownloadDateRangeBills = () => {
     if (!filteredByDateBills.length) {
@@ -409,12 +523,14 @@ const Dashboard = () => {
           grandTotal: bill.totalAmount || 0,
         });
 
-        const bodyMatch = thermalHtml.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
-        const innerBody = bodyMatch ? bodyMatch[1] : thermalHtml;
+        const thermalBody = thermalHtml
+          .replace(/<html[^>]*>/i, "")
+          .replace(/<\/html>/i, "")
+          .replace(/<head>[\s\S]*?<\/head>/i, "");
 
         return `
           <section class="bill ${index < filteredByDateBills.length - 1 ? "page-break" : ""}">
-            ${innerBody}
+            ${thermalBody}
           </section>
         `;
       })
@@ -424,9 +540,63 @@ const Dashboard = () => {
       <html>
         <head>
           <title>Print Bills</title>
+          <meta charset="UTF-8" />
           <style>
             @page { size: 80mm auto; margin: 0; }
-            body { margin: 0; padding: 4px; font-family: Arial, sans-serif; color: #000; }
+            body {
+              font-family: Arial, sans-serif;
+              width: 100%;
+              max-width: 72mm;
+              margin: 0 auto;
+              padding: 1mm;
+              color: #000;
+              font-size: 11px;
+            }
+            .copy-heading {
+              text-align: center;
+              font-size: 13px;
+              font-weight: 700;
+              margin-bottom: 4px;
+              letter-spacing: 0.4px;
+            }
+            .meta-row {
+              display: flex;
+              justify-content: space-between;
+              font-size: 13px;
+              margin: 2px 0;
+              margin-bottom: 6px;
+            }
+            .meta-left { text-align: left; }
+            .meta-right { text-align: right; }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              table-layout: fixed;
+              margin-top: 4px;
+            }
+            th, td {
+              border-bottom: 1px dashed #000;
+              padding: 2px 0;
+              vertical-align: top;
+            }
+            th { text-align: left; font-weight: bold; }
+            th:nth-child(1), td:nth-child(1) { width: 8%; }
+            th:nth-child(2), td:nth-child(2) { width: 36%; }
+            th:nth-child(3), td:nth-child(3) { width: 18%; }
+            th:nth-child(4), td:nth-child(4) { width: 14%; }
+            th:nth-child(5), td:nth-child(5) { width: 24%; }
+            .right { text-align: right; }
+            .summary { margin-top: 4px; }
+            .summary div { font-size: 11px; margin: 1px 0; }
+            .total {
+              font-weight: 900;
+              text-align: center;
+              font-size: 18px;
+              margin-top: 6px;
+              border-top: 2px solid #000;
+              padding-top: 5px;
+            }
+            .footer { text-align: center; margin-top: 6px; font-size: 10px; }
             .bill { width: 100%; max-width: 72mm; margin: 0 auto 8px auto; }
             .page-break { page-break-after: always; }
           </style>
@@ -485,6 +655,108 @@ const Dashboard = () => {
     } finally {
       setActionLoading(false);
     }
+  };
+
+  const handleCallCustomer = (customer) => {
+    const phone = cleanPhone(customer.phoneNumber);
+    if (!phone) {
+      openToast("Customer phone number is missing", "error");
+      return;
+    }
+    window.open(`tel:${phone}`, "_self");
+  };
+
+  const handleCustomerWhatsApp = (customer) => {
+    const phone = cleanPhone(customer.phoneNumber);
+    if (!phone) {
+      openToast("Customer phone number is missing", "error");
+      return;
+    }
+    const phoneForWhatsApp = phone.length === 10 ? `91${phone}` : phone;
+    const message = `Thank you ${customer.name || "Customer"} for shopping with us 🙏\nVisit again 😊`;
+    window.open(
+      `https://wa.me/${phoneForWhatsApp}?text=${encodeURIComponent(message)}`,
+      "_blank",
+      "noopener,noreferrer",
+    );
+  };
+
+  const handleCopyPhone = async (customer) => {
+    const phone = customer.phoneNumber || "";
+    if (!phone) {
+      openToast("No phone number to copy", "error");
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(phone);
+      openToast("Phone number copied");
+    } catch {
+      openToast("Could not copy phone number", "error");
+    }
+  };
+
+  const handleExportCustomersCsv = () => {
+    if (!filteredCustomers.length) {
+      openToast("No customers found to export", "warning");
+      return;
+    }
+
+    const rows = [
+      ["Name", "Phone", "Address", "Total Bills", "Total Spend", "Last Bill Date"],
+      ...filteredCustomers.map((customer) => [
+        customer.name || "",
+        customer.phoneNumber || "",
+        customer.address || "",
+        String(customer.totalBills || 0),
+        Number(customer.totalSpend || 0).toFixed(2),
+        customer.lastBillDate || "",
+      ]),
+    ];
+    const csvText = rows
+      .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
+      .join("\n");
+    const blob = new Blob([csvText], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `customers-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    openToast("Customer CSV exported");
+  };
+
+  const handleExportCustomersPdf = () => {
+    if (!filteredCustomers.length) {
+      openToast("No customers found to export", "warning");
+      return;
+    }
+    const doc = new jsPDF("p", "mm", "a4");
+    doc.setFontSize(15);
+    doc.text("Customer List", 14, 14);
+    doc.setFontSize(10);
+    doc.text(`Date: ${new Date().toLocaleDateString("en-IN")}`, 14, 20);
+
+    const body = filteredCustomers.map((customer, index) => [
+      String(index + 1),
+      customer.name || "-",
+      customer.phoneNumber || "-",
+      customer.address || "-",
+      String(customer.totalBills || 0),
+      `Rs. ${Number(customer.totalSpend || 0).toFixed(2)}`,
+      customer.lastBillDate || "-",
+    ]);
+
+    doc.autoTable({
+      head: [["No.", "Name", "Phone", "Address", "Bills", "Spend", "Last Bill"]],
+      body,
+      startY: 26,
+      styles: { fontSize: 8.5 },
+      headStyles: { fillColor: [29, 78, 216] },
+    });
+    doc.save(`customers-${new Date().toISOString().slice(0, 10)}.pdf`);
+    openToast("Customer PDF exported");
   };
 
   const handleDeleteDuplicateCustomers = async () => {
@@ -689,54 +961,112 @@ const Dashboard = () => {
               </Stack>
             ) : null}
 
-            <Autocomplete
-              freeSolo
-              fullWidth
-              options={smartCustomerOptions}
-              inputValue={search}
-              getOptionLabel={(option) =>
-                typeof option === "string"
-                  ? option
-                  : isPhoneSearch
-                    ? option.phoneNumber || option.name || ""
-                    : option.name || option.phoneNumber || ""
-              }
-              onInputChange={(_, value) => setSearch(value)}
-              onChange={(_, value) => {
-                if (typeof value === "string") {
-                  setSearch(value);
-                  return;
+            {activeTab === "bills" ? (
+              <Autocomplete
+                freeSolo
+                fullWidth
+                options={smartCustomerOptions}
+                inputValue={search}
+                getOptionLabel={(option) =>
+                  typeof option === "string"
+                    ? option
+                    : isPhoneSearch
+                      ? option.phoneNumber || option.name || ""
+                      : option.name || option.phoneNumber || ""
                 }
-
-                if (value) {
-                  setSearch(
-                    isPhoneSearch
-                      ? value.phoneNumber || value.name || ""
-                      : value.name || value.phoneNumber || ""
-                  );
-                }
-              }}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  label={
-                    activeTab === "bills"
-                      ? "Search by customer or phone"
-                      : "Search customer, mobile or address"
+                onInputChange={(_, value) => setSearch(value)}
+                onChange={(_, value) => {
+                  if (typeof value === "string") {
+                    setSearch(value);
+                    return;
                   }
+
+                  if (value) {
+                    setSearch(
+                      isPhoneSearch
+                        ? value.phoneNumber || value.name || ""
+                        : value.name || value.phoneNumber || ""
+                    );
+                  }
+                }}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Search by customer or phone"
+                  />
+                )}
+              />
+            ) : (
+              <Stack spacing={1}>
+                <TextField
+                  fullWidth
+                  label="Search customer, mobile or address"
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
                 />
-              )}
-            />
+                {customerTabTypoSuggestions.length ? (
+                  <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap", rowGap: 1 }}>
+                    <Typography variant="caption" color="text.secondary" sx={{ pt: 0.5 }}>
+                      Did you mean:
+                    </Typography>
+                    {customerTabTypoSuggestions.map((name) => (
+                      <Button
+                        key={`cust-typo-${name}`}
+                        size="small"
+                        variant="outlined"
+                        onClick={() => setSearch(name)}
+                      >
+                        {name}
+                      </Button>
+                    ))}
+                  </Stack>
+                ) : null}
+              </Stack>
+            )}
 
             {activeTab === "customers" ? (
-              <Stack direction="row" justifyContent="flex-end">
+              <Stack
+                direction={{ xs: "column", md: "row" }}
+                justifyContent="space-between"
+                spacing={1}
+              >
+                <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
+                  <TextField
+                    select
+                    size="small"
+                    label="Recent Filter"
+                    value={customerRecentFilter}
+                    onChange={(event) => setCustomerRecentFilter(event.target.value)}
+                    sx={{ minWidth: 180 }}
+                  >
+                    <MenuItem value="all">All Customers</MenuItem>
+                    <MenuItem value="30">Last 30 Days</MenuItem>
+                    <MenuItem value="90">Last 90 Days</MenuItem>
+                  </TextField>
+                  <Button
+                    variant="outlined"
+                    startIcon={<FileDownloadRoundedIcon />}
+                    onClick={handleExportCustomersCsv}
+                    disabled={!filteredCustomers.length}
+                  >
+                    Export CSV
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    startIcon={<DownloadRoundedIcon />}
+                    onClick={handleExportCustomersPdf}
+                    disabled={!filteredCustomers.length}
+                  >
+                    Export PDF
+                  </Button>
+                </Stack>
                 <Button
                   variant="outlined"
                   color="warning"
                   onClick={handleDeleteDuplicateCustomers}
                   disabled={actionLoading || !customers.length}
                 >
-                  Delete Duplicate Customers
+                  Merge Duplicate Customers
                 </Button>
               </Stack>
             ) : null}
@@ -749,6 +1079,19 @@ const Dashboard = () => {
       {loading ? (
         <Paper sx={{ p: 5, textAlign: "center" }}>
           <CircularProgress />
+        </Paper>
+      ) : activeTab === "customers" && customerTabLoading ? (
+        <Paper sx={{ p: 2.5 }}>
+          <Stack spacing={1.5}>
+            {Array.from({ length: 6 }).map((_, index) => (
+              <Box key={`customer-skeleton-${index}`} sx={{ display: "grid", gap: 0.75 }}>
+                <Skeleton variant="rectangular" height={16} width="28%" />
+                <Skeleton variant="rectangular" height={12} width="22%" />
+                <Skeleton variant="rectangular" height={12} width="34%" />
+                <Skeleton variant="rectangular" height={1} width="100%" />
+              </Box>
+            ))}
+          </Stack>
         </Paper>
       ) : activeTab === "bills" ? (
         <BillsTable
@@ -764,6 +1107,9 @@ const Dashboard = () => {
           onView={setViewingCustomer}
           onEdit={(customer) => setEditingCustomer({ ...customer })}
           onDelete={(customer) => openConfirm("deleteCustomer", customer)}
+          onCall={handleCallCustomer}
+          onWhatsApp={handleCustomerWhatsApp}
+          onCopyPhone={handleCopyPhone}
         />
       )}
 
@@ -880,7 +1226,11 @@ const Dashboard = () => {
           <Button onClick={() => setEditingCustomer(null)}>Cancel</Button>
           <Button
             onClick={() => openConfirm("saveCustomerEdit", editingCustomer)}
-            disabled={!editingCustomer?.name}
+            disabled={
+              !editingCustomer?.name?.trim() ||
+              (editingCustomer?.phoneNumber &&
+                cleanPhone(editingCustomer.phoneNumber).length < 10)
+            }
           >
             Save
           </Button>
