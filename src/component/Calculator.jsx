@@ -78,6 +78,7 @@ const Calculator = () => {
   const { user } = useAuth();
   const { activeShopId, shop } = useShop();
   const draftsStorageKey = `savedBills-${activeShopId}-${user?.uid || "guest"}`;
+  const inProgressDraftStorageKey = `inProgressBill-${activeShopId}-${user?.uid || "guest"}`;
   const itemHistoryStorageKey = `item-history-${activeShopId}-${user?.uid || "guest"}`;
   const offlineBillQueueStorageKey = `offline-bill-queue-${activeShopId}-${user?.uid || "guest"}`;
 
@@ -88,6 +89,45 @@ const Calculator = () => {
   const customerPhoneRef = useRef(null);
   const customerAddressRef = useRef(null);
   const lastSavedSignatureRef = useRef("");
+  const hasHydratedInProgressRef = useRef(false);
+  const suppressHistoryRef = useRef(false);
+  const previousSnapshotRef = useRef(null);
+  const [undoStack, setUndoStack] = useState([]);
+  const [redoStack, setRedoStack] = useState([]);
+
+  const buildEditorSnapshot = () => ({
+    customerName,
+    customerPhone,
+    customerAddress,
+    extraCharges,
+    items,
+    verifiedItems,
+    itemName,
+    itemPrice,
+    quantity,
+    priceUnit,
+    quantityUnit,
+  });
+
+  const applyEditorSnapshot = (snapshot) => {
+    setCustomerName(snapshot.customerName || "");
+    setCustomerPhone(snapshot.customerPhone || "");
+    setCustomerAddress(snapshot.customerAddress || "");
+    setExtraCharges(
+      snapshot.extraCharges || {
+        rickshaw: "",
+        bus: "",
+        other: "",
+      },
+    );
+    setItems(Array.isArray(snapshot.items) ? snapshot.items : []);
+    setVerifiedItems(Array.isArray(snapshot.verifiedItems) ? snapshot.verifiedItems : []);
+    setItemName(snapshot.itemName || "");
+    setItemPrice(snapshot.itemPrice || "");
+    setQuantity(snapshot.quantity || "");
+    setPriceUnit(snapshot.priceUnit || "piece");
+    setQuantityUnit(snapshot.quantityUnit || "piece");
+  };
 
   const handleItemNameChange = (event) => setItemName(event.target.value);
   const handleItemPriceChange = (event) => setItemPrice(event.target.value);
@@ -807,6 +847,189 @@ const Calculator = () => {
     setSavedBills(nextBills);
   }, [draftsStorageKey]);
 
+  // Restore unfinished in-progress bill for this shop/user.
+  useEffect(() => {
+    hasHydratedInProgressRef.current = false;
+    const stored = JSON.parse(localStorage.getItem(inProgressDraftStorageKey) || "null");
+    if (stored) {
+      applyEditorSnapshot(stored);
+      previousSnapshotRef.current = {
+        customerName: stored.customerName || "",
+        customerPhone: stored.customerPhone || "",
+        customerAddress: stored.customerAddress || "",
+        extraCharges:
+          stored.extraCharges || {
+            rickshaw: "",
+            bus: "",
+            other: "",
+          },
+        items: Array.isArray(stored.items) ? stored.items : [],
+        verifiedItems: Array.isArray(stored.verifiedItems) ? stored.verifiedItems : [],
+        itemName: stored.itemName || "",
+        itemPrice: stored.itemPrice || "",
+        quantity: stored.quantity || "",
+        priceUnit: stored.priceUnit || "piece",
+        quantityUnit: stored.quantityUnit || "piece",
+      };
+    } else {
+      applyEditorSnapshot({});
+      previousSnapshotRef.current = {
+        customerName: "",
+        customerPhone: "",
+        customerAddress: "",
+        extraCharges: {
+          rickshaw: "",
+          bus: "",
+          other: "",
+        },
+        items: [],
+        verifiedItems: [],
+        itemName: "",
+        itemPrice: "",
+        quantity: "",
+        priceUnit: "piece",
+        quantityUnit: "piece",
+      };
+    }
+    setUndoStack([]);
+    setRedoStack([]);
+    hasHydratedInProgressRef.current = true;
+  }, [inProgressDraftStorageKey]);
+
+  // Auto-save current in-progress bill, so tab switching does not lose work.
+  useEffect(() => {
+    if (!hasHydratedInProgressRef.current) return;
+    const hasAnyData =
+      customerName.trim() ||
+      customerPhone.trim() ||
+      customerAddress.trim() ||
+      items.length > 0 ||
+      itemName.trim() ||
+      itemPrice ||
+      quantity ||
+      Number(extraCharges.rickshaw || 0) > 0 ||
+      Number(extraCharges.bus || 0) > 0 ||
+      Number(extraCharges.other || 0) > 0;
+
+    if (!hasAnyData) {
+      localStorage.removeItem(inProgressDraftStorageKey);
+      return;
+    }
+
+    localStorage.setItem(
+      inProgressDraftStorageKey,
+      JSON.stringify({
+        customerName,
+        customerPhone,
+        customerAddress,
+        extraCharges,
+        items,
+        verifiedItems,
+        itemName,
+        itemPrice,
+        quantity,
+        priceUnit,
+        quantityUnit,
+        updatedAt: new Date().toISOString(),
+      }),
+    );
+  }, [
+    customerName,
+    customerPhone,
+    customerAddress,
+    extraCharges,
+    inProgressDraftStorageKey,
+    itemName,
+    itemPrice,
+    items,
+    priceUnit,
+    quantity,
+    quantityUnit,
+    verifiedItems,
+  ]);
+
+  // Maintain undo/redo history for ongoing bill editing.
+  useEffect(() => {
+    if (!hasHydratedInProgressRef.current) return;
+    const currentSnapshot = buildEditorSnapshot();
+
+    if (!previousSnapshotRef.current) {
+      previousSnapshotRef.current = currentSnapshot;
+      return;
+    }
+
+    if (suppressHistoryRef.current) {
+      suppressHistoryRef.current = false;
+      previousSnapshotRef.current = currentSnapshot;
+      return;
+    }
+
+    const previousSerialized = JSON.stringify(previousSnapshotRef.current);
+    const currentSerialized = JSON.stringify(currentSnapshot);
+    if (previousSerialized !== currentSerialized) {
+      const previousSnapshot = previousSnapshotRef.current;
+      setUndoStack((current) => [...current, previousSnapshot].slice(-100));
+      setRedoStack([]);
+      previousSnapshotRef.current = currentSnapshot;
+    }
+  }, [
+    customerName,
+    customerPhone,
+    customerAddress,
+    extraCharges,
+    itemName,
+    itemPrice,
+    items,
+    priceUnit,
+    quantity,
+    quantityUnit,
+    verifiedItems,
+  ]);
+
+  const handleUndo = () => {
+    if (!undoStack.length) return;
+    const target = undoStack[undoStack.length - 1];
+    const currentSnapshot = buildEditorSnapshot();
+    suppressHistoryRef.current = true;
+    setUndoStack((current) => current.slice(0, -1));
+    setRedoStack((current) => [currentSnapshot, ...current].slice(0, 100));
+    applyEditorSnapshot(target);
+  };
+
+  const handleRedo = () => {
+    if (!redoStack.length) return;
+    const [target, ...rest] = redoStack;
+    const currentSnapshot = buildEditorSnapshot();
+    suppressHistoryRef.current = true;
+    setRedoStack(rest);
+    setUndoStack((current) => [...current, currentSnapshot].slice(-100));
+    applyEditorSnapshot(target);
+  };
+
+  useEffect(() => {
+    const onKeyDown = (event) => {
+      const isUndo =
+        (event.ctrlKey || event.metaKey) &&
+        !event.shiftKey &&
+        event.key.toLowerCase() === "z";
+      const isRedo =
+        (event.ctrlKey || event.metaKey) &&
+        ((event.shiftKey && event.key.toLowerCase() === "z") ||
+          event.key.toLowerCase() === "y");
+
+      if (isUndo) {
+        event.preventDefault();
+        handleUndo();
+      } else if (isRedo) {
+        event.preventDefault();
+        handleRedo();
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [undoStack.length, redoStack.length]);
+
   // Keep verification state aligned with current item count to avoid false
   // "verify every item" blocks when stale arrays are loaded from drafts.
   useEffect(() => {
@@ -1351,6 +1574,24 @@ const Calculator = () => {
                   direction={{ xs: "column", sm: "row", lg: "column" }}
                   spacing={1}
                 >
+                  <Stack direction="row" spacing={1}>
+                    <Button
+                      variant="text"
+                      onClick={handleUndo}
+                      disabled={!undoStack.length}
+                      fullWidth
+                    >
+                      Undo
+                    </Button>
+                    <Button
+                      variant="text"
+                      onClick={handleRedo}
+                      disabled={!redoStack.length}
+                      fullWidth
+                    >
+                      Redo
+                    </Button>
+                  </Stack>
                   <Button
                     variant="contained"
                     onClick={generatePDF}

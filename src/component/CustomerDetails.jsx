@@ -1,8 +1,9 @@
-import { useMemo } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   Autocomplete,
   Box,
   Chip,
+  IconButton,
   Paper,
   Grid,
   Stack,
@@ -11,6 +12,7 @@ import {
 } from "@mui/material";
 import PhoneIphoneRoundedIcon from "@mui/icons-material/PhoneIphoneRounded";
 import LocationOnRoundedIcon from "@mui/icons-material/LocationOnRounded";
+import { Close } from "@mui/icons-material";
 import Fuse from "fuse.js";
 
 const CustomerDetails = ({
@@ -29,6 +31,10 @@ const CustomerDetails = ({
   onPhoneKeyDown,
   onAddressKeyDown,
 }) => {
+  const [customerPopupOpen, setCustomerPopupOpen] = useState(false);
+
+  const customerInputRef = useRef(null);
+
   const normalize = (text = "") =>
     String(text)
       .toLowerCase()
@@ -44,15 +50,21 @@ const CustomerDetails = ({
     const source = [...customerOptions].sort(
       (a, b) => (b.lastUsed || 0) - (a.lastUsed || 0),
     );
+
     const query = customerName?.trim() || "";
+
     if (!query) return source.slice(0, 8);
 
     const numericQuery = query.replace(/[^\d]/g, "");
+
     const isPhoneQuery = numericQuery.length >= 3 && /^\d+$/.test(numericQuery);
+
     if (isPhoneQuery) {
       return source
         .filter((entry) =>
-          (entry.phoneNumber || "").replace(/[^\d]/g, "").includes(numericQuery),
+          (entry.phoneNumber || "")
+            .replace(/[^\d]/g, "")
+            .includes(numericQuery),
         )
         .slice(0, 10);
     }
@@ -70,23 +82,30 @@ const CustomerDetails = ({
     });
 
     const fuseResults = fuse.search(query).map((result) => result.item);
+
     const startsWithMatches = source.filter((entry) =>
       (entry.name || "").toLowerCase().startsWith(query.toLowerCase()),
     );
+
     const merged = [...startsWithMatches, ...fuseResults];
+
     const unique = Array.from(
       new Map(
         merged.map((entry) => [
-          `${(entry.name || "").toLowerCase()}|${(entry.phoneNumber || "").toLowerCase()}`,
+          `${(entry.name || "").toLowerCase()}|${(
+            entry.phoneNumber || ""
+          ).toLowerCase()}`,
           entry,
         ]),
       ).values(),
     );
+
     return unique.slice(0, 10);
   }, [customerName, customerOptions]);
 
   const typoSuggestions = useMemo(() => {
     const query = (customerName || "").trim();
+
     if (query.length < 3) return [];
 
     const hasStrongMatch = smartOptions.some(
@@ -94,6 +113,7 @@ const CustomerDetails = ({
         (option.name || "").toLowerCase() === query.toLowerCase() ||
         (option.name || "").toLowerCase().startsWith(query.toLowerCase()),
     );
+
     if (hasStrongMatch) return [];
 
     return smartOptions
@@ -109,100 +129,200 @@ const CustomerDetails = ({
         <Autocomplete
           freeSolo
           fullWidth
-          openOnFocus
-          autoHighlight
-          selectOnFocus
-          clearOnBlur={false}
-          handleHomeEndKeys
-          noOptionsText="No customer found"
+          open={customerPopupOpen}
+          onOpen={() => setCustomerPopupOpen(true)}
+          onClose={() => setCustomerPopupOpen(false)}
           options={smartOptions}
           value={selectedCustomer}
           inputValue={customerName}
-          filterOptions={(options, state) => {
-            const input = normalize(state.inputValue);
-            const filtered = [...options];
-            const exactMatch = filtered.some(
-              (option) => normalize(option.name) === input,
-            );
-
-            if (input && !exactMatch) {
-              filtered.push({
-                name: `+ Add "${state.inputValue}"`,
-                isNew: true,
-              });
-            }
-
-            return filtered.slice(0, 10);
-          }}
-          getOptionLabel={(option) => (typeof option === "string" ? option : option.name || "")}
-          isOptionEqualToValue={(option, value) =>
-            normalize(option.name) === normalize(value.name)
+          getOptionLabel={(option) =>
+            typeof option === "string" ? option : option.name || ""
           }
-          onInputChange={(_, value, reason) => {
-            if (reason === "input") onNameChange(value);
+          isOptionEqualToValue={(option, value) => option.name === value.name}
+          filterOptions={(options) => options}
+          onInputChange={(event, value, reason) => {
+            onNameChange(value);
+
+            if (reason === "input") {
+              setCustomerPopupOpen(!!value.trim());
+            } else if (reason === "reset" || reason === "clear") {
+              setCustomerPopupOpen(false);
+            }
           }}
           onChange={(_, value) => {
-            if (!value) return;
             if (typeof value === "string") {
               onNameChange(value);
-              return;
+            } else if (value) {
+              onCustomerSelect(value);
             }
 
-            if (value.isNew) {
-              const cleanName = value.name.replace('+ Add "', "").replace('"', "");
-              onNameChange(cleanName);
-              onPhoneChange("");
-              onAddressChange("");
-              return;
-            }
+            setCustomerPopupOpen(false);
 
-            onCustomerSelect(value);
+            setTimeout(() => {
+              customerInputRef.current?.blur();
+            }, 50);
+          }}
+          PaperComponent={(paperProps) => {
+            const { children, ...other } = paperProps;
+
+            return (
+              <Paper
+                {...other}
+                elevation={12}
+                sx={{
+                  borderRadius: "16px",
+                  mt: 1,
+                  border: "1px solid rgba(148, 163, 184, 0.12)",
+                  overflow: "hidden",
+                  boxShadow:
+                    "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)",
+                }}
+              >
+                <Box
+                  sx={{
+                    px: 2,
+                    py: 1.25,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    bgcolor: "grey.50",
+                    borderBottom: "1px solid rgba(148, 163, 184, 0.12)",
+                  }}
+                >
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      fontWeight: 700,
+                      color: "text.secondary",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.05em",
+                    }}
+                  >
+                    Customer Suggestions
+                  </Typography>
+
+                  <IconButton
+                    size="small"
+                    onClick={() => {
+                      setCustomerPopupOpen(false);
+                      customerInputRef.current?.blur();
+                    }}
+                  >
+                    <Close sx={{ fontSize: 18 }} />
+                  </IconButton>
+                </Box>
+
+                {children}
+              </Paper>
+            );
           }}
           renderOption={(props, option) => (
-            <Box
-              component="li"
-              {...props}
-              sx={{ py: 1.1, px: 2, borderBottom: "1px solid #f1f1f1", alignItems: "flex-start" }}
-            >
-              {option.isNew ? (
-                <Typography sx={{ fontWeight: 700, color: "primary.main" }}>
-                  {option.name}
-                </Typography>
-              ) : (
-                <Box>
-                  <Typography sx={{ fontWeight: 700, fontSize: "15px" }}>{option.name}</Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    <PhoneIphoneRoundedIcon sx={{ fontSize: 14, mr: 0.5, verticalAlign: "text-bottom" }} />
-                    {option.phoneNumber || "No Phone"}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    <LocationOnRoundedIcon sx={{ fontSize: 14, mr: 0.5, verticalAlign: "text-bottom" }} />
-                    {option.address || "No Address"}
+            <li {...props} style={{ padding: "8px 16px" }}>
+              <Stack
+                direction="row"
+                spacing={2}
+                alignItems="center"
+                sx={{ width: "100%" }}
+              >
+                <Box
+                  sx={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: "10px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    bgcolor: "primary.light",
+                    color: "primary.main",
+                    opacity: 0.8,
+                  }}
+                >
+                  <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                    {option.name?.[0]?.toUpperCase()}
                   </Typography>
                 </Box>
-              )}
-            </Box>
+
+                <Box sx={{ flexGrow: 1 }}>
+                  <Typography
+                    variant="body1"
+                    sx={{ fontWeight: 600, color: "text.primary" }}
+                  >
+                    {option.name}
+                  </Typography>
+
+                  <Stack direction="row" spacing={2} sx={{ mt: 0.25 }}>
+                    {option.phoneNumber && (
+                      <Stack direction="row" spacing={0.5} alignItems="center">
+                        <PhoneIphoneRoundedIcon
+                          sx={{ fontSize: 14, color: "text.secondary" }}
+                        />
+
+                        <Typography variant="caption" color="text.secondary">
+                          {option.phoneNumber}
+                        </Typography>
+                      </Stack>
+                    )}
+
+                    {option.address && (
+                      <Stack direction="row" spacing={0.5} alignItems="center">
+                        <LocationOnRoundedIcon
+                          sx={{ fontSize: 14, color: "text.secondary" }}
+                        />
+
+                        <Typography
+                          variant="caption"
+                          color="text.secondary"
+                          noWrap
+                          sx={{ maxWidth: 150 }}
+                        >
+                          {option.address}
+                        </Typography>
+                      </Stack>
+                    )}
+                  </Stack>
+                </Box>
+              </Stack>
+            </li>
           )}
           renderInput={(params) => (
             <TextField
               {...params}
               label="Customer Name"
-              placeholder="Search by name, phone or address..."
-              helperText={`${customerOptions.length} customers available`}
+              placeholder="Search by name or phone"
               fullWidth
-              inputRef={nameInputRef}
-              onKeyDown={onNameKeyDown}
+              inputRef={(el) => {
+                customerInputRef.current = el;
+
+                if (typeof nameInputRef === "function") {
+                  nameInputRef(el);
+                } else if (nameInputRef) {
+                  nameInputRef.current = el;
+                }
+              }}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+
+                  setCustomerPopupOpen(false);
+
+                  setTimeout(() => {
+                    customerInputRef.current?.blur();
+                  }, 50);
+                }
+
+                onNameKeyDown?.(event);
+              }}
               sx={{
                 "& .MuiOutlinedInput-root": {
                   borderRadius: "16px",
                   backgroundColor: "#fff",
-                  fontSize: "16px",
                 },
               }}
             />
           )}
         />
-        {typoSuggestions.length ? (
+
+        {customerPopupOpen && typoSuggestions.length ? (
           <Paper
             elevation={8}
             sx={{
@@ -212,21 +332,52 @@ const CustomerDetails = ({
               top: "calc(100% + 6px)",
               zIndex: 1400,
               p: 1,
-              borderRadius: 2,
-              border: "1px solid rgba(148, 163, 184, 0.28)",
-              backgroundColor: "rgba(255,255,255,0.98)",
+              borderRadius: "12px",
+              border: "1px solid rgba(148, 163, 184, 0.2)",
+              backgroundColor: "rgba(255,255,255,0.96)",
+              backdropFilter: "blur(8px)",
+              boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1)",
             }}
           >
-            <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap", rowGap: 1 }}>
-              <Typography variant="caption" color="text.secondary" sx={{ pt: 0.5 }}>
+            <Stack
+              direction="row"
+              spacing={1}
+              sx={{ flexWrap: "wrap", rowGap: 1 }}
+            >
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                sx={{ pt: 0.5 }}
+              >
                 Did you mean:
               </Typography>
+
               {typoSuggestions.map((name) => (
                 <Chip
                   key={`suggest-${name}`}
                   size="small"
                   label={name}
-                  onClick={() => onNameChange(name)}
+                  onClick={() => {
+                    // FIND FULL CUSTOMER OBJECT
+                    const matchedCustomer = customerOptions.find(
+                      (option) => normalize(option.name) === normalize(name),
+                    );
+
+                    // SAME BEHAVIOR AS AUTOCOMPLETE SELECT
+                    if (matchedCustomer) {
+                      onCustomerSelect(matchedCustomer);
+                    } else {
+                      onNameChange(name);
+                    }
+
+                    // CLOSE POPUP
+                    setCustomerPopupOpen(false);
+
+                    // BLUR INPUT
+                    setTimeout(() => {
+                      customerInputRef.current?.blur();
+                    }, 50);
+                  }}
                   variant="outlined"
                   color="primary"
                 />
@@ -245,7 +396,12 @@ const CustomerDetails = ({
           onKeyDown={onPhoneKeyDown}
           inputRef={phoneInputRef}
           fullWidth
-          sx={{ "& .MuiOutlinedInput-root": { borderRadius: "16px", backgroundColor: "#fff" } }}
+          sx={{
+            "& .MuiOutlinedInput-root": {
+              borderRadius: "16px",
+              backgroundColor: "#fff",
+            },
+          }}
         />
       </Grid>
 
@@ -258,7 +414,12 @@ const CustomerDetails = ({
           onKeyDown={onAddressKeyDown}
           inputRef={addressInputRef}
           fullWidth
-          sx={{ "& .MuiOutlinedInput-root": { borderRadius: "16px", backgroundColor: "#fff" } }}
+          sx={{
+            "& .MuiOutlinedInput-root": {
+              borderRadius: "16px",
+              backgroundColor: "#fff",
+            },
+          }}
         />
       </Grid>
     </>
