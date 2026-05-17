@@ -41,10 +41,53 @@ const CustomerDetails = ({
       .replace(/\s+/g, "")
       .replace(/[^a-z0-9]/g, "");
 
+  const normalizePhone = (value = "") =>
+    String(value).replace(/[^\d]/g, "");
+
   const selectedCustomer =
     customerOptions.find(
       (option) => normalize(option.name) === normalize(customerName),
     ) || null;
+
+  const exactPhoneMatch = useMemo(() => {
+    const query = normalizePhone(customerPhone);
+    if (!query) return null;
+    return customerOptions.find(
+      (option) => normalizePhone(option.phoneNumber) === query,
+    );
+  }, [customerPhone, customerOptions]);
+
+  const exactNameAddressMatch = useMemo(() => {
+    const nameQuery = normalize(customerName);
+    const addressQuery = normalize(customerAddress);
+    if (!nameQuery || !addressQuery) return null;
+    return customerOptions.find(
+      (option) =>
+        normalize(option.name) === nameQuery &&
+        normalize(option.address) === addressQuery,
+    );
+  }, [customerName, customerAddress, customerOptions]);
+
+  const duplicateMessage = useMemo(() => {
+    if (exactPhoneMatch) {
+      if (normalize(exactPhoneMatch.name) !== normalize(customerName)) {
+        return `Existing customer found for this phone: ${exactPhoneMatch.name}. Select it to reuse their details.`;
+      }
+      if (
+        exactPhoneMatch.address &&
+        normalize(exactPhoneMatch.address) !== normalize(customerAddress)
+      ) {
+        return `Phone matches existing customer ${exactPhoneMatch.name}. Their saved address is "${exactPhoneMatch.address}".`;
+      }
+      return `Phone matches existing customer ${exactPhoneMatch.name}.`;
+    }
+
+    if (exactNameAddressMatch) {
+      return `Customer name and address already exist for ${exactNameAddressMatch.name}. Select it to avoid a duplicate.`;
+    }
+
+    return "";
+  }, [exactPhoneMatch, exactNameAddressMatch, customerName, customerAddress]);
 
   const smartOptions = useMemo(() => {
     const source = [...customerOptions].sort(
@@ -386,6 +429,17 @@ const CustomerDetails = ({
           </Paper>
         ) : null}
       </Grid>
+
+      {duplicateMessage ? (
+        <Grid item xs={12}>
+          <Typography
+            variant="body2"
+            sx={{ color: "warning.main", mt: 0.5 }}
+          >
+            {duplicateMessage}
+          </Typography>
+        </Grid>
+      ) : null}
 
       <Grid item xs={12} sm={6}>
         <TextField

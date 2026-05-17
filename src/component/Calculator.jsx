@@ -189,6 +189,29 @@ const Calculator = () => {
     setQuantityUnit("piece");
   };
 
+  const resetAllFields = () => {
+    setCustomerName("");
+    setCustomerPhone("");
+    setCustomerAddress("");
+    setExtraCharges({
+      rickshaw: "",
+      bus: "",
+      other: "",
+    });
+    setItems([]);
+    setVerifiedItems([]);
+    setItemName("");
+    setItemPrice("");
+    setQuantity("");
+    setPriceUnit("piece");
+    setQuantityUnit("piece");
+    setUndoStack([]);
+    setRedoStack([]);
+    lastSavedSignatureRef.current = "";
+    localStorage.removeItem(inProgressDraftStorageKey);
+    openToast("All fields and draft storage have been reset", "success");
+  };
+
   const calculateTotalBill = () =>
     items.reduce((acc, item) => acc + item.totalPrice, 0);
 
@@ -1452,6 +1475,9 @@ const Calculator = () => {
                   </Button>
                   <Button variant="text" color="inherit" onClick={resetForm}>
                     Reset Fields
+                  </Button>
+                  <Button variant="outlined" color="error" onClick={resetAllFields}>
+                    Reset All
                   </Button>
                 </Stack>
 

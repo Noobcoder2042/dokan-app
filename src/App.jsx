@@ -10,6 +10,7 @@ import {
 } from "@mui/material";
 import AuthScreen from "./component/AuthScreen";
 import Analysis from "./component/Analysis";
+import AnalyticsDashboard from "./pages/AnalyticsDashboard";
 import Calculator from "./component/Calculator";
 import Dashboard from "./component/Dashboard";
 import ErrorBoundary from "./component/ErrorBoundary";
@@ -193,6 +194,7 @@ const App = () => {
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/inventory" element={<Inventory />} />
                 <Route path="/analysis" element={<Analysis />} />
+                <Route path="/analytics" element={<AnalyticsDashboard />} />
                 <Route path="/guide" element={<UserGuide />} />
                 <Route path="/settings" element={<ShopSettings />} />
                 <Route path="*" element={<Dashboard />} />

@@ -41,6 +41,11 @@ const navItems = [
     icon: <InsightsRoundedIcon fontSize="small" />,
   },
   {
+    label: "Analytics",
+    to: "/analytics",
+    icon: <InsightsRoundedIcon fontSize="small" />,
+  },
+  {
     label: "Settings",
     to: "/settings",
     icon: <SettingsRoundedIcon fontSize="small" />,

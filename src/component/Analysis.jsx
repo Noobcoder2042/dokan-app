@@ -17,6 +17,8 @@ import { subscribeToShopBills } from "../services/shopData";
 const dateFilters = [
   { label: "This Week", value: "week" },
   { label: "Last 30 Days", value: "30" },
+  { label: "This Month", value: "month" },
+  { label: "This Year", value: "year" },
   { label: "Custom Range", value: "custom" },
 ];
 
@@ -84,6 +86,16 @@ const Analysis = () => {
         const start = new Date(todayStart);
         start.setDate(start.getDate() - 29);
         return billDate >= start && billDate <= todayEnd;
+      }
+
+      if (dateFilter === "month") {
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        return billDate >= monthStart && billDate <= todayEnd;
+      }
+
+      if (dateFilter === "year") {
+        const yearStart = new Date(now.getFullYear(), 0, 1);
+        return billDate >= yearStart && billDate <= todayEnd;
       }
 
       if (!customStartDate || !customEndDate) return true;

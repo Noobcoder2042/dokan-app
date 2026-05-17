@@ -95,6 +95,8 @@ const buildCustomerId = (customer) => {
   if (phoneKey) return `phone-${phoneKey}`;
 
   const nameKey = normalize(customer.name);
+  const addressKey = normalize(customer.address);
+  if (nameKey && addressKey) return `name-${nameKey}-${addressKey}`;
   if (nameKey) return `name-${nameKey}`;
 
   return `customer-${Date.now()}`;
@@ -333,6 +335,23 @@ export const subscribeToInventoryItems = (
           ...itemDoc.data(),
         }))
       );
+    },
+    onError
+  );
+};
+
+export const subscribeToShopItems = (shopId, onData, onError) => {
+  if (!shopId) {
+    onData([]);
+    return () => {};
+  }
+
+  const itemsQuery = query(collection(db, "shops", shopId, "items"), orderBy("name", "asc"));
+
+  return onSnapshot(
+    itemsQuery,
+    (snapshot) => {
+      onData(snapshot.docs.map((itemDoc) => ({ id: itemDoc.id, ...itemDoc.data() })));
     },
     onError
   );

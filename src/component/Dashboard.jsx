@@ -69,7 +69,12 @@ const getBillDate = (bill) => {
 };
 
 const normalizePhone = (value) => (value || "").toString().replace(/[^\d]/g, "");
-const normalizeText = (value) => (value || "").toString().trim().toLowerCase();
+const normalizeText = (value) =>
+  (value || "")
+    .toString()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "")
+    .trim();
 
 const getCustomerDedupKey = (customer) => {
   const phoneKey = normalizePhone(customer.phoneNumber);
@@ -641,6 +646,14 @@ const Dashboard = () => {
       } else if (type === "deleteCustomer") {
         await deleteCustomerForShop(activeShopId, payload.id);
         openToast("Customer deleted");
+      } else if (type === "mergeCustomerDuplicates") {
+        const duplicateGroups = findDuplicateCustomerGroups(mergedCustomers);
+        const deletedCount = await mergeDuplicateCustomerGroups(duplicateGroups);
+        if (deletedCount > 0) {
+          openToast(`Removed ${deletedCount} duplicate customer record(s)`);
+        } else {
+          openToast("No duplicate customer records were merged", "warning");
+        }
       } else if (type === "saveCustomerEdit") {
         await updateCustomerForShop(activeShopId, payload.id, {
           name: payload.name?.trim(),
@@ -759,90 +772,98 @@ const Dashboard = () => {
     openToast("Customer PDF exported");
   };
 
-  const handleDeleteDuplicateCustomers = async () => {
-    const groups = customers.reduce((acc, customer) => {
+  const findDuplicateCustomerGroups = (sourceCustomers) => {
+    const groups = sourceCustomers.reduce((acc, customer) => {
       const key = getCustomerDedupKey(customer);
       if (!acc.has(key)) acc.set(key, []);
       acc.get(key).push(customer);
       return acc;
     }, new Map());
 
-    const duplicateGroups = Array.from(groups.values()).filter(
-      (group) => group.length > 1
-    );
+    return Array.from(groups.values()).filter((group) => group.length > 1);
+  };
 
+  const prepareDuplicateCustomerMerge = () => {
+    const duplicateGroups = findDuplicateCustomerGroups(mergedCustomers);
     if (!duplicateGroups.length) {
       openToast("No duplicate customers found");
       return;
     }
 
-    setActionLoading(true);
-    try {
-      let deletedCount = 0;
+    openConfirm("mergeCustomerDuplicates", {
+      groupsCount: duplicateGroups.length,
+      duplicatesCount: duplicateGroups.reduce((sum, group) => sum + group.length, 0),
+    });
+  };
 
-      for (const group of duplicateGroups) {
-        const sorted = [...group].sort((a, b) => {
-          const aTime = Math.max(
-            parseDateValue(a.updatedAt),
-            parseDateValue(a.lastBilledAt),
-            parseDateValue(a.createdAt)
-          );
-          const bTime = Math.max(
-            parseDateValue(b.updatedAt),
-            parseDateValue(b.lastBilledAt),
-            parseDateValue(b.createdAt)
-          );
-          return bTime - aTime;
-        });
+  const mergeDuplicateCustomerGroups = async (duplicateGroups) => {
+    let deletedCount = 0;
 
-        const keeper = sorted[0];
-        const duplicates = sorted.slice(1);
+    for (const group of duplicateGroups) {
+      const sorted = [...group].sort((a, b) => {
+        const aTime = Math.max(
+          parseDateValue(a.updatedAt),
+          parseDateValue(a.lastBilledAt),
+          parseDateValue(a.createdAt)
+        );
+        const bTime = Math.max(
+          parseDateValue(b.updatedAt),
+          parseDateValue(b.lastBilledAt),
+          parseDateValue(b.createdAt)
+        );
+        return bTime - aTime;
+      });
 
-        const mergedName =
-          keeper.name || duplicates.find((entry) => entry.name)?.name || "";
-        const mergedPhone =
-          keeper.phoneNumber || duplicates.find((entry) => entry.phoneNumber)?.phoneNumber || "";
-        const mergedAddress =
-          keeper.address || duplicates.find((entry) => entry.address)?.address || "";
+      const keeper = sorted.find((entry) => entry.id && !entry.id.startsWith("bill-")) || sorted[0];
+      const duplicates = sorted.filter((entry) => entry !== keeper && entry.id && !entry.id.startsWith("bill-"));
 
-        if (
-          mergedName !== (keeper.name || "") ||
-          mergedPhone !== (keeper.phoneNumber || "") ||
-          mergedAddress !== (keeper.address || "")
-        ) {
-          await updateCustomerForShop(activeShopId, keeper.id, {
-            name: mergedName,
-            phoneNumber: mergedPhone,
-            address: mergedAddress,
-          });
-        }
-
-        for (const duplicate of duplicates) {
-          await deleteCustomerForShop(activeShopId, duplicate.id);
-          deletedCount += 1;
-        }
+      if (!keeper.id || keeper.id.startsWith("bill-")) {
+        continue;
       }
 
-      openToast(`Removed ${deletedCount} duplicate customer record(s)`);
-    } catch (error) {
-      console.error(error);
-      openToast("Could not delete duplicate customers", "error");
-    } finally {
-      setActionLoading(false);
+      const mergedName =
+        keeper.name || sorted.find((entry) => entry.name)?.name || "";
+      const mergedPhone =
+        keeper.phoneNumber || sorted.find((entry) => entry.phoneNumber)?.phoneNumber || "";
+      const mergedAddress =
+        keeper.address || sorted.find((entry) => entry.address)?.address || "";
+
+      if (
+        mergedName !== (keeper.name || "") ||
+        mergedPhone !== (keeper.phoneNumber || "") ||
+        mergedAddress !== (keeper.address || "")
+      ) {
+        await updateCustomerForShop(activeShopId, keeper.id, {
+          name: mergedName,
+          phoneNumber: mergedPhone,
+          address: mergedAddress,
+        });
+      }
+
+      for (const duplicate of duplicates) {
+        await deleteCustomerForShop(activeShopId, duplicate.id);
+        deletedCount += 1;
+      }
     }
+
+    return deletedCount;
   };
 
   const confirmTitle =
     confirmState.type === "deleteBill" || confirmState.type === "deleteCustomer"
       ? "Delete"
-      : "Save Changes";
+      : confirmState.type === "mergeCustomerDuplicates"
+        ? "Merge Duplicate Customers"
+        : "Save Changes";
 
   const confirmDescription =
     confirmState.type === "deleteBill"
       ? "Are you sure? This bill will be deleted."
       : confirmState.type === "deleteCustomer"
         ? "Are you sure? This customer will be deleted."
-        : "Are you sure? Changes will be saved.";
+        : confirmState.type === "mergeCustomerDuplicates"
+          ? `Found ${confirmState.payload?.groupsCount || 0} duplicate group(s). Confirm to merge duplicate customer records.`
+          : "Are you sure? Changes will be saved.";
 
   const loading = loadingBills || loadingCustomers;
 
@@ -1063,8 +1084,8 @@ const Dashboard = () => {
                 <Button
                   variant="outlined"
                   color="warning"
-                  onClick={handleDeleteDuplicateCustomers}
-                  disabled={actionLoading || !customers.length}
+                  onClick={prepareDuplicateCustomerMerge}
+                  disabled={actionLoading || !mergedCustomers.length}
                 >
                   Merge Duplicate Customers
                 </Button>
