@@ -58,6 +58,20 @@ export const buildThermalBillHtml = ({
             margin: 0;
           }
 
+          @media print {
+            html, body {
+              width: ${printerWidth};
+              margin: 0;
+              padding: 0;
+              height: max-content;
+              overflow: visible;
+            }
+            table, tr, td, th, .item, tbody {
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
+            }
+          }
+
           body {
             font-family: Arial, sans-serif;
             width: 100%;
@@ -66,6 +80,9 @@ export const buildThermalBillHtml = ({
             padding: 1mm;
             color: #000;
             font-size: 11px;
+            height: max-content;
+            overflow: visible;
+            page-break-inside: auto;
           }
 
           .head {

@@ -1,7 +1,7 @@
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, CartesianGrid } from "recharts";
 import PropTypes from "prop-types";
 
-const BarChartWrapper = ({ data, dataKey = "value", name = "Count", xKey = "label", color = "#0f766e" }) => {
+const BarChartWrapper = ({ data, dataKey = "value", name = "Count", xKey = "label", color = "#0f766e", onPointClick }) => {
   if (!data || !data.length) return <div>No data</div>;
 
   return (
@@ -12,7 +12,7 @@ const BarChartWrapper = ({ data, dataKey = "value", name = "Count", xKey = "labe
         <YAxis />
         <Tooltip />
         <Legend />
-        <Bar dataKey={dataKey} name={name} fill={color} />
+        <Bar dataKey={dataKey} name={name} fill={color} onClick={(payload, index) => onPointClick && onPointClick(payload, index)} />
       </BarChart>
     </ResponsiveContainer>
   );
@@ -26,4 +26,5 @@ BarChartWrapper.propTypes = {
   name: PropTypes.string,
   xKey: PropTypes.string,
   color: PropTypes.string,
+  onPointClick: PropTypes.func,
 };

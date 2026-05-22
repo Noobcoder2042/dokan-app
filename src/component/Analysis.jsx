@@ -170,14 +170,19 @@ const Analysis = () => {
         sx={{
           p: { xs: 2.5, md: 3.5 },
           borderRadius: 6,
-          background:
-            "linear-gradient(135deg, rgba(255,255,255,0.96) 0%, rgba(239,246,255,0.98) 52%, rgba(236,253,245,0.96) 100%)",
-          border: "1px solid rgba(148, 163, 184, 0.12)",
+          background: (theme) =>
+            theme.palette.mode === "dark"
+              ? "linear-gradient(135deg, rgba(15,23,42,0.96) 0%, rgba(17,24,39,0.98) 52%, rgba(15,23,42,0.96) 100%)"
+              : "linear-gradient(135deg, rgba(255,255,255,0.96) 0%, rgba(239,246,255,0.98) 52%, rgba(236,253,245,0.96) 100%)",
+          border: (theme) =>
+            theme.palette.mode === "dark"
+              ? "1px solid rgba(255, 255, 255, 0.1)"
+              : "1px solid rgba(148, 163, 184, 0.12)",
         }}
       >
-        <Typography variant="h4">Sales Analysis</Typography>
+        <Typography variant="h4">Sales</Typography>
         <Typography variant="body1" color="text.secondary" sx={{ mt: 1 }}>
-          Monitor top selling items, best customers, and full business performance.
+          Review top selling items, top customers, bill summaries, and sales performance.
         </Typography>
       </Paper>
 
@@ -267,7 +272,10 @@ const Analysis = () => {
                       sx={{
                         p: 1.25,
                         borderRadius: 2,
-                        border: "1px solid rgba(148, 163, 184, 0.2)",
+                        border: (theme) =>
+                          theme.palette.mode === "dark"
+                            ? "1px solid rgba(255, 255, 255, 0.12)"
+                            : "1px solid rgba(148, 163, 184, 0.2)",
                       }}
                     >
                       <Typography sx={{ fontWeight: 600 }}>{item.name}</Typography>
@@ -298,7 +306,10 @@ const Analysis = () => {
                       sx={{
                         p: 1.25,
                         borderRadius: 2,
-                        border: "1px solid rgba(148, 163, 184, 0.2)",
+                        border: (theme) =>
+                          theme.palette.mode === "dark"
+                            ? "1px solid rgba(255, 255, 255, 0.12)"
+                            : "1px solid rgba(148, 163, 184, 0.2)",
                       }}
                     >
                       <Typography sx={{ fontWeight: 600 }}>{customer.name}</Typography>

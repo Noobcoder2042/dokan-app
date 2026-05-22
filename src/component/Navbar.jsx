@@ -1,75 +1,47 @@
-import {
-  AppBar,
-  Box,
-  Button,
-  Chip,
-  Stack,
-  Toolbar,
-  Typography,
-} from "@mui/material";
+import { AppBar, Box, Button, Chip, IconButton, Stack, Toolbar, Tooltip, Typography } from "@mui/material";
 import { useEffect, useState } from "react";
-import ReceiptLongRoundedIcon from "@mui/icons-material/ReceiptLongRounded";
-import DashboardRoundedIcon from "@mui/icons-material/DashboardRounded";
-import StoreRoundedIcon from "@mui/icons-material/StoreRounded";
-import SettingsRoundedIcon from "@mui/icons-material/SettingsRounded";
-import InsightsRoundedIcon from "@mui/icons-material/InsightsRounded";
-import HelpOutlineRoundedIcon from "@mui/icons-material/HelpOutlineRounded";
+import { motion } from "framer-motion";
+import ReceiptRoundedIcon from "@mui/icons-material/ReceiptRounded";
+import GridViewRoundedIcon from "@mui/icons-material/GridViewRounded";
+import Inventory2RoundedIcon from "@mui/icons-material/Inventory2Rounded";
+import TrendingUpRoundedIcon from "@mui/icons-material/TrendingUpRounded";
+import QueryStatsRoundedIcon from "@mui/icons-material/QueryStatsRounded";
+import SettingsSuggestRoundedIcon from "@mui/icons-material/SettingsSuggestRounded";
+import AutoAwesomeRoundedIcon from "@mui/icons-material/AutoAwesomeRounded";
+import DarkModeRoundedIcon from "@mui/icons-material/DarkModeRounded";
+import LightModeRoundedIcon from "@mui/icons-material/LightModeRounded";
+import VolumeUpRoundedIcon from "@mui/icons-material/VolumeUpRounded";
+import VolumeOffRoundedIcon from "@mui/icons-material/VolumeOffRounded";
 import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
 import { Link, useLocation } from "react-router-dom";
 import { useShop } from "../context/ShopContext";
 import { useAuth } from "../context/AuthContext";
+import { useUIExperience } from "../context/UIExperienceContext";
 
 const navItems = [
-  {
-    label: "Billing",
-    to: "/",
-    icon: <ReceiptLongRoundedIcon fontSize="small" />,
-  },
-  {
-    label: "Dashboard",
-    to: "/dashboard",
-    icon: <DashboardRoundedIcon fontSize="small" />,
-  },
-  {
-    label: "Inventory",
-    to: "/inventory",
-    icon: <StoreRoundedIcon fontSize="small" />,
-  },
-  {
-    label: "Analysis",
-    to: "/analysis",
-    icon: <InsightsRoundedIcon fontSize="small" />,
-  },
-  {
-    label: "Analytics",
-    to: "/analytics",
-    icon: <InsightsRoundedIcon fontSize="small" />,
-  },
-  {
-    label: "Settings",
-    to: "/settings",
-    icon: <SettingsRoundedIcon fontSize="small" />,
-  },
-  {
-    label: "Guide",
-    to: "/guide",
-    icon: <HelpOutlineRoundedIcon fontSize="small" />,
-  },
+  { label: "Billing", to: "/", icon: <ReceiptRoundedIcon fontSize="small" /> },
+  { label: "Dashboard", to: "/dashboard", icon: <GridViewRoundedIcon fontSize="small" /> },
+  { label: "Inventory", to: "/inventory", icon: <Inventory2RoundedIcon fontSize="small" /> },
+  { label: "Sales", to: "/sales", icon: <TrendingUpRoundedIcon fontSize="small" /> },
+  { label: "Analytics", to: "/analytics", icon: <QueryStatsRoundedIcon fontSize="small" /> },
+  { label: "Settings", to: "/settings", icon: <SettingsSuggestRoundedIcon fontSize="small" /> },
+  { label: "Guide", to: "/guide", icon: <AutoAwesomeRoundedIcon fontSize="small" /> },
 ];
+
+const MotionButton = motion(Button);
 
 const Navbar = () => {
   const location = useLocation();
   const { shop } = useShop();
   const { logoutUser, profile } = useAuth();
+  const { themeMode, toggleThemeMode, soundEnabled, setSound, playSound } = useUIExperience();
   const [isOnline, setIsOnline] = useState(navigator.onLine);
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
-
     window.addEventListener("online", handleOnline);
     window.addEventListener("offline", handleOffline);
-
     return () => {
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
@@ -83,118 +55,67 @@ const Navbar = () => {
       elevation={0}
       sx={{
         backdropFilter: "blur(18px)",
-        backgroundColor: "rgba(244, 247, 251, 0.82)",
-        borderBottom: "1px solid rgba(148, 163, 184, 0.16)",
+        backgroundColor: themeMode === "dark" ? "rgba(5,9,20,0.74)" : "rgba(247,250,255,0.74)",
+        borderBottom: "1px solid rgba(148, 163, 184, 0.18)",
       }}
     >
-      <Toolbar
-        sx={{
-          minHeight: { xs: 74, md: 84 },
-          gap: 2,
-          justifyContent: "space-between",
-        }}
-      >
-        <Stack direction="row" spacing={1.5} alignItems="center">
-          <Box
-            sx={{
-              width: 44,
-              height: 44,
-              borderRadius: 1,
-              overflow: "hidden",
-              bgcolor: "white",
-              boxShadow: "0 14px 24px rgba(29, 78, 216, 0.25)",
-            }}
-          >
-            <Box
-              component="img"
-              src="/branding/dokan pro logo sm.png"
-              alt="Dokan Pro"
-              sx={{ width: "100%", height: "100%", objectFit: "cover" }}
-            />
+      <Toolbar sx={{ minHeight: { xs: 74, md: 84 }, gap: 1.5, justifyContent: "space-between" }}>
+        <Stack direction="row" spacing={1.4} alignItems="center">
+          <Box sx={{ width: 44, height: 44, borderRadius: 1.5, overflow: "hidden", bgcolor: "white", boxShadow: "0 0 0 1px rgba(255,255,255,0.35), 0 0 32px rgba(37, 99, 235, 0.35)" }}>
+            <Box component="img" src="/branding/dokan pro logo sm.png" alt="Dokan Pro" sx={{ width: "100%", height: "100%", objectFit: "cover" }} />
           </Box>
           <Box>
             <Typography variant="h6">{shop.name || "Dokan Pro"}</Typography>
-            <Typography variant="body2" color="text.secondary">
-              Modern billing for everyday shop work
-            </Typography>
+            <Typography variant="body2" color="text.secondary">Smart billing command center</Typography>
           </Box>
         </Stack>
 
         <Stack direction="row" spacing={1} alignItems="center">
-        {navItems.map((item) => {
-          const isActive = location.pathname === item.to;
-
+          {navItems.map((item) => {
+            const isActive = location.pathname === item.to;
             return (
-              <Button
+              <MotionButton
                 key={item.to}
                 component={Link}
                 to={item.to}
                 startIcon={item.icon}
+                onMouseEnter={() => playSound("hover")}
+                onClick={() => playSound("click")}
+                whileHover={{ y: -2, scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
                 variant={isActive ? "contained" : "text"}
-                color={isActive ? "primary" : "inherit"}
                 sx={{
                   display: { xs: "none", sm: "inline-flex" },
                   color: isActive ? "white" : "text.primary",
+                  background: isActive
+                    ? "linear-gradient(120deg, #2563eb 0%, #7c3aed 100%)"
+                    : "transparent",
+                  boxShadow: isActive ? "0 0 0 1px rgba(255,255,255,0.2), 0 10px 28px rgba(37,99,235,0.45)" : "none",
+                  transition: "all .25s ease",
                 }}
               >
                 {item.label}
-              </Button>
+              </MotionButton>
             );
           })}
 
-          <Chip
-            label={isOnline ? "Online Sync" : "Offline Mode"}
-            color={isOnline ? "secondary" : "warning"}
-            variant="outlined"
-            sx={{ display: { xs: "none", md: "inline-flex" } }}
-          />
-          <Button
-            variant="outlined"
-            startIcon={<LogoutRoundedIcon />}
-            onClick={logoutUser}
-            sx={{ display: { xs: "none", md: "inline-flex" } }}
-          >
+          <Chip label={isOnline ? "Live Sync" : "Offline Mode"} color={isOnline ? "secondary" : "warning"} variant="outlined" sx={{ display: { xs: "none", md: "inline-flex" } }} />
+
+          <Tooltip title={themeMode === "dark" ? "Switch to light theme" : "Switch to neon dark theme"}>
+            <IconButton onClick={toggleThemeMode} sx={{ border: "1px solid rgba(148,163,184,0.3)" }}>
+              {themeMode === "dark" ? <LightModeRoundedIcon /> : <DarkModeRoundedIcon />}
+            </IconButton>
+          </Tooltip>
+          <Tooltip title={soundEnabled ? "Mute UI sounds" : "Unmute UI sounds"}>
+            <IconButton onClick={() => setSound(!soundEnabled)} sx={{ border: "1px solid rgba(148,163,184,0.3)" }}>
+              {soundEnabled ? <VolumeUpRoundedIcon /> : <VolumeOffRoundedIcon />}
+            </IconButton>
+          </Tooltip>
+          <Button variant="outlined" startIcon={<LogoutRoundedIcon />} onClick={logoutUser} sx={{ display: { xs: "none", md: "inline-flex" } }}>
             {profile?.name ? `Logout ${profile.name}` : "Logout"}
           </Button>
         </Stack>
       </Toolbar>
-
-      <Stack
-        direction="row"
-        spacing={1}
-        sx={{
-          px: 2,
-          pb: 1.5,
-          display: { xs: "flex", sm: "none" },
-          overflowX: "auto",
-        }}
-      >
-        {navItems.map((item) => {
-          const isActive = location.pathname === item.to;
-
-          return (
-            <Button
-              key={item.to}
-              component={Link}
-              to={item.to}
-              startIcon={item.icon}
-              variant={isActive ? "contained" : "outlined"}
-              color={isActive ? "primary" : "inherit"}
-              sx={{ minWidth: "fit-content" }}
-            >
-              {item.label}
-            </Button>
-          );
-        })}
-        <Button
-          variant="outlined"
-          startIcon={<LogoutRoundedIcon />}
-          onClick={logoutUser}
-          sx={{ minWidth: "fit-content" }}
-        >
-          Logout
-        </Button>
-      </Stack>
     </AppBar>
   );
 };

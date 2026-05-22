@@ -34,6 +34,7 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import ClearIcon from "@mui/icons-material/Clear";
 import PrintIcon from "@mui/icons-material/Print";
 import WhatsAppIcon from "@mui/icons-material/WhatsApp";
+import LockRoundedIcon from "@mui/icons-material/LockRounded";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
 import CustomerDetails from "./CustomerDetails";
@@ -42,11 +43,13 @@ import { useShop } from "../context/ShopContext";
 import { useAuth } from "../context/AuthContext";
 import {
   saveBillAndConsumeStockForShop,
+  updateBillAndConsumeStockDeltaForShop,
   subscribeToShopBills,
   subscribeToShopCustomers,
   subscribeToShopInventoryItems,
   upsertCustomerForShop,
 } from "../services/shopData";
+import { subscribeCategories } from "../services/firebase";
 
 const Calculator = () => {
   const [itemName, setItemName] = useState("");
@@ -69,6 +72,10 @@ const Calculator = () => {
   const [historicalItemNames, setHistoricalItemNames] = useState([]);
   const [localItemNameHistory, setLocalItemNameHistory] = useState([]);
   const [inventoryItemOptions, setInventoryItemOptions] = useState([]);
+  const [shopBills, setShopBills] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [resumeSearch, setResumeSearch] = useState("");
+  const [activeBillMeta, setActiveBillMeta] = useState(null);
   const [extraCharges, setExtraCharges] = useState({
     rickshaw: "",
     bus: "",
@@ -77,10 +84,11 @@ const Calculator = () => {
   const [verifiedItems, setVerifiedItems] = useState([]);
   const { user } = useAuth();
   const { activeShopId, shop } = useShop();
-  const draftsStorageKey = `savedBills-${activeShopId}-${user?.uid || "guest"}`;
-  const inProgressDraftStorageKey = `inProgressBill-${activeShopId}-${user?.uid || "guest"}`;
-  const itemHistoryStorageKey = `item-history-${activeShopId}-${user?.uid || "guest"}`;
-  const offlineBillQueueStorageKey = `offline-bill-queue-${activeShopId}-${user?.uid || "guest"}`;
+  const draftScopeKey = activeShopId && user?.uid ? `${activeShopId}-${user.uid}` : null;
+  const draftsStorageKey = draftScopeKey ? `savedBills-${draftScopeKey}` : null;
+  const inProgressDraftStorageKey = draftScopeKey ? `inProgressBill-${draftScopeKey}` : null;
+  const itemHistoryStorageKey = draftScopeKey ? `item-history-${draftScopeKey}` : null;
+  const offlineBillQueueStorageKey = draftScopeKey ? `offline-bill-queue-${draftScopeKey}` : null;
 
   const itemNameRef = useRef(null);
   const itemPriceRef = useRef(null);
@@ -148,6 +156,7 @@ const Calculator = () => {
   // Keeps item-name suggestions alive even when old bills are deleted.
   // History is scoped per shop + user using itemHistoryStorageKey.
   const saveItemNameToLocalHistory = (value) => {
+    if (!itemHistoryStorageKey) return;
     const itemNameValue = (value || "").trim();
     if (!itemNameValue) return;
 
@@ -207,8 +216,11 @@ const Calculator = () => {
     setQuantityUnit("piece");
     setUndoStack([]);
     setRedoStack([]);
+    setActiveBillMeta(null);
     lastSavedSignatureRef.current = "";
-    localStorage.removeItem(inProgressDraftStorageKey);
+    if (inProgressDraftStorageKey) {
+      localStorage.removeItem(inProgressDraftStorageKey);
+    }
     openToast("All fields and draft storage have been reset", "success");
   };
 
@@ -224,6 +236,29 @@ const Calculator = () => {
   const calculateGrandTotal = () =>
     calculateTotalBill() + calculateExtraChargesTotal();
   const calculateRoundedGrandTotal = () => Math.round(calculateGrandTotal());
+
+  const isBillLocked = (bill) => {
+    if (!bill) return false;
+    if (bill.status === "Locked") return true;
+    if (!bill.createdAt) return false;
+    const createdAt = new Date(bill.createdAt).getTime();
+    if (Number.isNaN(createdAt)) return false;
+    return Date.now() - createdAt > 24 * 60 * 60 * 1000;
+  };
+
+  const getBillStatusColor = (statusValue) => {
+    switch (statusValue) {
+      case "Finalized":
+        return "info";
+      case "Edited":
+        return "warning";
+      case "Locked":
+        return "error";
+      case "Draft":
+      default:
+        return "default";
+    }
+  };
 
   const normalizeValue = (value) =>
     (value || "").toString().trim().toLowerCase();
@@ -288,11 +323,13 @@ const Calculator = () => {
   };
 
   const getOfflineBillQueue = () => {
+    if (!offlineBillQueueStorageKey) return [];
     const parsed = JSON.parse(localStorage.getItem(offlineBillQueueStorageKey) || "[]");
     return Array.isArray(parsed) ? parsed : [];
   };
 
   const setOfflineBillQueue = (queue) => {
+    if (!offlineBillQueueStorageKey) return;
     localStorage.setItem(offlineBillQueueStorageKey, JSON.stringify(queue));
   };
 
@@ -315,7 +352,15 @@ const Calculator = () => {
     currentItems,
     totalAmount,
     createdAtIso = new Date().toISOString(),
+    options = {},
   ) => {
+    const {
+      status = "Finalized",
+      version = 1,
+      editHistory = [],
+      billId = "",
+      originalCreatedAt = null,
+    } = options;
     const date = new Date(createdAtIso);
     const formattedDate = date.toLocaleDateString("en-IN", {
       day: "2-digit",
@@ -339,6 +384,11 @@ const Calculator = () => {
       time: formattedTime,
       createdAt: createdAtIso,
       totalAmount: Number(totalAmount),
+      billId,
+      status,
+      version,
+      editHistory,
+      originalCreatedAt: originalCreatedAt || createdAtIso,
       subtotalAmount: Number(calculateTotalBill()),
       extraCharges: {
         ...extraCharges,
@@ -422,6 +472,7 @@ const Calculator = () => {
       totalPrice,
       inventoryItemId: inventoryMatch?.id || "",
       inventoryStockUnit: inventoryMatch?.stockUnit || "piece",
+      categoryId: inventoryMatch?.categoryId || "",
     };
 
     setItems([...items, newItem]);
@@ -486,6 +537,7 @@ const Calculator = () => {
       inventoryItemId: inventoryMatch?.id || previousItem.inventoryItemId || "",
       inventoryStockUnit:
         inventoryMatch?.stockUnit || previousItem.inventoryStockUnit || "piece",
+      categoryId: inventoryMatch?.categoryId || previousItem.categoryId || "",
     };
 
     setItems(updatedItems);
@@ -567,6 +619,11 @@ const Calculator = () => {
   const allItemsVerified = () =>
     items.length > 0 && items.every((_, index) => verifiedItems[index] === true);
 
+  const toggleCheckAllItems = () => {
+    const isAllChecked = allItemsVerified();
+    setVerifiedItems(items.map(() => !isAllChecked));
+  };
+
   const saveBillToFirebase = async (
     shopId,
     currentCustomerName,
@@ -574,9 +631,34 @@ const Calculator = () => {
     currentItems,
     totalAmount,
     createdAtIso = new Date().toISOString(),
+    options = {},
   ) => {
+    const editingBill = options.editingBill || null;
+    const isEditFlow = Boolean(editingBill?.id);
     const date = new Date(createdAtIso);
     const stockRequests = buildStockRequests(currentItems);
+    const nextVersion = isEditFlow ? Number(editingBill.version || 1) + 1 : 1;
+    const nextStatus = isEditFlow ? "Edited" : "Finalized";
+    const nextHistory = isEditFlow
+      ? [
+          ...(Array.isArray(editingBill.editHistory) ? editingBill.editHistory : []),
+          {
+            version: nextVersion,
+            editedAt: createdAtIso,
+            status: nextStatus,
+            totalAmount: Number(totalAmount),
+            itemCount: currentItems.length,
+          },
+        ]
+      : [
+          {
+            version: 1,
+            editedAt: createdAtIso,
+            status: "Finalized",
+            totalAmount: Number(totalAmount),
+            itemCount: currentItems.length,
+          },
+        ];
     const billPayload = buildBillPayload(
       shopId,
       currentCustomerName,
@@ -584,10 +666,28 @@ const Calculator = () => {
       currentItems,
       totalAmount,
       createdAtIso,
+      {
+        status: nextStatus,
+        version: nextVersion,
+        editHistory: nextHistory,
+        billId: editingBill?.id || "",
+        originalCreatedAt: editingBill?.originalCreatedAt || editingBill?.createdAt || createdAtIso,
+      },
     );
 
     try {
-      await saveBillAndConsumeStockForShop(shopId, billPayload, stockRequests);
+      if (isEditFlow) {
+        await updateBillAndConsumeStockDeltaForShop(
+          shopId,
+          editingBill.id,
+          billPayload,
+          currentItems,
+          Array.isArray(editingBill.items) ? editingBill.items : []
+        );
+      } else {
+        const newBillRef = await saveBillAndConsumeStockForShop(shopId, billPayload, stockRequests);
+        billPayload.billId = newBillRef.id;
+      }
     } catch (error) {
       console.error("Error saving bill: ", error);
       if (
@@ -613,6 +713,8 @@ const Calculator = () => {
       console.error("Error syncing customer: ", error);
       openToast("Bill saved, but customer info sync failed", "warning");
     }
+
+    return isEditFlow ? editingBill.id : billPayload.billId || null;
   };
 
   const ensureBillSaved = async () => {
@@ -625,13 +727,24 @@ const Calculator = () => {
       return;
     }
 
-    await saveBillToFirebase(
+    const savedBillId = await saveBillToFirebase(
       activeShopId,
       customerName,
       customerPhone,
       items,
       calculateRoundedGrandTotal(),
+      new Date().toISOString(),
+      {
+        editingBill: activeBillMeta,
+      }
     );
+
+    if (savedBillId) {
+      setActiveBillMeta((current) => ({
+        id: savedBillId,
+        version: current?.id === savedBillId ? Number(current.version || 1) + 1 : 1,
+      }));
+    }
 
     lastSavedSignatureRef.current = signature;
   };
@@ -665,6 +778,11 @@ const Calculator = () => {
     const formattedTime = `${hours.toString().padStart(2, "0")}.${minutes}${ampm}`;
 
     doc.setFontSize(10);
+    if (activeBillMeta?.id) {
+      doc.setFont("helvetica", "bold");
+      doc.text("Updated Bill", 10, 6);
+      doc.setFont("helvetica", "normal");
+    }
     doc.text(`Date - ${formattedDate}`, 175, 10);
     doc.text(`Time - ${formattedTime}`, 175, 15);
     doc.text(`${shop.name || "Demo Shop"}`, 10, 10);
@@ -722,6 +840,10 @@ const Calculator = () => {
   };
 
   const saveBillForLaterEditing = () => {
+    if (!draftsStorageKey) {
+      openToast("Please wait, shop is loading", "warning");
+      return;
+    }
     const bill = {
       customerName,
       customerPhone,
@@ -747,9 +869,12 @@ const Calculator = () => {
     });
     setVerifiedItems([]);
     setItems([]);
+    setActiveBillMeta(null);
+    lastSavedSignatureRef.current = "";
   };
 
   const loadBill = (index) => {
+    if (!draftsStorageKey) return;
     const nextBills = JSON.parse(localStorage.getItem(draftsStorageKey)) || [];
     const bill = nextBills[index];
     setCustomerName(bill.customerName);
@@ -764,10 +889,13 @@ const Calculator = () => {
     );
     setItems(bill.items);
     setVerifiedItems(bill.verifiedItems || bill.items.map(() => false));
+    setActiveBillMeta(null);
+    lastSavedSignatureRef.current = "";
     openToast("Bill loaded successfully");
   };
 
   const deleteBill = (index) => {
+    if (!draftsStorageKey) return;
     const nextBills = JSON.parse(localStorage.getItem(draftsStorageKey)) || [];
     nextBills.splice(index, 1);
     localStorage.setItem(draftsStorageKey, JSON.stringify(nextBills));
@@ -775,7 +903,7 @@ const Calculator = () => {
     openToast("Bill deleted successfully", "error");
   };
 
-  const printThermalBill = async () => {
+  const printThermalBill = async (mode = "original") => {
     if (!items.length) {
       openToast("Add at least one item before printing", "error");
       return;
@@ -789,19 +917,24 @@ const Calculator = () => {
       return;
     }
 
-    // Open popup first so user gets immediate feedback and browser popup blockers are less likely.
-    const printWindow = window.open("", "_blank", "width=420,height=720");
-    if (!printWindow) {
-      openToast("Allow popups to print the thermal bill", "error");
-      return;
+    const isElectron = !!(window.electronAPI || window.ipcRenderer || (window.require && window.require('electron')));
+    let printWindow = null;
+
+    if (!isElectron) {
+      // Fallback: Open popup first for browser environment
+      printWindow = window.open("", "_blank", "width=420,height=720");
+      if (!printWindow) {
+        openToast("Allow popups to print the thermal bill", "error");
+        return;
+      }
+      printWindow.document.write(`
+        <html>
+          <head><title>Preparing Thermal Bill</title></head>
+          <body style="font-family: Arial, sans-serif; padding: 12px;">Preparing print...</body>
+        </html>
+      `);
+      printWindow.document.close();
     }
-    printWindow.document.write(`
-      <html>
-        <head><title>Preparing Thermal Bill</title></head>
-        <body style="font-family: Arial, sans-serif; padding: 12px;">Preparing print...</body>
-      </html>
-    `);
-    printWindow.document.close();
 
     try {
       await ensureBillSaved();
@@ -821,11 +954,36 @@ const Calculator = () => {
           "warning"
         );
       } else {
-        printWindow.close();
+        if (printWindow) printWindow.close();
         openToast("Could not save bill before printing", "error");
         return;
       }
     }
+
+    const displayItems = mode === "customer"
+      ? items.map((item) => {
+          let protectedName = item.name;
+          
+          let targetCategoryId = item.categoryId;
+          if (!targetCategoryId) {
+            const inventoryMatch = findInventoryItemByName(item.name);
+            if (inventoryMatch && inventoryMatch.categoryId) {
+              targetCategoryId = inventoryMatch.categoryId;
+            }
+          }
+
+          if (targetCategoryId) {
+            const cat = categories.find((c) => c.id === targetCategoryId);
+            if (cat && cat.name) {
+              protectedName = cat.name;
+            }
+          }
+          return {
+            ...item,
+            name: protectedName
+          };
+        })
+      : items;
 
     const extraChargeEntries = [
       { label: "Colie", value: Number(extraCharges.rickshaw || 0) },
@@ -845,6 +1003,7 @@ const Calculator = () => {
       hour12: true,
     });
     const thermalHtml = buildThermalBillHtml({
+      heading: activeBillMeta?.id ? "Updated" : "",
       printerWidth: shop.thermalPrinterWidth || "80mm",
       shopName: shop.name || "Shop",
       billDate,
@@ -852,26 +1011,47 @@ const Calculator = () => {
       customerName,
       customerPhone,
       customerAddress,
-      items,
+      items: displayItems,
       extraChargeEntries,
       subtotal: calculateTotalBill(),
       extraTotal: calculateExtraChargesTotal(),
       grandTotal: calculateRoundedGrandTotal(),
     });
 
-    printWindow.document.write(thermalHtml);
-    printWindow.document.close();
-    printWindow.focus();
-    printWindow.print();
+    if (isElectron) {
+      try {
+        if (window.electronAPI && window.electronAPI.printReceipt) {
+          window.electronAPI.printReceipt(thermalHtml);
+        } else {
+          const ipcRenderer = window.ipcRenderer || (window.require && window.require('electron').ipcRenderer);
+          if (ipcRenderer) {
+            ipcRenderer.send("print-thermal-receipt", thermalHtml);
+          } else {
+            throw new Error("No IPC handler found");
+          }
+        }
+        openToast("Bill sent to thermal printer");
+      } catch (err) {
+        console.error("Electron print error:", err);
+        openToast("Failed to print via Electron", "error");
+      }
+    } else if (printWindow) {
+      printWindow.document.write(thermalHtml);
+      printWindow.document.close();
+      printWindow.focus();
+      printWindow.print();
+    }
   };
 
   useEffect(() => {
+    if (!draftsStorageKey) return;
     const nextBills = JSON.parse(localStorage.getItem(draftsStorageKey)) || [];
     setSavedBills(nextBills);
   }, [draftsStorageKey]);
 
   // Restore unfinished in-progress bill for this shop/user.
   useEffect(() => {
+    if (!inProgressDraftStorageKey) return;
     hasHydratedInProgressRef.current = false;
     const stored = JSON.parse(localStorage.getItem(inProgressDraftStorageKey) || "null");
     if (stored) {
@@ -894,25 +1074,10 @@ const Calculator = () => {
         priceUnit: stored.priceUnit || "piece",
         quantityUnit: stored.quantityUnit || "piece",
       };
-    } else {
-      applyEditorSnapshot({});
-      previousSnapshotRef.current = {
-        customerName: "",
-        customerPhone: "",
-        customerAddress: "",
-        extraCharges: {
-          rickshaw: "",
-          bus: "",
-          other: "",
-        },
-        items: [],
-        verifiedItems: [],
-        itemName: "",
-        itemPrice: "",
-        quantity: "",
-        priceUnit: "piece",
-        quantityUnit: "piece",
-      };
+    } else if (!previousSnapshotRef.current) {
+      // Keep existing in-memory editor state unless this is first hydration.
+      // This prevents refresh/tab-switch context races from wiping an unfinished bill.
+      previousSnapshotRef.current = buildEditorSnapshot();
     }
     setUndoStack([]);
     setRedoStack([]);
@@ -921,6 +1086,7 @@ const Calculator = () => {
 
   // Auto-save current in-progress bill, so tab switching does not lose work.
   useEffect(() => {
+    if (!inProgressDraftStorageKey) return;
     if (!hasHydratedInProgressRef.current) return;
     const hasAnyData =
       customerName.trim() ||
@@ -1067,6 +1233,10 @@ const Calculator = () => {
 
   // Load persistent item-name history once per active shop/user context.
   useEffect(() => {
+    if (!itemHistoryStorageKey) {
+      setLocalItemNameHistory([]);
+      return;
+    }
     const storedHistory = JSON.parse(localStorage.getItem(itemHistoryStorageKey)) || [];
     setLocalItemNameHistory(Array.isArray(storedHistory) ? storedHistory : []);
   }, [itemHistoryStorageKey]);
@@ -1119,6 +1289,7 @@ const Calculator = () => {
 
   useEffect(() => {
     if (!user?.uid) {
+      setShopBills([]);
       setCustomerOptionsFromBills([]);
       setHistoricalItemNames([]);
       return () => {};
@@ -1128,6 +1299,7 @@ const Calculator = () => {
       activeShopId,
       user.uid,
       (bills) => {
+        setShopBills(bills);
         const uniqueCustomers = new Map();
         const uniqueItemNames = new Set();
 
@@ -1171,6 +1343,24 @@ const Calculator = () => {
         console.error("Inventory suggestions subscribe failed:", error);
         setInventoryItemOptions([]);
       },
+    );
+
+    return () => unsubscribe();
+  }, [activeShopId, user?.uid]);
+
+  useEffect(() => {
+    if (!user?.uid || !activeShopId) {
+      setCategories([]);
+      return () => {};
+    }
+
+    const unsubscribe = subscribeCategories(
+      activeShopId,
+      (catData) => setCategories(catData),
+      (error) => {
+        console.error("Categories subscribe failed:", error);
+        setCategories([]);
+      }
     );
 
     return () => unsubscribe();
@@ -1221,6 +1411,55 @@ const Calculator = () => {
     return Array.from(byName.values());
   }, [historicalItemNames, inventoryItemOptions, localItemNameHistory]);
 
+  const resumableBills = useMemo(() => {
+    const normalized = (resumeSearch || "").toLowerCase().trim();
+    const sorted = [...shopBills].sort((a, b) => {
+      const aTime = new Date(a.createdAt || 0).getTime();
+      const bTime = new Date(b.createdAt || 0).getTime();
+      return bTime - aTime;
+    });
+
+    return sorted
+      .filter((bill) => {
+        if (!normalized) return true;
+        const haystack = `${bill.id || ""} ${bill.billId || ""} ${bill.name || ""} ${bill.phoneNumber || ""} ${bill.date || ""}`.toLowerCase();
+        return haystack.includes(normalized);
+      })
+      .slice(0, 20);
+  }, [resumeSearch, shopBills]);
+
+  const loadFirestoreBillForEditing = (bill) => {
+    if (!bill) return;
+    if (isBillLocked(bill)) {
+      openToast("This bill is locked after 24 hours", "error");
+      return;
+    }
+
+    setCustomerName(bill.name || "");
+    setCustomerPhone(bill.phoneNumber || "");
+    setCustomerAddress(bill.address || "");
+    setItems(Array.isArray(bill.items) ? bill.items : []);
+    setVerifiedItems(Array.isArray(bill.items) ? bill.items.map(() => true) : []);
+    setExtraCharges(
+      bill.extraCharges || {
+        rickshaw: "",
+        bus: "",
+        other: "",
+      },
+    );
+    setActiveBillMeta({
+      id: bill.id,
+      version: Number(bill.version || 1),
+      status: bill.status || "Finalized",
+      editHistory: Array.isArray(bill.editHistory) ? bill.editHistory : [],
+      items: Array.isArray(bill.items) ? bill.items : [],
+      createdAt: bill.createdAt || null,
+      originalCreatedAt: bill.originalCreatedAt || bill.createdAt || null,
+    });
+    lastSavedSignatureRef.current = "";
+    openToast(`Bill ${bill.id} resumed for editing`, "success");
+  };
+
   return (
     <Stack spacing={3}>
       <Paper
@@ -1261,9 +1500,10 @@ const Calculator = () => {
         </Stack>
       </Paper>
 
-      <Grid container spacing={3}>
+      <Grid container spacing={4}>
         <Grid item xs={12} lg={8}>
-          <Card>
+          <Stack spacing={4}>
+            <Card sx={{ borderRadius: 4, boxShadow: "0 4px 20px rgba(0,0,0,0.04)", border: "1px solid", borderColor: "divider" }}>
             <CardContent sx={{ p: { xs: 2, md: 3 } }}>
               <Stack spacing={3}>
                 <Box>
@@ -1526,157 +1766,30 @@ const Calculator = () => {
               </Stack>
             </CardContent>
           </Card>
-        </Grid>
-
-        <Grid item xs={12} lg={4}>
-          <Card sx={{ position: { lg: "sticky" }, top: { lg: 104 } }}>
-            <CardContent sx={{ p: { xs: 2, md: 3 } }}>
-              <Stack spacing={2.5}>
-                <Box>
-                  <Typography variant="h6">Bill Summary</Typography>
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    sx={{ mt: 0.5 }}
-                  >
-                    Keep the final amount and print actions within reach.
-                  </Typography>
-                </Box>
-
-                <Paper
-                  variant="outlined"
-                  sx={{
-                    p: 2.5,
-                    borderRadius: 4,
-                    borderColor: "rgba(148, 163, 184, 0.18)",
-                    background:
-                      "linear-gradient(180deg, rgba(248, 250, 252, 0.95) 0%, rgba(241, 245, 249, 0.9) 100%)",
-                  }}
-                >
-                  <Typography variant="body2" color="text.secondary">
-                    Subtotal
-                  </Typography>
-                  <Typography variant="h3" sx={{ mt: 1 }}>
-                    Rs. {calculateTotalBill().toFixed(2)}
-                  </Typography>
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    sx={{ mt: 1 }}
-                  >
-                    Extra charges: Rs. {calculateExtraChargesTotal().toFixed(2)}
-                  </Typography>
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    sx={{ mt: 0.5 }}
-                  >
-                    Grand total: Rs. {calculateRoundedGrandTotal()}
-                  </Typography>
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    sx={{ mt: 1 }}
-                  >
-                    Verified {verifiedItems.filter(Boolean).length} of{" "}
-                    {items.length} items
-                  </Typography>
-                </Paper>
-
-                <Paper
-                  variant="outlined"
-                  sx={{
-                    position: "sticky",
-                    bottom: 10,
-                    zIndex: 5,
-                    p: 1.25,
-                    borderRadius: 2,
-                    borderColor: "rgba(148,163,184,0.26)",
-                    bgcolor: "rgba(255,255,255,0.94)",
-                    backdropFilter: "blur(8px)",
-                  }}
-                >
-                <Stack
-                  direction={{ xs: "column", sm: "row", lg: "column" }}
-                  spacing={1}
-                >
-                  <Stack direction="row" spacing={1}>
-                    <Button
-                      variant="text"
-                      onClick={handleUndo}
-                      disabled={!undoStack.length}
-                      fullWidth
-                    >
-                      Undo
-                    </Button>
-                    <Button
-                      variant="text"
-                      onClick={handleRedo}
-                      disabled={!redoStack.length}
-                      fullWidth
-                    >
-                      Redo
-                    </Button>
-                  </Stack>
-                  <Button
-                    variant="contained"
-                    onClick={generatePDF}
-                    disabled={
-                      !customerName || !customerPhone || items.length === 0
-                    }
-                  >
-                    Generate Bill
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    startIcon={<PrintIcon />}
-                    onClick={printThermalBill}
-                    disabled={
-                      !customerName || !customerPhone || items.length === 0
-                    }
-                  >
-                    Thermal Print
-                  </Button>
-                  <Button
-                    variant="contained"
-                    color="success"
-                    onClick={saveBillForLaterEditing}
-                    disabled={
-                      !customerName || !customerPhone || items.length === 0
-                    }
-                  >
-                    Save for Later
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    color="success"
-                    startIcon={<WhatsAppIcon />}
-                    onClick={sendWhatsAppFromBilling}
-                    disabled={!customerName || !customerPhone}
-                  >
-                    WhatsApp
-                  </Button>
-                </Stack>
-                </Paper>
-              </Stack>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        <Grid item xs={12} lg={8}>
-          <Card>
+            <Card sx={{ borderRadius: 4, boxShadow: "0 4px 20px rgba(0,0,0,0.04)", border: "1px solid", borderColor: "divider" }}>
             <CardContent sx={{ p: { xs: 2, md: 3 } }}>
               <Stack spacing={2}>
-                <Box>
-                  <Typography variant="h6">Bill Items</Typography>
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    sx={{ mt: 0.5 }}
-                  >
-                    Review, edit, and remove line items before the final print.
-                  </Typography>
-                </Box>
+                <Stack direction="row" justifyContent="space-between" alignItems="center">
+                  <Box>
+                    <Typography variant="h6">Bill Items</Typography>
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{ mt: 0.5 }}
+                    >
+                      Review, edit, and remove line items before the final print.
+                    </Typography>
+                  </Box>
+                  {items.length > 0 && (
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      onClick={toggleCheckAllItems}
+                    >
+                      {allItemsVerified() ? "Uncheck All" : "Check All Items"}
+                    </Button>
+                  )}
+                </Stack>
 
                 {items.length ? (
                   <List sx={{ p: 0 }}>
@@ -1729,67 +1842,314 @@ const Calculator = () => {
               </Stack>
             </CardContent>
           </Card>
+          </Stack>
         </Grid>
-
         <Grid item xs={12} lg={4}>
-          <Card>
+          <Stack spacing={4} sx={{ position: { lg: "sticky" }, top: { lg: 104 } }}>
+            <Card >
             <CardContent sx={{ p: { xs: 2, md: 3 } }}>
-              <List
-                sx={{ p: 0 }}
-                subheader={
-                  <ListSubheader
-                    sx={{
-                      px: 0,
-                      py: 0,
-                      mb: 1.5,
-                      bgcolor: "transparent",
-                      color: "text.primary",
-                      fontSize: 18,
-                      fontWeight: 700,
-                    }}
+              <Stack spacing={2.5}>
+                <Box>
+                  <Typography variant="h6">Bill Summary</Typography>
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{ mt: 0.5 }}
                   >
-                    Saved Draft Bills
-                  </ListSubheader>
-                }
-              >
-                {savedBills.length ? (
-                  savedBills.map((bill, index) => (
-                    <ListItem
-                      key={index}
-                      button
-                      onClick={() => loadBill(index)}
-                      sx={{
-                        px: 0,
-                        py: 1.5,
-                        borderBottom:
-                          index === savedBills.length - 1
-                            ? "none"
-                            : "1px solid rgba(226, 232, 240, 0.9)",
-                      }}
-                      secondaryAction={
-                        <IconButton
-                          aria-label="delete"
-                          onClick={() => deleteBill(index)}
-                          sx={{ color: "error.main" }}
-                        >
-                          <ClearIcon />
-                        </IconButton>
-                      }
-                    >
-                      <ListItemText
-                        primary={`Bill for ${bill.customerName}`}
-                        secondary={`Phone: ${bill.customerPhone}${bill.customerAddress ? ` | Address: ${bill.customerAddress}` : ""}`}
-                      />
-                    </ListItem>
-                  ))
-                ) : (
-                  <Typography variant="body2" color="text.secondary">
-                    Saved draft bills will appear here for quick reload.
+                    Keep the final amount and print actions within reach.
                   </Typography>
-                )}
-              </List>
+                  {activeBillMeta?.id ? (
+                    <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
+                      <Chip
+                        size="small"
+                        label={`Editing Bill: ${activeBillMeta.id}`}
+                        color="primary"
+                        variant="outlined"
+                      />
+                      <Chip
+                        size="small"
+                        label={`v${Number(activeBillMeta.version || 1)}`}
+                        color="warning"
+                        variant="outlined"
+                      />
+                    </Stack>
+                  ) : null}
+                </Box>
+
+                <Paper
+                  variant="outlined"
+                  sx={{
+                    p: 2.5,
+                    borderRadius: 4,
+                    borderColor: (theme) =>
+                      theme.palette.mode === "dark"
+                        ? "rgba(255,255,255,0.12)"
+                        : "rgba(148, 163, 184, 0.18)",
+                    background: (theme) =>
+                      theme.palette.mode === "dark"
+                        ? "linear-gradient(180deg, rgba(15,23,42,0.98) 0%, rgba(17,24,39,0.96) 100%)"
+                        : "linear-gradient(180deg, rgba(248, 250, 252, 0.95) 0%, rgba(241, 245, 249, 0.9) 100%)",
+                    boxShadow: (theme) =>
+                      theme.palette.mode === "dark"
+                        ? "0 0 0 1px rgba(96,165,250,0.14), 0 20px 36px rgba(2,6,23,0.48)"
+                        : undefined,
+                  }}
+                >
+                  <Typography variant="body2" color="text.secondary">
+                    Subtotal
+                  </Typography>
+                  <Typography variant="h5" sx={{ mt: 0.75, color: "text.secondary", fontWeight: 700 }}>
+                    Rs. {calculateTotalBill().toFixed(2)}
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{ mt: 1 }}
+                  >
+                    Extra charges: Rs. {calculateExtraChargesTotal().toFixed(2)}
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{ mt: 1.25, fontWeight: 700 }}
+                  >
+                    Grand total
+                  </Typography>
+                  <Typography
+                    variant="h3"
+                    color="primary.main"
+                    sx={{ mt: 0.25, fontWeight: 900, letterSpacing: "-0.02em" }}
+                  >
+                    Rs. {calculateRoundedGrandTotal()}
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{ mt: 1 }}
+                  >
+                    Verified {verifiedItems.filter(Boolean).length} of{" "}
+                    {items.length} items
+                  </Typography>
+                </Paper>
+
+                <Paper
+                  variant="outlined"
+                  sx={{
+                    
+                    p: 1.25,
+                    borderRadius: 2,
+                    borderColor: (theme) =>
+                      theme.palette.mode === "dark"
+                        ? "rgba(255,255,255,0.16)"
+                        : "rgba(148,163,184,0.26)",
+                    bgcolor: (theme) =>
+                      theme.palette.mode === "dark"
+                        ? "rgba(15,23,42,0.92)"
+                        : "rgba(255,255,255,0.94)",
+                    backdropFilter: "blur(8px)",
+                  }}
+                >
+                <Stack
+                  direction={{ xs: "column", sm: "row", lg: "column" }}
+                  spacing={1}
+                >
+                  <Stack direction="row" spacing={1}>
+                    <Button
+                      variant="text"
+                      onClick={handleUndo}
+                      disabled={!undoStack.length}
+                      fullWidth
+                    >
+                      Undo
+                    </Button>
+                    <Button
+                      variant="text"
+                      onClick={handleRedo}
+                      disabled={!redoStack.length}
+                      fullWidth
+                    >
+                      Redo
+                    </Button>
+                  </Stack>
+                  <Button
+                    variant="contained"
+                    onClick={generatePDF}
+                    disabled={
+                      !customerName || !customerPhone || items.length === 0
+                    }
+                  >
+                    {activeBillMeta?.id ? "Reprint Updated Bill" : "Generate Bill"}
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    startIcon={<PrintIcon />}
+                    onClick={() => printThermalBill("original")}
+                    disabled={
+                      !customerName || !customerPhone || items.length === 0
+                    }
+                  >
+                    Original Bill
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    startIcon={<PrintIcon />}
+                    onClick={() => printThermalBill("customer")}
+                    disabled={
+                      !customerName || !customerPhone || items.length === 0
+                    }
+                    color="secondary"
+                  >
+                    Privacy Copy
+                  </Button>
+                  <Button
+                    variant="contained"
+                    color="success"
+                    onClick={saveBillForLaterEditing}
+                    disabled={
+                      !customerName || !customerPhone || items.length === 0
+                    }
+                  >
+                    Save for Later
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    color="success"
+                    startIcon={<WhatsAppIcon />}
+                    onClick={sendWhatsAppFromBilling}
+                    disabled={!customerName || !customerPhone}
+                  >
+                    WhatsApp
+                  </Button>
+                </Stack>
+                </Paper>
+              </Stack>
             </CardContent>
           </Card>
+            <Card sx={{ borderRadius: 4, boxShadow: "0 4px 20px rgba(0,0,0,0.04)", border: "1px solid", borderColor: "divider" }}>
+            <CardContent sx={{ p: { xs: 2, md: 3 } }}>
+              <Stack spacing={2}>
+                <List
+                  sx={{ p: 0 }}
+                  subheader={
+                    <ListSubheader
+                      sx={{
+                        px: 0,
+                        py: 0,
+                        mb: 1.5,
+                        bgcolor: "transparent",
+                        color: "text.primary",
+                        fontSize: 18,
+                        fontWeight: 700,
+                      }}
+                    >
+                      Saved Draft Bills
+                    </ListSubheader>
+                  }
+                >
+                  {savedBills.length ? (
+                    savedBills.map((bill, index) => (
+                      <ListItem
+                        key={index}
+                        button
+                        onClick={() => loadBill(index)}
+                        sx={{
+                          px: 0,
+                          py: 1.5,
+                          borderBottom:
+                            index === savedBills.length - 1
+                              ? "none"
+                              : "1px solid rgba(226, 232, 240, 0.9)",
+                        }}
+                        secondaryAction={
+                          <IconButton
+                            aria-label="delete"
+                            onClick={() => deleteBill(index)}
+                            sx={{ color: "error.main" }}
+                          >
+                            <ClearIcon />
+                          </IconButton>
+                        }
+                      >
+                        <ListItemText
+                          primary={`Bill for ${bill.customerName}`}
+                          secondary={`Phone: ${bill.customerPhone}${bill.customerAddress ? ` | Address: ${bill.customerAddress}` : ""}`}
+                        />
+                      </ListItem>
+                    ))
+                  ) : (
+                    <Typography variant="body2" color="text.secondary">
+                      Saved draft bills will appear here for quick reload.
+                    </Typography>
+                  )}
+                </List>
+
+                <Divider />
+
+                <Typography variant="h6">Resume Recent Bills</Typography>
+                <TextField
+                  size="small"
+                  label="Search by name, phone, date"
+                  value={resumeSearch}
+                  onChange={(event) => setResumeSearch(event.target.value)}
+                  fullWidth
+                />
+                <List sx={{ p: 0, maxHeight: 320, overflowY: "auto" }}>
+                  {resumableBills.length ? (
+                    resumableBills.map((bill) => {
+                      const locked = isBillLocked(bill);
+                      const statusValue = locked ? "Locked" : bill.status || "Finalized";
+                      return (
+                        <ListItem
+                          key={bill.id}
+                          sx={{
+                            px: 0,
+                            py: 1.25,
+                            borderBottom: "1px solid rgba(226,232,240,0.28)",
+                          }}
+                          className="flex flex-row"
+                        >
+                          <div className="flex-1 min-w-0 pr-4">
+                            <ListItemText
+                              primary={
+                                <Stack direction="row" spacing={1} alignItems="center">
+                                  <span>{bill.name || "Customer"}</span>
+                                  <Chip
+                                    size="small"
+                                    label={statusValue}
+                                    color={getBillStatusColor(statusValue)}
+                                    variant="outlined"
+                                  />
+                                  <Chip size="small" label={`v${Number(bill.version || 1)}`} variant="outlined" />
+                                </Stack>
+                              }
+                              secondary={`Phone: ${bill.phoneNumber || "-"} | Total: Rs. ${Number(
+                                bill.totalAmount || 0
+                              ).toFixed(2)}`}
+                            />
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <IconButton
+                              disabled={locked}
+                              onClick={() => loadFirestoreBillForEditing(bill)}
+                              color="primary"
+                              title={locked ? "Bill Locked" : "Edit Bill"}
+                            >
+                              {locked ? <LockRoundedIcon /> : <EditIcon />}
+                            </IconButton>
+                          </div>
+                        </ListItem>
+                      );
+                    })
+                  ) : (
+                    <Typography variant="body2" color="text.secondary">
+                      No bills found for resume.
+                    </Typography>
+                  )}
+                </List>
+              </Stack>
+            </CardContent>
+          </Card>
+          </Stack>
         </Grid>
       </Grid>
 

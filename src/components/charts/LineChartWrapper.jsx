@@ -1,7 +1,7 @@
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, Legend, CartesianGrid } from "recharts";
 import PropTypes from "prop-types";
 
-const LineChartWrapper = ({ data, dataKey = "value", name = "Value", xKey = "label", color = "#1d4ed8" }) => {
+const LineChartWrapper = ({ data, dataKey = "value", name = "Value", xKey = "label", color = "#1d4ed8", onPointClick }) => {
   if (!data || !data.length) return <div>No data</div>;
 
   return (
@@ -12,7 +12,15 @@ const LineChartWrapper = ({ data, dataKey = "value", name = "Value", xKey = "lab
         <YAxis />
         <Tooltip />
         <Legend />
-        <Line type="monotone" dataKey={dataKey} name={name} stroke={color} strokeWidth={2} dot={{ r: 2 }} />
+        <Line
+          type="monotone"
+          dataKey={dataKey}
+          name={name}
+          stroke={color}
+          strokeWidth={2}
+          dot={{ r: 3, onClick: (_, index) => onPointClick && onPointClick(data[index], index) }}
+          activeDot={{ r: 5, onClick: (_, index) => onPointClick && onPointClick(data[index], index) }}
+        />
       </LineChart>
     </ResponsiveContainer>
   );
@@ -26,4 +34,5 @@ LineChartWrapper.propTypes = {
   name: PropTypes.string,
   xKey: PropTypes.string,
   color: PropTypes.string,
+  onPointClick: PropTypes.func,
 };

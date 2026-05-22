@@ -207,6 +207,80 @@ export const saveBillAndConsumeStockForShop = async (
   return billRef;
 };
 
+export const updateBillAndConsumeStockDeltaForShop = async (
+  shopId,
+  billId,
+  billPatch,
+  currentItems,
+  previousItems
+) => {
+  const billRef = getShopBillDocRef(shopId, billId);
+
+  const calculatePieceQty = (item) => {
+    const qty = Number(item.quantity || 0);
+    return item.quantityUnit === "dozen" ? qty * 12 : qty;
+  };
+
+  const deltaRequests = new Map();
+
+  currentItems.forEach((item) => {
+    const itemId = item.inventoryItemId;
+    if (!itemId) return;
+    const qty = calculatePieceQty(item);
+    deltaRequests.set(itemId, (deltaRequests.get(itemId) || 0) + qty);
+  });
+
+  previousItems.forEach((item) => {
+    const itemId = item.inventoryItemId;
+    if (!itemId) return;
+    const qty = calculatePieceQty(item);
+    deltaRequests.set(itemId, (deltaRequests.get(itemId) || 0) - qty);
+  });
+
+  await runTransaction(db, async (transaction) => {
+    const stockUpdates = [];
+
+    for (const [itemId, deltaPieceQty] of deltaRequests.entries()) {
+      if (deltaPieceQty === 0) continue;
+
+      const itemRef = doc(db, "shops", shopId, "items", itemId);
+      const snapshot = await transaction.get(itemRef);
+      if (!snapshot.exists()) continue;
+
+      const itemData = snapshot.data() || {};
+      const stockQty = Number(itemData.stockQty);
+      if (Number.isNaN(stockQty)) continue;
+
+      const stockUnit = itemData.stockUnit === "dozen" ? "dozen" : "piece";
+      const deductQty = pieceQtyToStockUnitQty(deltaPieceQty, stockUnit);
+
+      if (stockQty < deductQty) {
+        throw new Error(
+          `Insufficient stock for ${itemData.name || "item"}`
+        );
+      }
+
+      stockUpdates.push({
+        itemRef,
+        stockQty: Number((stockQty - deductQty).toFixed(4)),
+        updatedAt: new Date().toISOString(),
+      });
+    }
+
+    stockUpdates.forEach((entry) => {
+      transaction.update(entry.itemRef, {
+        stockQty: entry.stockQty,
+        updatedAt: entry.updatedAt,
+      });
+    });
+
+    transaction.update(billRef, {
+      ...billPatch,
+      updatedAt: new Date().toISOString(),
+    });
+  });
+};
+
 export const updateBillForShop = (shopId, billId, billPatch) =>
   updateDoc(getShopBillDocRef(shopId, billId), {
     ...billPatch,

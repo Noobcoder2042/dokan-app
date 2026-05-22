@@ -53,7 +53,8 @@ const guideCards = [
     icon: <InsightsRoundedIcon />,
     steps: [
       "Use Dashboard to search bills and customer records.",
-      "Use Analysis to see total sales, average bill value, top items, and best customers.",
+      "Use Sales to see total sales, average bill value, top items, best customers, and performance summaries.",
+      "Use Analytics to track charts, trends, monthly growth, and advanced business insights.",
     ],
   },
   {
@@ -72,9 +73,14 @@ const UserGuide = () => (
       sx={{
         p: { xs: 2.5, md: 3.5 },
         borderRadius: 6,
-        background:
-          "linear-gradient(135deg, rgba(255,255,255,0.96) 0%, rgba(239,246,255,0.98) 52%, rgba(236,253,245,0.96) 100%)",
-        border: "1px solid rgba(148, 163, 184, 0.12)",
+        background: (theme) =>
+          theme.palette.mode === "dark"
+            ? "linear-gradient(135deg, rgba(15,23,42,0.96) 0%, rgba(17,24,39,0.98) 52%, rgba(15,23,42,0.96) 100%)"
+            : "linear-gradient(135deg, rgba(255,255,255,0.96) 0%, rgba(239,246,255,0.98) 52%, rgba(236,253,245,0.96) 100%)",
+        border: (theme) =>
+          theme.palette.mode === "dark"
+            ? "1px solid rgba(255,255,255,0.10)"
+            : "1px solid rgba(148, 163, 184, 0.12)",
       }}
     >
       <Stack
@@ -96,8 +102,14 @@ const UserGuide = () => (
             px: 1.5,
             py: 1,
             borderRadius: 2,
-            bgcolor: "rgba(236, 253, 245, 0.8)",
-            color: "success.dark",
+            bgcolor: (theme) =>
+              theme.palette.mode === "dark"
+                ? "rgba(16,185,129,0.18)"
+                : "rgba(236, 253, 245, 0.8)",
+            color: (theme) =>
+              theme.palette.mode === "dark"
+                ? "#86efac"
+                : "success.dark",
             width: "fit-content",
             height: "fit-content",
           }}
@@ -125,7 +137,10 @@ const UserGuide = () => (
                       alignItems: "center",
                       justifyContent: "center",
                       color: "primary.main",
-                      bgcolor: "rgba(219, 234, 254, 0.9)",
+                      bgcolor: (theme) =>
+                        theme.palette.mode === "dark"
+                          ? "rgba(96,165,250,0.18)"
+                          : "rgba(219, 234, 254, 0.9)",
                     }}
                   >
                     {entry.icon}
@@ -151,8 +166,14 @@ const UserGuide = () => (
       sx={{
         p: 2.5,
         borderRadius: 3,
-        borderColor: "rgba(245, 158, 11, 0.28)",
-        bgcolor: "rgba(255, 251, 235, 0.75)",
+        borderColor: (theme) =>
+          theme.palette.mode === "dark"
+            ? "rgba(251, 191, 36, 0.34)"
+            : "rgba(245, 158, 11, 0.28)",
+        bgcolor: (theme) =>
+          theme.palette.mode === "dark"
+            ? "rgba(92, 59, 8, 0.34)"
+            : "rgba(255, 251, 235, 0.75)",
       }}
     >
       <Stack direction="row" spacing={1.25} alignItems="flex-start">

@@ -756,9 +756,14 @@ const InventoryContent = () => {
         sx={{
           p: { xs: 2, md: 2.75 },
           borderRadius: 3,
-          border: "1px solid rgba(148,163,184,0.15)",
-          background:
-            "linear-gradient(115deg, rgba(255,255,255,0.98), rgba(239,246,255,0.95) 62%, rgba(236,253,245,0.92))",
+          border: (theme) =>
+            theme.palette.mode === "dark"
+              ? "1px solid rgba(255,255,255,0.10)"
+              : "1px solid rgba(148,163,184,0.15)",
+          background: (theme) =>
+            theme.palette.mode === "dark"
+              ? "linear-gradient(115deg, rgba(15,23,42,0.98), rgba(17,24,39,0.95) 62%, rgba(15,23,42,0.92))"
+              : "linear-gradient(115deg, rgba(255,255,255,0.98), rgba(239,246,255,0.95) 62%, rgba(236,253,245,0.92))",
         }}
       >
         <Typography variant="h5">Inventory Management</Typography>
@@ -810,7 +815,10 @@ const InventoryContent = () => {
         sx={{
           p: 2,
           borderRadius: 3,
-          border: "1px solid rgba(148,163,184,0.15)",
+          border: (theme) =>
+            theme.palette.mode === "dark"
+              ? "1px solid rgba(255,255,255,0.10)"
+              : "1px solid rgba(148,163,184,0.15)",
         }}
       >
         <Stack direction={{ xs: "column", md: "row" }} spacing={1.5} alignItems="stretch">
@@ -882,7 +890,10 @@ const InventoryContent = () => {
         sx={{
           p: 2,
           borderRadius: 3,
-          border: "1px solid rgba(148,163,184,0.15)",
+          border: (theme) =>
+            theme.palette.mode === "dark"
+              ? "1px solid rgba(255,255,255,0.10)"
+              : "1px solid rgba(148,163,184,0.15)",
         }}
       >
         <Typography variant="subtitle1" fontWeight={700}>
@@ -897,8 +908,14 @@ const InventoryContent = () => {
                   px: 1.25,
                   py: 0.75,
                   borderRadius: 2,
-                  border: "1px solid rgba(148,163,184,0.2)",
-                  bgcolor: "rgba(248,250,252,0.9)",
+                  border: (theme) =>
+                    theme.palette.mode === "dark"
+                      ? "1px solid rgba(255,255,255,0.14)"
+                      : "1px solid rgba(148,163,184,0.2)",
+                  bgcolor: (theme) =>
+                    theme.palette.mode === "dark"
+                      ? "rgba(15,23,42,0.85)"
+                      : "rgba(248,250,252,0.9)",
                 }}
               >
                 <Typography variant="body2" fontWeight={600}>

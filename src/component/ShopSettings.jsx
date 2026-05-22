@@ -8,10 +8,12 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  FormControlLabel,
   Grid,
   Paper,
   Snackbar,
   Stack,
+  Switch,
   TextField,
   Typography,
 } from "@mui/material";
@@ -26,6 +28,7 @@ import JSZip from "jszip";
 import { saveAs } from "file-saver";
 import { useShop } from "../context/ShopContext";
 import { useAuth } from "../context/AuthContext";
+import { useUIExperience } from "../context/UIExperienceContext";
 import {
   getShopBackupData,
   importShopBackupData,
@@ -128,6 +131,8 @@ const createBillPdfBlob = (bill) => {
 const ShopSettings = () => {
   const { activeShopId, shop } = useShop();
   const { user } = useAuth();
+  const { themeMode, toggleThemeMode, soundEnabled, setSound, immersiveEnabled, setImmersive } =
+    useUIExperience();
   const [form, setForm] = useState(shop);
   const [toastOpen, setToastOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState("Shop settings saved");
@@ -321,9 +326,14 @@ const ShopSettings = () => {
         sx={{
           p: { xs: 2.5, md: 3.5 },
           borderRadius: 6,
-          background:
-            "linear-gradient(135deg, rgba(255,255,255,0.96) 0%, rgba(239,246,255,0.98) 52%, rgba(236,253,245,0.96) 100%)",
-          border: "1px solid rgba(148, 163, 184, 0.12)",
+          background: (theme) =>
+            theme.palette.mode === "dark"
+              ? "linear-gradient(135deg, rgba(15,23,42,0.96) 0%, rgba(17,24,39,0.98) 52%, rgba(15,23,42,0.96) 100%)"
+              : "linear-gradient(135deg, rgba(255,255,255,0.96) 0%, rgba(239,246,255,0.98) 52%, rgba(236,253,245,0.96) 100%)",
+          border: (theme) =>
+            theme.palette.mode === "dark"
+              ? "1px solid rgba(255, 255, 255, 0.1)"
+              : "1px solid rgba(148, 163, 184, 0.12)",
         }}
       >
         <Stack
@@ -341,6 +351,31 @@ const ShopSettings = () => {
           </Button>
         </Stack>
       </Paper>
+
+      <Card>
+        <CardContent sx={{ p: { xs: 2, md: 3 } }}>
+          <Stack spacing={1.5}>
+            <Typography variant="h6">Experience Settings</Typography>
+            <Typography color="text.secondary">
+              Control premium visual mode and UI sound style for your workspace.
+            </Typography>
+            <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
+              <FormControlLabel
+                control={<Switch checked={themeMode === "dark"} onChange={toggleThemeMode} />}
+                label={themeMode === "dark" ? "Neon Dark Theme" : "Premium Light Theme"}
+              />
+              <FormControlLabel
+                control={<Switch checked={soundEnabled} onChange={(event) => setSound(event.target.checked)} />}
+                label="UI Sound Effects"
+              />
+              <FormControlLabel
+                control={<Switch checked={immersiveEnabled} onChange={(event) => setImmersive(event.target.checked)} />}
+                label="Immersive Startup Screen"
+              />
+            </Stack>
+          </Stack>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardContent sx={{ p: { xs: 2, md: 3 } }}>

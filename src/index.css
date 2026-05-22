@@ -9,6 +9,7 @@ html {
 body {
   margin: 0;
   min-width: 320px;
+  background: #0b1220;
 }
 
 #root {
@@ -27,4 +28,8 @@ body {
 
 ::-webkit-scrollbar-track {
   background: transparent;
+}
+
+::selection {
+  background: rgba(59, 130, 246, 0.32);
 }

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { motion } from "framer-motion";
 import {
   Alert,
   Box,
@@ -12,13 +13,16 @@ import BoltRoundedIcon from "@mui/icons-material/BoltRounded";
 import PersonAddAlt1RoundedIcon from "@mui/icons-material/PersonAddAlt1Rounded";
 import DashboardRoundedIcon from "@mui/icons-material/DashboardRounded";
 import { useAuth } from "../context/AuthContext";
+import { useUIExperience } from "../context/UIExperienceContext";
 
 const AuthScreen = () => {
   const { loginWithGoogle } = useAuth();
+  const { playSound } = useUIExperience();
   const [error, setError] = useState("");
 
   const handleGoogle = async () => {
     try {
+      playSound("click");
       await loginWithGoogle();
     } catch (err) {
       setError(err.message);
@@ -36,6 +40,10 @@ const AuthScreen = () => {
       }}
     >
       <Card
+        component={motion.div}
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.45 }}
         sx={{
           width: "100%",
           maxWidth: 1040,
