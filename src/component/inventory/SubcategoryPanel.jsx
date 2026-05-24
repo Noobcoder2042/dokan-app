@@ -28,7 +28,7 @@ const SubcategoryPanel = ({
   onDelete,
 }) => {
   return (
-    <Card sx={{ borderRadius: 4 }}>
+    <Card sx={{ borderRadius: 1 }}>
       <CardContent sx={{ p: { xs: 2, md: 3 } }}>
         <Stack spacing={2}>
           <Typography variant="h6">
@@ -64,11 +64,11 @@ const SubcategoryPanel = ({
                   selected={selectedSubcategoryId === subcategory.id}
                   onClick={() => onSelect(subcategory.id)}
                   sx={{
-                    borderRadius: 2,
+                    borderRadius: 1,
                     mb: 0.5,
                     border:
                       selectedSubcategoryId === subcategory.id
-                        ? "1px solid rgba(37,99,235,0.45)"
+                        ? "1px solid rgba(34,197,94,0.45)"
                         : "1px solid transparent",
                   }}
                 >
@@ -107,3 +107,4 @@ const SubcategoryPanel = ({
 };
 
 export default SubcategoryPanel;
+

@@ -1,3 +1,4 @@
+/* eslint-disable react/prop-types */
 import {
   Box,
   Button,
@@ -63,12 +64,23 @@ const downloadPdfBill = (bill) => {
   });
 
   const finalY = doc.lastAutoTable?.finalY || 20;
+  const gst = bill.gst || {};
+  const gstEnabled = Boolean(gst.enabled);
+  const gstRate = Number(gst.rate || 0);
+  const gstAmount = Number(gst.amount || 0);
+  let summaryY = finalY + 8;
+  if (gstEnabled) {
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.text(`GST (${gstRate}%) - RS. ${gstAmount.toFixed(2)}`, 140, summaryY);
+    summaryY += 6;
+  }
   doc.setFontSize(12);
   doc.setFont("helvetica", "bold");
   doc.text(
     `Grand Total - RS. ${Math.round(Number(bill.totalAmount || 0))}`,
     140,
-    finalY + 8
+    summaryY
   );
   doc.setFont("helvetica", "normal");
   doc.save(`invoice_${bill.id || new Date().toISOString()}.pdf`);
@@ -102,6 +114,9 @@ const printPreviousBill = (bill) => {
     subtotal:
       bill.subtotalAmount ||
       (bill.items || []).reduce((sum, item) => sum + Number(item.totalPrice || 0), 0),
+    gstEnabled: Boolean(bill?.gst?.enabled),
+    gstRate: Number(bill?.gst?.rate || 0),
+    gstAmount: Number(bill?.gst?.amount || 0),
     extraTotal: bill?.extraCharges?.total || 0,
     grandTotal: bill.totalAmount || 0,
   });
@@ -131,6 +146,9 @@ const BillDialog = ({ bill, onClose }) => {
       0
   );
   const extraTotal = Number(bill?.extraCharges?.total || 0);
+  const gstEnabled = Boolean(bill?.gst?.enabled);
+  const gstRate = Number(bill?.gst?.rate || 0);
+  const gstAmount = Number(bill?.gst?.amount || 0);
 
   return (
     <Dialog open={!!bill} onClose={onClose} fullWidth maxWidth="sm">
@@ -142,9 +160,9 @@ const BillDialog = ({ bill, onClose }) => {
             <Box
               sx={{
                 p: 2.5,
-                borderRadius: 4,
+                borderRadius: 1,
                 background:
-                  "linear-gradient(135deg, rgba(29, 78, 216, 0.08) 0%, rgba(15, 118, 110, 0.08) 100%)",
+                  "linear-gradient(135deg, rgba(34, 197, 94, 0.08) 0%, rgba(22, 163, 74, 0.08) 100%)",
               }}
             >
               <Typography variant="h6">{bill.name}</Typography>
@@ -197,6 +215,11 @@ const BillDialog = ({ bill, onClose }) => {
               <Typography variant="body2" color="text.secondary">
                 Subtotal: Rs. {subtotalAmount.toFixed(2)}
               </Typography>
+              {gstEnabled ? (
+                <Typography variant="body2" color="text.secondary">
+                  GST ({gstRate}%): Rs. {gstAmount.toFixed(2)}
+                </Typography>
+              ) : null}
               <Typography variant="body2" color="text.secondary">
                 Extra Cost: Rs. {extraTotal.toFixed(2)}
               </Typography>
@@ -234,3 +257,4 @@ const BillDialog = ({ bill, onClose }) => {
 };
 
 export default BillDialog;
+

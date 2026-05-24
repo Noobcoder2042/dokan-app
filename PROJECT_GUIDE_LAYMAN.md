@@ -13,6 +13,8 @@ Dokan Pro is a shop billing app with:
 - Inventory management
 - Sales dashboard + analysis
 - Thermal printing
+- Custom WhatsApp messages
+- Optional GST mode
 - Backup/import/delete tools
 
 The app is built using:
@@ -85,6 +87,8 @@ What it does:
 - Updates stock from inventory
 - Generates PDF
 - Thermal print
+- Sends WhatsApp message using shop settings
+- Adds GST when GST mode is enabled in Settings
 - Save draft bills in localStorage
 
 ### Billing logic in simple terms
@@ -148,6 +152,7 @@ Shows:
 - Customer info table
 - Date filters (today / last N days / custom)
 - Download/print date range bills
+- WhatsApp bill/customer actions using the message saved in Settings
 - Show/hide summary state (saved in localStorage)
 
 ### `src/component/BillsTable.jsx`
@@ -210,15 +215,67 @@ They split big UI into smaller reusable parts.
 
 ---
 
-## 9. Settings module (backup/import/delete)
+## 9. Settings module
 
 ### `src/component/ShopSettings.jsx`
 
 Handles:
 - Shop details
+- GST mode and GST rate
+- WhatsApp message settings
 - Backup actions
 - Import backup JSON
 - Delete actions by scope
+
+### WhatsApp message settings
+
+The shop owner can set the message used when pressing WhatsApp buttons.
+
+The message can use simple placeholders:
+
+- `{customerName}`
+- `{shopName}`
+- `{total}`
+- `{date}`
+- `{customerPhone}`
+
+Example:
+
+```text
+Thank you {customerName} for shopping with {shopName}.
+Your bill total is {total}.
+Visit again.
+```
+
+There are two bill sharing styles:
+
+1. Send total in WhatsApp text
+   - WhatsApp opens with the message and bill total already written.
+2. Download PDF bill before WhatsApp
+   - The app downloads the PDF bill first.
+   - Then WhatsApp opens with the message.
+   - The user manually attaches the downloaded PDF in WhatsApp.
+
+Important note:
+- A normal web app cannot silently attach a PDF into WhatsApp by itself.
+- That is a browser/WhatsApp limitation, not an app bug.
+- So the current safe flow is: download PDF first, then attach it manually.
+
+### GST mode
+
+The shop owner can turn GST mode on or off in Settings.
+
+When GST mode is on:
+- The app calculates GST on the item subtotal.
+- Extra charges are added after GST.
+- Billing summary, saved bills, PDFs, and thermal bills show the GST line.
+
+Example:
+- Item subtotal: Rs. 1000
+- GST rate: 18%
+- GST amount: Rs. 180
+- Extra charges: Rs. 50
+- Final total: Rs. 1230
 
 Current backup strategy:
 - Creates one ZIP file
@@ -318,6 +375,7 @@ Main keys used:
 
 Good next upgrades:
 
+- Smoother WhatsApp bill sharing flow
 - Offline-first cache
 - Due payment ledger
 - Barcode scan
@@ -331,6 +389,8 @@ Good next upgrades:
 
 - Thermal print blocked:
   - Check popup blocked in browser.
+- WhatsApp PDF not attaching automatically:
+  - This is expected in a browser. Use the downloaded PDF and attach it manually.
 - “Missing or insufficient permissions”:
   - Check Firestore rules + active shop membership.
 - Backup/import issues:
@@ -347,4 +407,3 @@ Think of this app as:
 **Billing engine + inventory engine + customer memory + reporting + safe backup tools**
 
 all tied together with shop-scoped and user-scoped Firebase rules.
-

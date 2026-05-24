@@ -14,6 +14,7 @@ import PrintRoundedIcon from "@mui/icons-material/PrintRounded";
 import BackupRoundedIcon from "@mui/icons-material/BackupRounded";
 import WifiOffRoundedIcon from "@mui/icons-material/WifiOffRounded";
 import TaskAltRoundedIcon from "@mui/icons-material/TaskAltRounded";
+import TipsAndUpdatesRoundedIcon from "@mui/icons-material/TipsAndUpdatesRounded";
 
 const guideCards = [
   {
@@ -38,6 +39,7 @@ const guideCards = [
     steps: [
       "Open Billing, select or type customer details, then add items by name or code.",
       "Check every item, add transport charges if needed, then generate or print the bill.",
+      "Turn on GST Mode in Settings if the shop needs GST added to the item subtotal.",
     ],
   },
   {
@@ -45,7 +47,8 @@ const guideCards = [
     icon: <PrintRoundedIcon />,
     steps: [
       "Use Thermal Print for 80mm receipt printers.",
-      "Use WhatsApp to send a quick thank-you message to the customer phone number.",
+      "Open Settings to write your own WhatsApp message template.",
+      "Choose whether bill WhatsApp sends the total in text or downloads a PDF bill before opening WhatsApp.",
     ],
   },
   {
@@ -67,16 +70,26 @@ const guideCards = [
   },
 ];
 
+const upcomingUpdates = [
+  "Smoother WhatsApp bill sharing flow",
+  "Offline-first cache",
+  "Due payment ledger",
+  "Barcode scan",
+  "Multi-payment split (cash + UPI)",
+  "Staff roles (cashier/owner)",
+  "Auto invoice numbering counter",
+];
+
 const UserGuide = () => (
   <Stack spacing={3}>
     <Paper
       sx={{
         p: { xs: 2.5, md: 3.5 },
-        borderRadius: 6,
+        borderRadius: 1,
         background: (theme) =>
           theme.palette.mode === "dark"
-            ? "linear-gradient(135deg, rgba(15,23,42,0.96) 0%, rgba(17,24,39,0.98) 52%, rgba(15,23,42,0.96) 100%)"
-            : "linear-gradient(135deg, rgba(255,255,255,0.96) 0%, rgba(239,246,255,0.98) 52%, rgba(236,253,245,0.96) 100%)",
+            ? "linear-gradient(135deg, rgba(12,20,16,0.96) 0%, rgba(18,26,22,0.98) 52%, rgba(12,20,16,0.96) 100%)"
+            : "linear-gradient(135deg, rgba(255,255,255,0.96) 0%, rgba(236,253,245,0.98) 52%, rgba(240,253,244,0.96) 100%)",
         border: (theme) =>
           theme.palette.mode === "dark"
             ? "1px solid rgba(255,255,255,0.10)"
@@ -101,7 +114,7 @@ const UserGuide = () => (
           sx={{
             px: 1.5,
             py: 1,
-            borderRadius: 2,
+            borderRadius: 1,
             bgcolor: (theme) =>
               theme.palette.mode === "dark"
                 ? "rgba(16,185,129,0.18)"
@@ -133,13 +146,13 @@ const UserGuide = () => (
                     sx={{
                       width: 40,
                       height: 40,
-                      borderRadius: 2,
+                      borderRadius: 1,
                       alignItems: "center",
                       justifyContent: "center",
                       color: "primary.main",
                       bgcolor: (theme) =>
                         theme.palette.mode === "dark"
-                          ? "rgba(96,165,250,0.18)"
+                          ? "rgba(74,222,128,0.18)"
                           : "rgba(219, 234, 254, 0.9)",
                     }}
                   >
@@ -165,7 +178,7 @@ const UserGuide = () => (
       variant="outlined"
       sx={{
         p: 2.5,
-        borderRadius: 3,
+        borderRadius: 1,
         borderColor: (theme) =>
           theme.palette.mode === "dark"
             ? "rgba(251, 191, 36, 0.34)"
@@ -187,7 +200,41 @@ const UserGuide = () => (
         </div>
       </Stack>
     </Paper>
+
+    <Paper
+      variant="outlined"
+      sx={{
+        p: 2.5,
+        borderRadius: 1,
+        borderColor: (theme) =>
+          theme.palette.mode === "dark"
+            ? "rgba(74, 222, 128, 0.28)"
+            : "rgba(22, 163, 74, 0.22)",
+        bgcolor: (theme) =>
+          theme.palette.mode === "dark"
+            ? "rgba(20, 83, 45, 0.26)"
+            : "rgba(240, 253, 244, 0.72)",
+      }}
+    >
+      <Stack direction="row" spacing={1.25} alignItems="flex-start">
+        <TipsAndUpdatesRoundedIcon color="success" />
+        <div>
+          <Typography fontWeight={800}>Upcoming Update</Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.4 }}>
+            Planned improvements for future versions:
+          </Typography>
+          <Stack spacing={0.6} sx={{ mt: 1 }}>
+            {upcomingUpdates.map((item, index) => (
+              <Typography key={item} variant="body2" color="text.secondary">
+                {index + 1}. {item}
+              </Typography>
+            ))}
+          </Stack>
+        </div>
+      </Stack>
+    </Paper>
   </Stack>
 );
 
 export default UserGuide;
+

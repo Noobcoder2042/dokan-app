@@ -169,11 +169,11 @@ const Analysis = () => {
       <Paper
         sx={{
           p: { xs: 2.5, md: 3.5 },
-          borderRadius: 6,
+          borderRadius: 1,
           background: (theme) =>
             theme.palette.mode === "dark"
-              ? "linear-gradient(135deg, rgba(15,23,42,0.96) 0%, rgba(17,24,39,0.98) 52%, rgba(15,23,42,0.96) 100%)"
-              : "linear-gradient(135deg, rgba(255,255,255,0.96) 0%, rgba(239,246,255,0.98) 52%, rgba(236,253,245,0.96) 100%)",
+              ? "linear-gradient(135deg, rgba(12,20,16,0.96) 0%, rgba(18,26,22,0.98) 52%, rgba(12,20,16,0.96) 100%)"
+              : "linear-gradient(135deg, rgba(255,255,255,0.96) 0%, rgba(236,253,245,0.98) 52%, rgba(240,253,244,0.96) 100%)",
           border: (theme) =>
             theme.palette.mode === "dark"
               ? "1px solid rgba(255, 255, 255, 0.1)"
@@ -271,7 +271,7 @@ const Analysis = () => {
                       key={`${item.name}-${index}`}
                       sx={{
                         p: 1.25,
-                        borderRadius: 2,
+                        borderRadius: 1,
                         border: (theme) =>
                           theme.palette.mode === "dark"
                             ? "1px solid rgba(255, 255, 255, 0.12)"
@@ -305,7 +305,7 @@ const Analysis = () => {
                       key={`${customer.phone}-${customer.name}-${index}`}
                       sx={{
                         p: 1.25,
-                        borderRadius: 2,
+                        borderRadius: 1,
                         border: (theme) =>
                           theme.palette.mode === "dark"
                             ? "1px solid rgba(255, 255, 255, 0.12)"
@@ -332,3 +332,4 @@ const Analysis = () => {
 };
 
 export default Analysis;
+

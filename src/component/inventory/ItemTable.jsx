@@ -62,7 +62,7 @@ const ItemTable = ({
     return (
       <Paper
         variant="outlined"
-        sx={{ p: 5, textAlign: "center", borderStyle: "dashed", borderRadius: 3 }}
+        sx={{ p: 5, textAlign: "center", borderStyle: "dashed", borderRadius: 1 }}
       >
         <Typography variant="h6">No items yet</Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
@@ -76,7 +76,7 @@ const ItemTable = ({
     <>
       <Paper
         sx={{
-          borderRadius: 3,
+          borderRadius: 1,
           border: "1px solid rgba(148, 163, 184, 0.2)",
           boxShadow: "0 12px 28px rgba(15, 23, 42, 0.06)",
           overflow: "hidden",
@@ -175,3 +175,4 @@ const ItemTable = ({
 };
 
 export default ItemTable;
+

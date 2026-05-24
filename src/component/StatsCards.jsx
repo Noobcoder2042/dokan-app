@@ -51,7 +51,7 @@ const StatsCards = ({ bills }) => {
       value: `Rs. ${totalSales.toFixed(2)}`,
       caption: "Live from bills created today",
       icon: <CurrencyRupeeRoundedIcon />,
-      accent: "linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%)",
+      accent: "linear-gradient(135deg, #16a34a 0%, #22c55e 100%)",
     },
     {
       title: "Total Bills",
@@ -101,7 +101,7 @@ const StatsCards = ({ bills }) => {
                   sx={{
                     width: 52,
                     height: 52,
-                    borderRadius: 4,
+                    borderRadius: 1,
                     alignItems: "center",
                     justifyContent: "center",
                     color: "white",
@@ -121,3 +121,4 @@ const StatsCards = ({ bills }) => {
 };
 
 export default StatsCards;
+

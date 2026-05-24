@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import {
   Alert,
+  Box,
   Button,
   Card,
   CardContent,
@@ -10,6 +11,7 @@ import {
   DialogTitle,
   FormControlLabel,
   Grid,
+  MenuItem,
   Paper,
   Snackbar,
   Stack,
@@ -26,6 +28,10 @@ import jsPDF from "jspdf";
 import "jspdf-autotable";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
+import {
+  DEFAULT_WHATSAPP_MESSAGE,
+  WHATSAPP_BILL_SHARE_MODES,
+} from "../utils/whatsappUtils";
 import { useShop } from "../context/ShopContext";
 import { useAuth } from "../context/AuthContext";
 import { useUIExperience } from "../context/UIExperienceContext";
@@ -49,7 +55,10 @@ const toCsv = (rows) => {
 
 const sanitizeFileName = (value) =>
   String(value || "bill")
-    .replace(/[<>:"/\\|?*\x00-\x1F]/g, "")
+    .split("")
+    .filter((char) => char.charCodeAt(0) >= 32)
+    .join("")
+    .replace(/[<>:"/\\|?*]/g, "")
     .replace(/\s+/g, "-")
     .slice(0, 60);
 
@@ -166,6 +175,11 @@ const ShopSettings = () => {
       currency: form.currency || "INR",
       thermalPrinterWidth: "80mm",
       extraChargesEnabled: form.extraChargesEnabled ?? true,
+      gstEnabled: form.gstEnabled ?? false,
+      gstRate: Number(form.gstRate || 18),
+      whatsappMessage: form.whatsappMessage || DEFAULT_WHATSAPP_MESSAGE,
+      whatsappBillShareMode:
+        form.whatsappBillShareMode || WHATSAPP_BILL_SHARE_MODES.TOTAL_TEXT,
     });
 
     setToastMessage("Shop settings saved");
@@ -325,11 +339,11 @@ const ShopSettings = () => {
       <Paper
         sx={{
           p: { xs: 2.5, md: 3.5 },
-          borderRadius: 6,
+          borderRadius: 1,
           background: (theme) =>
             theme.palette.mode === "dark"
-              ? "linear-gradient(135deg, rgba(15,23,42,0.96) 0%, rgba(17,24,39,0.98) 52%, rgba(15,23,42,0.96) 100%)"
-              : "linear-gradient(135deg, rgba(255,255,255,0.96) 0%, rgba(239,246,255,0.98) 52%, rgba(236,253,245,0.96) 100%)",
+              ? "linear-gradient(135deg, rgba(12,20,16,0.96) 0%, rgba(18,26,22,0.98) 52%, rgba(12,20,16,0.96) 100%)"
+              : "linear-gradient(135deg, rgba(255,255,255,0.96) 0%, rgba(236,253,245,0.98) 52%, rgba(240,253,244,0.96) 100%)",
           border: (theme) =>
             theme.palette.mode === "dark"
               ? "1px solid rgba(255, 255, 255, 0.1)"
@@ -513,7 +527,68 @@ const ShopSettings = () => {
             <Grid item xs={12} md={6}>
               <TextField label="Thermal Printer Width" value="80mm" fullWidth disabled />
             </Grid>
+            <Grid item xs={12} md={6}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={Boolean(form.gstEnabled)}
+                    onChange={handleChange("gstEnabled")}
+                  />
+                }
+                label="GST Mode"
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                label="GST Rate (%)"
+                type="number"
+                value={form.gstRate ?? 18}
+                onChange={handleChange("gstRate")}
+                fullWidth
+                disabled={!form.gstEnabled}
+                helperText="GST is calculated on item subtotal before extra charges."
+              />
+            </Grid>
           </Grid>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent sx={{ p: { xs: 2, md: 3 } }}>
+          <Stack spacing={2}>
+            <Box>
+              <Typography variant="h6">WhatsApp Message</Typography>
+              <Typography color="text.secondary" sx={{ mt: 0.5 }}>
+                Set the message used from Billing and Dashboard WhatsApp buttons.
+              </Typography>
+            </Box>
+
+            <TextField
+              label="Message Template"
+              value={form.whatsappMessage || DEFAULT_WHATSAPP_MESSAGE}
+              onChange={handleChange("whatsappMessage")}
+              fullWidth
+              multiline
+              minRows={4}
+              helperText="Use {customerName}, {shopName}, {total}, {date}, or {customerPhone} where needed."
+            />
+
+            <TextField
+              select
+              label="Bill Sharing Style"
+              value={form.whatsappBillShareMode || WHATSAPP_BILL_SHARE_MODES.TOTAL_TEXT}
+              onChange={handleChange("whatsappBillShareMode")}
+              fullWidth
+              helperText="Browsers cannot attach a PDF automatically. PDF mode downloads the bill first, then opens WhatsApp."
+            >
+              <MenuItem value={WHATSAPP_BILL_SHARE_MODES.TOTAL_TEXT}>
+                Send total in WhatsApp text
+              </MenuItem>
+              <MenuItem value={WHATSAPP_BILL_SHARE_MODES.PDF_BILL}>
+                Download PDF bill before WhatsApp
+              </MenuItem>
+            </TextField>
+          </Stack>
         </CardContent>
       </Card>
 
@@ -565,11 +640,11 @@ const BoxRow = () => (
       sx={{
         width: 48,
         height: 48,
-        borderRadius: 3,
+        borderRadius: 1,
         alignItems: "center",
         justifyContent: "center",
         background:
-          "linear-gradient(135deg, rgba(29, 78, 216, 1) 0%, rgba(15, 118, 110, 0.95) 100%)",
+          "linear-gradient(135deg, rgba(22, 163, 74, 1) 0%, rgba(21, 128, 61, 0.95) 100%)",
         color: "white",
       }}
     >
@@ -585,3 +660,4 @@ const BoxRow = () => (
 );
 
 export default ShopSettings;
+

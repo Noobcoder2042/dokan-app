@@ -62,7 +62,7 @@ const ItemPanel = ({
   const closeMenu = () => setMenuState({ anchorEl: null, item: null });
 
   return (
-    <Card sx={{ borderRadius: 4 }}>
+    <Card sx={{ borderRadius: 1 }}>
       <CardContent sx={{ p: { xs: 2, md: 3 } }}>
         <Stack spacing={2}>
           <Typography variant="h6">
@@ -121,7 +121,7 @@ const ItemPanel = ({
                     sx={{
                       width: 96,
                       height: 96,
-                      borderRadius: 2,
+                      borderRadius: 1,
                       objectFit: "cover",
                       border: "1px solid rgba(148,163,184,0.35)",
                     }}
@@ -174,7 +174,7 @@ const ItemPanel = ({
                       key={item.id}
                       variant="outlined"
                       sx={{
-                        borderRadius: 3,
+                        borderRadius: 1,
                         transition: "all 0.2s ease",
                         "&:hover": {
                           boxShadow: "0 14px 28px rgba(15, 23, 42, 0.13)",
@@ -195,7 +195,7 @@ const ItemPanel = ({
                             sx={{
                               width: 62,
                               height: 62,
-                              borderRadius: 2,
+                              borderRadius: 1,
                               objectFit: "cover",
                               border: "1px solid rgba(148,163,184,0.3)",
                             }}
@@ -265,3 +265,4 @@ const ItemPanel = ({
 };
 
 export default ItemPanel;
+

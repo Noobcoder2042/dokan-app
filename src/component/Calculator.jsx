@@ -39,6 +39,12 @@ import jsPDF from "jspdf";
 import "jspdf-autotable";
 import CustomerDetails from "./CustomerDetails";
 import { buildThermalBillHtml } from "./calculator/thermalPrint";
+import {
+  WHATSAPP_BILL_SHARE_MODES,
+  buildWhatsAppMessage,
+  openWhatsAppMessage,
+  saveBillPdf,
+} from "../utils/whatsappUtils";
 import { useShop } from "../context/ShopContext";
 import { useAuth } from "../context/AuthContext";
 import {
@@ -184,10 +190,48 @@ const Calculator = () => {
       return;
     }
 
-    const phoneForWhatsApp = cleanDigits.length === 10 ? `91${cleanDigits}` : cleanDigits;
-    const message = `Thank you ${customerName || "Customer"} for shopping with us 🙏\nVisit again 😊`;
-    const whatsappUrl = `https://wa.me/${phoneForWhatsApp}?text=${encodeURIComponent(message)}`;
-    window.open(whatsappUrl, "_blank", "noopener,noreferrer");
+    const currentBill = {
+      name: customerName,
+      phoneNumber: customerPhone,
+      address: customerAddress,
+      items,
+      extraCharges,
+      totalAmount: calculateRoundedGrandTotal(),
+      subtotalAmount: calculateTotalBill(),
+      gst: {
+        enabled: isGstEnabled(),
+        rate: getGstRate(),
+        amount: calculateGstAmount(),
+      },
+      shopName: shop.name || "Shop",
+      date: new Date().toLocaleDateString("en-IN"),
+      time: new Date().toLocaleTimeString("en-IN", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      }),
+    };
+    const shareMode = shop.whatsappBillShareMode || WHATSAPP_BILL_SHARE_MODES.TOTAL_TEXT;
+    const message = buildWhatsAppMessage({
+      template: shop.whatsappMessage,
+      customerName,
+      customerPhone,
+      shopName: shop.name || "Shop",
+      totalAmount: currentBill.totalAmount,
+      billDate: currentBill.date,
+      includeTotal: shareMode === WHATSAPP_BILL_SHARE_MODES.TOTAL_TEXT,
+    });
+
+    if (shareMode === WHATSAPP_BILL_SHARE_MODES.PDF_BILL) {
+      if (!items.length) {
+        openToast("Add at least one item before preparing the PDF bill", "error");
+        return;
+      }
+      saveBillPdf(currentBill, shop);
+      openToast("PDF bill downloaded. Attach it in WhatsApp after the chat opens.", "info");
+    }
+
+    openWhatsAppMessage(cleanDigits, message);
   };
 
   const resetForm = (usePreviousName = false) => {
@@ -233,8 +277,13 @@ const Calculator = () => {
       0,
     );
 
+  const isGstEnabled = () => Boolean(shop.gstEnabled);
+  const getGstRate = () => Number(shop.gstRate || 0);
+  const calculateGstAmount = () =>
+    isGstEnabled() ? (calculateTotalBill() * getGstRate()) / 100 : 0;
+
   const calculateGrandTotal = () =>
-    calculateTotalBill() + calculateExtraChargesTotal();
+    calculateTotalBill() + calculateGstAmount() + calculateExtraChargesTotal();
   const calculateRoundedGrandTotal = () => Math.round(calculateGrandTotal());
 
   const isBillLocked = (bill) => {
@@ -318,6 +367,11 @@ const Calculator = () => {
         totalPrice: item.totalPrice,
       })),
       extraCharges,
+      gst: {
+        enabled: isGstEnabled(),
+        rate: getGstRate(),
+        amount: calculateGstAmount(),
+      },
       totalAmount: calculateRoundedGrandTotal(),
     });
   };
@@ -390,6 +444,11 @@ const Calculator = () => {
       editHistory,
       originalCreatedAt: originalCreatedAt || createdAtIso,
       subtotalAmount: Number(calculateTotalBill()),
+      gst: {
+        enabled: isGstEnabled(),
+        rate: getGstRate(),
+        amount: Number(calculateGstAmount()),
+      },
       extraCharges: {
         ...extraCharges,
         total: Number(calculateExtraChargesTotal()),
@@ -408,7 +467,6 @@ const Calculator = () => {
 
   const queueBillForOfflineSync = ({
     signature,
-    shopId,
     currentCustomerName,
     currentCustomerPhone,
     currentItems,
@@ -635,7 +693,6 @@ const Calculator = () => {
   ) => {
     const editingBill = options.editingBill || null;
     const isEditFlow = Boolean(editingBill?.id);
-    const date = new Date(createdAtIso);
     const stockRequests = buildStockRequests(currentItems);
     const nextVersion = isEditFlow ? Number(editingBill.version || 1) + 1 : 1;
     const nextStatus = isEditFlow ? "Edited" : "Finalized";
@@ -825,12 +882,19 @@ const Calculator = () => {
     });
 
     const finalY = doc.lastAutoTable.finalY || 20;
+    let summaryY = finalY + 8;
+    if (isGstEnabled()) {
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      doc.text(`GST (${getGstRate()}%) - RS. ${calculateGstAmount().toFixed(2)}`, 140, summaryY);
+      summaryY += 6;
+    }
     doc.setFontSize(12);
     doc.setFont("helvetica", "bold");
     doc.text(
       `Grand Total - RS. ${Math.round(calculateGrandTotal())}`,
       140,
-      finalY + 8,
+      summaryY,
     );
     doc.setFont("helvetica", "normal");
     doc.save(`invoice_${new Date().toISOString()}.pdf`);
@@ -1014,6 +1078,9 @@ const Calculator = () => {
       items: displayItems,
       extraChargeEntries,
       subtotal: calculateTotalBill(),
+      gstEnabled: isGstEnabled(),
+      gstRate: getGstRate(),
+      gstAmount: calculateGstAmount(),
       extraTotal: calculateExtraChargesTotal(),
       grandTotal: calculateRoundedGrandTotal(),
     });
@@ -1465,9 +1532,9 @@ const Calculator = () => {
       <Paper
         sx={{
           p: { xs: 2.5, md: 3.5 },
-          borderRadius: 6,
+          borderRadius: 1,
           background:
-            "linear-gradient(135deg, rgba(15, 23, 42, 0.97) 0%, rgba(29, 78, 216, 0.95) 56%, rgba(15, 118, 110, 0.92) 100%)",
+            "linear-gradient(135deg, rgba(10, 15, 13, 0.97) 0%, rgba(22, 101, 52, 0.95) 56%, rgba(6, 95, 70, 0.92) 100%)",
           color: "white",
         }}
       >
@@ -1503,7 +1570,7 @@ const Calculator = () => {
       <Grid container spacing={4}>
         <Grid item xs={12} lg={8}>
           <Stack spacing={4}>
-            <Card sx={{ borderRadius: 4, boxShadow: "0 4px 20px rgba(0,0,0,0.04)", border: "1px solid", borderColor: "divider" }}>
+            <Card sx={{ borderRadius: 1, boxShadow: "0 4px 20px rgba(0,0,0,0.04)", border: "1px solid", borderColor: "divider" }}>
             <CardContent sx={{ p: { xs: 2, md: 3 } }}>
               <Stack spacing={3}>
                 <Box>
@@ -1766,7 +1833,7 @@ const Calculator = () => {
               </Stack>
             </CardContent>
           </Card>
-            <Card sx={{ borderRadius: 4, boxShadow: "0 4px 20px rgba(0,0,0,0.04)", border: "1px solid", borderColor: "divider" }}>
+            <Card sx={{ borderRadius: 1, boxShadow: "0 4px 20px rgba(0,0,0,0.04)", border: "1px solid", borderColor: "divider" }}>
             <CardContent sx={{ p: { xs: 2, md: 3 } }}>
               <Stack spacing={2}>
                 <Stack direction="row" justifyContent="space-between" alignItems="center">
@@ -1880,7 +1947,7 @@ const Calculator = () => {
                   variant="outlined"
                   sx={{
                     p: 2.5,
-                    borderRadius: 4,
+                    borderRadius: 1,
                     borderColor: (theme) =>
                       theme.palette.mode === "dark"
                         ? "rgba(255,255,255,0.12)"
@@ -1891,7 +1958,7 @@ const Calculator = () => {
                         : "linear-gradient(180deg, rgba(248, 250, 252, 0.95) 0%, rgba(241, 245, 249, 0.9) 100%)",
                     boxShadow: (theme) =>
                       theme.palette.mode === "dark"
-                        ? "0 0 0 1px rgba(96,165,250,0.14), 0 20px 36px rgba(2,6,23,0.48)"
+                        ? "0 0 0 1px rgba(74,222,128,0.14), 0 20px 36px rgba(0,0,0,0.48)"
                         : undefined,
                   }}
                 >
@@ -1900,6 +1967,14 @@ const Calculator = () => {
                   </Typography>
                   <Typography variant="h5" sx={{ mt: 0.75, color: "text.secondary", fontWeight: 700 }}>
                     Rs. {calculateTotalBill().toFixed(2)}
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{ mt: 1 }}
+                  >
+                    GST {isGstEnabled() ? `(${getGstRate()}%)` : "(off)"}: Rs.{" "}
+                    {calculateGstAmount().toFixed(2)}
                   </Typography>
                   <Typography
                     variant="body2"
@@ -1937,7 +2012,7 @@ const Calculator = () => {
                   sx={{
                     
                     p: 1.25,
-                    borderRadius: 2,
+                    borderRadius: 1,
                     borderColor: (theme) =>
                       theme.palette.mode === "dark"
                         ? "rgba(255,255,255,0.16)"
@@ -2025,7 +2100,7 @@ const Calculator = () => {
               </Stack>
             </CardContent>
           </Card>
-            <Card sx={{ borderRadius: 4, boxShadow: "0 4px 20px rgba(0,0,0,0.04)", border: "1px solid", borderColor: "divider" }}>
+            <Card sx={{ borderRadius: 1, boxShadow: "0 4px 20px rgba(0,0,0,0.04)", border: "1px solid", borderColor: "divider" }}>
             <CardContent sx={{ p: { xs: 2, md: 3 } }}>
               <Stack spacing={2}>
                 <List
@@ -2247,3 +2322,4 @@ const Calculator = () => {
 };
 
 export default Calculator;
+

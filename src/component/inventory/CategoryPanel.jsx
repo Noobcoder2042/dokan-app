@@ -26,7 +26,7 @@ const CategoryPanel = ({
   onDelete,
 }) => {
   return (
-    <Card sx={{ borderRadius: 4 }}>
+    <Card sx={{ borderRadius: 1 }}>
       <CardContent sx={{ p: { xs: 2, md: 3 } }}>
         <Stack spacing={2}>
           <Typography variant="h6">Categories</Typography>
@@ -50,11 +50,11 @@ const CategoryPanel = ({
                   selected={selectedCategoryId === category.id}
                   onClick={() => onSelect(category.id)}
                   sx={{
-                    borderRadius: 2,
+                    borderRadius: 1,
                     mb: 0.5,
                     border:
                       selectedCategoryId === category.id
-                        ? "1px solid rgba(37,99,235,0.45)"
+                        ? "1px solid rgba(34,197,94,0.45)"
                         : "1px solid transparent",
                   }}
                 >
@@ -93,3 +93,4 @@ const CategoryPanel = ({
 };
 
 export default CategoryPanel;
+

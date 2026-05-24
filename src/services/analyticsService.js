@@ -243,6 +243,57 @@ export const customerBuyingHabits = (orders) => {
   });
 };
 
+export const dailyGrowthTrend = (orders, options = {}) => {
+  const maxDays = Number(options.maxDays) > 0 ? Number(options.maxDays) : 31;
+  const dayMap = new Map();
+
+  (orders || []).forEach((order) => {
+    const date = parseOrderDate(order);
+    if (!date) return;
+    const key = dayjs(date).format("YYYY-MM-DD");
+    const current = dayMap.get(key) || { revenue: 0, bills: 0 };
+    current.revenue += getOrderTotal(order);
+    current.bills += 1;
+    dayMap.set(key, current);
+  });
+
+  const keys = Array.from(dayMap.keys()).sort();
+  if (!keys.length) return [];
+
+  const end = dayjs(keys[keys.length - 1]);
+  let start = dayjs(keys[0]);
+  const rangeDays = end.diff(start, "day") + 1;
+  if (rangeDays > maxDays) {
+    start = end.subtract(maxDays - 1, "day");
+  }
+
+  const rows = [];
+  let cursor = start;
+  while (cursor.isBefore(end.add(1, "day"), "day")) {
+    const key = cursor.format("YYYY-MM-DD");
+    const bucket = dayMap.get(key) || { revenue: 0, bills: 0 };
+    rows.push({
+      key,
+      label: cursor.format("DD MMM"),
+      value: Number(bucket.revenue.toFixed(2)),
+      bills: bucket.bills,
+    });
+    cursor = cursor.add(1, "day");
+  }
+
+  return rows.map((row, index, arr) => {
+    const prevValue = index > 0 ? arr[index - 1].value : null;
+    const growthPercent = prevValue === null ? null : calculateGrowth(row.value, prevValue);
+    const growthValue = prevValue === null ? 0 : Number((row.value - prevValue).toFixed(2));
+    return {
+      ...row,
+      growthPercent,
+      growthValue,
+      growthChart: growthPercent === null ? 0 : growthPercent,
+    };
+  });
+};
+
 export const salesByWeekday = (orders) => {
   const labels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   const map = labels.map((label) => ({ label, sales: 0, orders: 0 }));
@@ -368,4 +419,158 @@ export const buildSmartInsights = ({ orders = [], products = [], dues = null, gr
   }
 
   return insights.slice(0, 6);
+};
+
+export const buildAIInsights = ({
+  orders = [],
+  products = [],
+  customers = [],
+  dues = null,
+  growth = null,
+  dailyTrend = [],
+  totalRevenue = 0,
+  averageOrder = 0,
+}) => {
+  const cards = [];
+  const recentDays = (dailyTrend || []).slice(-7);
+  const avgDaily =
+    recentDays.length > 0
+      ? recentDays.reduce((sum, row) => sum + Number(row.value || 0), 0) / recentDays.length
+      : 0;
+  const forecast7d = avgDaily * 7;
+  const forecastConfidence = recentDays.length >= 5 ? 86 : recentDays.length >= 2 ? 68 : 45;
+
+  let healthScore = 58;
+  if ((orders || []).length >= 20) healthScore += 12;
+  if ((orders || []).length >= 5) healthScore += 6;
+  if (growth?.growthPercent > 0) healthScore += Math.min(18, Math.round(growth.growthPercent / 2));
+  if (growth?.growthPercent < -5) healthScore -= Math.min(22, Math.abs(Math.round(growth.growthPercent / 2)));
+  if (dues?.totalPending > 0 && totalRevenue > 0 && dues.totalPending / totalRevenue > 0.35) {
+    healthScore -= 14;
+  }
+  if (dues?.overdue?.length > 0) healthScore -= 8;
+  healthScore = Math.max(12, Math.min(98, healthScore));
+
+  const bestDay = [...(dailyTrend || [])].sort((a, b) => Number(b.value || 0) - Number(a.value || 0))[0];
+  const topProduct = products?.[0];
+  const topCustomer = customers?.[0];
+
+  if (!(orders || []).length) {
+    return {
+      healthScore: 0,
+      healthLabel: "Waiting for data",
+      summary: "Start billing to activate Dokan AI insights, forecasts, and smart recommendations.",
+      cards: [
+        {
+          id: "empty",
+          type: "tip",
+          title: "AI is ready",
+          message: "Create a few bills and come back — forecasts and alerts will appear automatically.",
+          confidence: 100,
+          tone: "info",
+        },
+      ],
+    };
+  }
+
+  cards.push({
+    id: "forecast",
+    type: "forecast",
+    title: "7-day revenue forecast",
+    message: `Projected sales ~Rs. ${forecast7d.toFixed(0)} based on your recent daily average of Rs. ${avgDaily.toFixed(0)}.`,
+    confidence: forecastConfidence,
+    tone: "info",
+  });
+
+  if (growth?.growthPercent > 3) {
+    cards.push({
+      id: "growth",
+      type: "insight",
+      title: "Growth momentum",
+      message: `Sales are up ${growth.growthPercent}% vs the previous period. Double down on ${topProduct?.name || "top sellers"} while demand is rising.`,
+      confidence: 84,
+      tone: "success",
+    });
+  } else if (growth?.growthPercent < -3) {
+    cards.push({
+      id: "slowdown",
+      type: "alert",
+      title: "Slowdown signal",
+      message: `Sales dipped ${Math.abs(growth.growthPercent)}%. Try WhatsApp follow-ups with ${topCustomer?.name || "repeat customers"} and highlight ${topProduct?.name || "popular items"}.`,
+      confidence: 81,
+      tone: "warning",
+    });
+  }
+
+  if (bestDay && Number(bestDay.value || 0) > 0) {
+    cards.push({
+      id: "peak-day",
+      type: "insight",
+      title: "Peak performance day",
+      message: `${bestDay.label} was your strongest day (Rs. ${Number(bestDay.value).toFixed(0)}). Plan stock and staff for similar patterns.`,
+      confidence: 79,
+      tone: "success",
+    });
+  }
+
+  if (dues?.highestDue && Number(dues.highestDue.due || 0) > 0) {
+    cards.push({
+      id: "due",
+      type: "action",
+      title: "Collect pending due",
+      message: `${dues.highestDue.customer} owes Rs. ${Number(dues.highestDue.due).toFixed(0)} — highest in your books. A reminder today could improve cash flow.`,
+      confidence: 92,
+      tone: "warning",
+    });
+  }
+
+  const slowMover = [...(products || [])].filter((p) => p.qty > 0).sort((a, b) => a.qty - b.qty)[0];
+  if (slowMover && topProduct && slowMover.name !== topProduct.name) {
+    cards.push({
+      id: "inventory",
+      type: "tip",
+      title: "Inventory nudge",
+      message: `${slowMover.name} is moving slowly (${slowMover.qty} units). Bundle it with ${topProduct.name} or run a small discount.`,
+      confidence: 74,
+      tone: "info",
+    });
+  }
+
+  if (topCustomer) {
+    cards.push({
+      id: "vip",
+      type: "action",
+      title: "VIP customer alert",
+      message: `${topCustomer.name} spent Rs. ${Number(topCustomer.total || 0).toFixed(0)} across ${topCustomer.count} bills. Reward loyalty to protect repeat revenue.`,
+      confidence: 88,
+      tone: "success",
+    });
+  }
+
+  if (averageOrder > 0 && averageOrder < 500 && (orders || []).length > 5) {
+    cards.push({
+      id: "basket",
+      type: "tip",
+      title: "Basket size opportunity",
+      message: `Average bill is Rs. ${averageOrder.toFixed(0)}. Suggest add-ons at billing to lift ticket size by 10–15%.`,
+      confidence: 71,
+      tone: "info",
+    });
+  }
+
+  const healthLabel =
+    healthScore >= 80 ? "Excellent" : healthScore >= 65 ? "Healthy" : healthScore >= 45 ? "Stable" : "Needs attention";
+
+  const summary = growth?.growthPercent > 0
+    ? `Your shop health is ${healthLabel} (${healthScore}/100). Revenue is trending up and ${topProduct?.name || "core products"} are driving sales.`
+    : growth?.growthPercent < 0
+      ? `Your shop health is ${healthLabel} (${healthScore}/100). Focus on collections and pushing ${topProduct?.name || "bestsellers"} to recover momentum.`
+      : `Your shop health is ${healthLabel} (${healthScore}/100). ${topCustomer?.name || "Customers"} and daily billing patterns look steady.`;
+
+  return {
+    healthScore,
+    healthLabel,
+    summary,
+    cards: cards.slice(0, 6),
+  };
 };

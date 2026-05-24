@@ -20,7 +20,7 @@ const SplashScreen = () => {
         position: "relative",
         overflow: "hidden",
         background:
-          "radial-gradient(circle at 22% 20%, rgba(37,99,235,0.45), transparent 34%), radial-gradient(circle at 80% 24%, rgba(236,72,153,0.26), transparent 42%), linear-gradient(180deg, #04070f 0%, #091126 48%, #050914 100%)",
+          "radial-gradient(circle at 22% 20%, rgba(34,197,94,0.32), transparent 34%), radial-gradient(circle at 80% 24%, rgba(22,163,74,0.18), transparent 42%), linear-gradient(180deg, #0a0f0d 0%, #0d1411 48%, #0a0f0d 100%)",
       }}
     >
       {particles.map((particle) => (
@@ -33,8 +33,8 @@ const SplashScreen = () => {
             width: particle.size,
             height: particle.size,
             borderRadius: "50%",
-            backgroundColor: "rgba(186, 230, 253, 0.82)",
-            boxShadow: "0 0 14px rgba(96,165,250,0.85)",
+            backgroundColor: "rgba(134, 239, 172, 0.82)",
+            boxShadow: "0 0 14px rgba(74,222,128,0.75)",
             animation: `floatParticle ${particle.duration}s ease-in-out ${particle.delay}s infinite alternate`,
           }}
         />
@@ -42,12 +42,37 @@ const SplashScreen = () => {
 
       <Stack spacing={2} alignItems="center" sx={{ textAlign: "center", px: 2, zIndex: 1 }}>
         <motion.div initial={{ scale: 0.7, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 0.65 }}>
-          <Box sx={{ width: { xs: 82, md: 100 }, height: { xs: 82, md: 100 }, borderRadius: 3, p: 0.8, bgcolor: "rgba(15,23,42,0.58)", border: "1px solid rgba(148,163,184,0.35)", boxShadow: "0 0 42px rgba(59,130,246,0.45)" }}>
-            <Box component="img" src="/branding/dokan pro logo sm.png" alt="Dokan Pro" sx={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 2 }} />
+          <Box
+            sx={{
+              width: { xs: 128, md: 152 },
+              height: { xs: 128, md: 152 },
+              borderRadius: 3,
+              p: { xs: 2, md: 2.5 },
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              bgcolor: "rgba(18,26,22,0.72)",
+              border: "1px solid rgba(74,222,128,0.28)",
+              boxShadow: "0 0 42px rgba(34,197,94,0.35)",
+            }}
+          >
+            <Box
+              component="img"
+              src="/branding/dokan pro logo sm.png"
+              alt="Dokan Pro"
+              sx={{
+                width: "100%",
+                height: "100%",
+                maxWidth: "100%",
+                maxHeight: "100%",
+                objectFit: "contain",
+                display: "block",
+              }}
+            />
           </Box>
         </motion.div>
         <motion.div initial={{ y: 14, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.65, delay: 0.2 }}>
-          <Typography variant="h4" sx={{ fontWeight: 800, letterSpacing: "-0.03em", color: "#e2e8f0", textShadow: "0 0 20px rgba(96,165,250,0.45)" }}>
+          <Typography variant="h4" sx={{ fontWeight: 800, letterSpacing: "-0.03em", color: "#e2e8f0", textShadow: "0 0 20px rgba(74,222,128,0.4)" }}>
             Welcome to Dokan Pro
           </Typography>
         </motion.div>

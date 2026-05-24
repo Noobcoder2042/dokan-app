@@ -11,10 +11,16 @@ const DEFAULT_SHOP = {
   currency: "INR",
   extraChargesEnabled: true,
   thermalPrinterWidth: "80mm",
+  gstEnabled: false,
+  gstRate: 18,
+  whatsappMessage:
+    "Thank you {customerName} for shopping with {shopName}.\nVisit again.",
+  whatsappBillShareMode: "totalText",
 };
 
 const ShopContext = createContext(null);
 
+// eslint-disable-next-line react/prop-types
 export const ShopProvider = ({ children }) => {
   const { profile, authLoading, user } = useAuth();
   const shopStorageKey = `active-shop-id-${user?.uid || "guest"}`;

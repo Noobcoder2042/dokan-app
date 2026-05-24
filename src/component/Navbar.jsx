@@ -55,14 +55,39 @@ const Navbar = () => {
       elevation={0}
       sx={{
         backdropFilter: "blur(18px)",
-        backgroundColor: themeMode === "dark" ? "rgba(5,9,20,0.74)" : "rgba(247,250,255,0.74)",
+        backgroundColor: themeMode === "dark" ? "rgba(10,15,13,0.82)" : "rgba(248,250,249,0.82)",
         borderBottom: "1px solid rgba(148, 163, 184, 0.18)",
       }}
     >
       <Toolbar sx={{ minHeight: { xs: 74, md: 84 }, gap: 1.5, justifyContent: "space-between" }}>
         <Stack direction="row" spacing={1.4} alignItems="center">
-          <Box sx={{ width: 44, height: 44, borderRadius: 1.5, overflow: "hidden", bgcolor: "white", boxShadow: "0 0 0 1px rgba(255,255,255,0.35), 0 0 32px rgba(37, 99, 235, 0.35)" }}>
-            <Box component="img" src="/branding/dokan pro logo sm.png" alt="Dokan Pro" sx={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          <Box
+            sx={{
+              width: 44,
+              height: 44,
+              borderRadius: 1.5,
+              p: 0.5,
+              flexShrink: 0,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              bgcolor: themeMode === "dark" ? "rgba(18,26,22,0.95)" : "#ffffff",
+              border:
+                themeMode === "dark"
+                  ? "1px solid rgba(74,222,128,0.22)"
+                  : "1px solid rgba(148,163,184,0.22)",
+              boxShadow:
+                themeMode === "dark"
+                  ? "0 0 20px rgba(34,197,94,0.22)"
+                  : "0 0 24px rgba(34,197,94,0.18)",
+            }}
+          >
+            <Box
+              component="img"
+              src="/branding/dokan pro logo sm.png"
+              alt="Dokan Pro"
+              sx={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
+            />
           </Box>
           <Box>
             <Typography variant="h6">{shop.name || "Dokan Pro"}</Typography>
@@ -88,9 +113,9 @@ const Navbar = () => {
                   display: { xs: "none", sm: "inline-flex" },
                   color: isActive ? "white" : "text.primary",
                   background: isActive
-                    ? "linear-gradient(120deg, #2563eb 0%, #7c3aed 100%)"
+                    ? "linear-gradient(120deg, #22c55e 0%, #16a34a 100%)"
                     : "transparent",
-                  boxShadow: isActive ? "0 0 0 1px rgba(255,255,255,0.2), 0 10px 28px rgba(37,99,235,0.45)" : "none",
+                  boxShadow: isActive ? "0 0 0 1px rgba(255,255,255,0.2), 0 10px 28px rgba(34,197,94,0.38)" : "none",
                   transition: "all .25s ease",
                 }}
               >
@@ -101,7 +126,7 @@ const Navbar = () => {
 
           <Chip label={isOnline ? "Live Sync" : "Offline Mode"} color={isOnline ? "secondary" : "warning"} variant="outlined" sx={{ display: { xs: "none", md: "inline-flex" } }} />
 
-          <Tooltip title={themeMode === "dark" ? "Switch to light theme" : "Switch to neon dark theme"}>
+          <Tooltip title={themeMode === "dark" ? "Switch to light theme" : "Switch to dark theme"}>
             <IconButton onClick={toggleThemeMode} sx={{ border: "1px solid rgba(148,163,184,0.3)" }}>
               {themeMode === "dark" ? <LightModeRoundedIcon /> : <DarkModeRoundedIcon />}
             </IconButton>

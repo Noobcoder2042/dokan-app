@@ -31,6 +31,12 @@ import jsPDF from "jspdf";
 import "jspdf-autotable";
 import Fuse from "fuse.js";
 import { buildThermalBillHtml } from "./calculator/thermalPrint";
+import {
+  WHATSAPP_BILL_SHARE_MODES,
+  buildWhatsAppMessage,
+  openWhatsAppMessage,
+  saveBillPdf,
+} from "../utils/whatsappUtils";
 import BillDialog from "./BillDialog";
 import BillsTable from "./BillsTable";
 import CustomerInfoTable from "./CustomerInfoTable";
@@ -146,13 +152,23 @@ const Dashboard = () => {
       return;
     }
 
-    const phoneForWhatsApp =
-      cleanedDigits.length === 10 ? `91${cleanedDigits}` : cleanedDigits;
-    const customerName = bill?.name || "Customer";
-    const message = `Thank you ${customerName} for shopping with us 🙏\nVisit again 😊`;
+    const shareMode = shop.whatsappBillShareMode || WHATSAPP_BILL_SHARE_MODES.TOTAL_TEXT;
+    const message = buildWhatsAppMessage({
+      template: shop.whatsappMessage,
+      customerName: bill?.name || "Customer",
+      customerPhone: bill?.phoneNumber || "",
+      shopName: shop.name || bill?.shopName || "Shop",
+      totalAmount: bill?.totalAmount,
+      billDate: bill?.date || "",
+      includeTotal: shareMode === WHATSAPP_BILL_SHARE_MODES.TOTAL_TEXT,
+    });
 
-    const whatsappUrl = `https://wa.me/${phoneForWhatsApp}?text=${encodeURIComponent(message)}`;
-    window.open(whatsappUrl, "_blank", "noopener,noreferrer");
+    if (shareMode === WHATSAPP_BILL_SHARE_MODES.PDF_BILL) {
+      saveBillPdf(bill, shop);
+      openToast("PDF bill downloaded. Attach it in WhatsApp after the chat opens.", "info");
+    }
+
+    openWhatsAppMessage(cleanedDigits, message);
   };
 
   useEffect(() => {
@@ -685,13 +701,13 @@ const Dashboard = () => {
       openToast("Customer phone number is missing", "error");
       return;
     }
-    const phoneForWhatsApp = phone.length === 10 ? `91${phone}` : phone;
-    const message = `Thank you ${customer.name || "Customer"} for shopping with us 🙏\nVisit again 😊`;
-    window.open(
-      `https://wa.me/${phoneForWhatsApp}?text=${encodeURIComponent(message)}`,
-      "_blank",
-      "noopener,noreferrer",
-    );
+    const message = buildWhatsAppMessage({
+      template: shop.whatsappMessage,
+      customerName: customer.name || "Customer",
+      customerPhone: customer.phoneNumber || "",
+      shopName: shop.name || "Shop",
+    });
+    openWhatsAppMessage(phone, message);
   };
 
   const handleCopyPhone = async (customer) => {
@@ -872,11 +888,11 @@ const Dashboard = () => {
       <Paper
         sx={{
           p: { xs: 2.5, md: 3.5 },
-          borderRadius: 6,
+          borderRadius: 1,
           background: (theme) =>
             theme.palette.mode === "dark"
-              ? "linear-gradient(135deg, rgba(15,23,42,0.96) 0%, rgba(17,24,39,0.98) 52%, rgba(15,23,42,0.96) 100%)"
-              : "linear-gradient(135deg, rgba(255,255,255,0.96) 0%, rgba(239,246,255,0.98) 52%, rgba(236,253,245,0.96) 100%)",
+              ? "linear-gradient(135deg, rgba(12,20,16,0.96) 0%, rgba(18,26,22,0.98) 52%, rgba(12,20,16,0.96) 100%)"
+              : "linear-gradient(135deg, rgba(255,255,255,0.96) 0%, rgba(236,253,245,0.98) 52%, rgba(240,253,244,0.96) 100%)",
           border: (theme) =>
             theme.palette.mode === "dark"
               ? "1px solid rgba(255, 255, 255, 0.1)"
@@ -1294,3 +1310,4 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
+

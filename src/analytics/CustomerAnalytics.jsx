@@ -25,9 +25,11 @@ import dayjs from "dayjs";
 import LineChartWrapper from "../components/charts/LineChartWrapper";
 import BarChartWrapper from "../components/charts/BarChartWrapper";
 import PieChartWrapper from "../components/charts/PieChartWrapper";
-import AreaChartWrapper from "../components/charts/AreaChartWrapper";
+import ChartShell from "../components/charts/ChartShell";
+import DailyGrowthChart from "../components/charts/DailyGrowthChart";
 import StatCard from "../components/ui/StatCard";
 import ActivityFeed from "../components/ui/ActivityFeed";
+import AIInsightsPanel from "../components/ui/AIInsightsPanel";
 import { useAuth } from "../context/AuthContext";
 import { useShop } from "../context/ShopContext";
 import { useUIExperience } from "../context/UIExperienceContext";
@@ -36,14 +38,13 @@ import {
   aggregateCustomerSpending,
   aggregateFavoriteCategories,
   aggregateProducts,
-  buildSmartInsights,
+  buildAIInsights,
   compareRangeMetrics,
   customerBuyingHabits,
   dueAnalytics,
   getBestCustomerInsight,
+  dailyGrowthTrend,
   monthlySpendingTrend,
-  recentActivity,
-  salesByWeekday,
   topAndWorstProduct,
 } from "../services/analyticsService";
 import { exportOrdersAsExcel, exportOrdersAsPdf } from "../utils/exportUtils";
@@ -189,8 +190,34 @@ const CustomerAnalytics = () => {
   const habits = useMemo(() => customerBuyingHabits(filteredOrders), [filteredOrders]);
   const dueStats = useMemo(() => dueAnalytics(filteredOrders), [filteredOrders]);
   const growthStats = useMemo(() => compareRangeMetrics(filteredOrders, comparisonRange), [filteredOrders, comparisonRange]);
-  const weekdayHeatmap = useMemo(() => salesByWeekday(filteredOrders), [filteredOrders]);
-  const recentOrders = useMemo(() => recentActivity(filteredOrders, 6), [filteredOrders]);
+  const dailyGrowthMaxDays = useMemo(() => {
+    if (dateFilter === "week") return 7;
+    if (dateFilter === "30") return 30;
+    if (dateFilter === "month") return dayjs().date();
+    if (dateFilter === "year") return 60;
+    if (dateFilter === "custom" && customStartDate && customEndDate) {
+      const diff = dayjs(customEndDate).diff(dayjs(customStartDate), "day") + 1;
+      return Math.min(Math.max(diff, 1), 90);
+    }
+    return 31;
+  }, [dateFilter, customStartDate, customEndDate]);
+
+  const dailyTrend = useMemo(
+    () => dailyGrowthTrend(filteredOrders, { maxDays: dailyGrowthMaxDays }),
+    [filteredOrders, dailyGrowthMaxDays]
+  );
+
+  const dailyGrowthHighlight = useMemo(() => {
+    const withGrowth = dailyTrend.filter((row) => row.growthPercent !== null);
+    if (!withGrowth.length) return null;
+    const best = withGrowth.reduce((top, row) =>
+      row.growthPercent > (top?.growthPercent ?? -Infinity) ? row : top
+    );
+    const worst = withGrowth.reduce((low, row) =>
+      row.growthPercent < (low?.growthPercent ?? Infinity) ? row : low
+    );
+    return { best, worst };
+  }, [dailyTrend]);
 
   const totalRevenue = useMemo(() => filteredOrders.reduce((sum, o) => sum + Number(o.totalAmount || 0), 0), [filteredOrders]);
   const totalDue = useMemo(() => filteredOrders.reduce((sum, o) => sum + Number(o.dueAmount || 0), 0), [filteredOrders]);
@@ -202,9 +229,19 @@ const CustomerAnalytics = () => {
   const grossProfit = useMemo(() => products.reduce((sum, item) => sum + Number(item.profit || 0), 0), [products]);
   const highestProfitItem = useMemo(() => [...products].sort((a, b) => Number(b.profit || 0) - Number(a.profit || 0))[0] || null, [products]);
   const topProductsChart = useMemo(() => products.slice(0, 8).map((item) => ({ name: item.name, revenue: Number(item.revenue || 0) })), [products]);
-  const smartInsights = useMemo(
-    () => buildSmartInsights({ orders: filteredOrders, products, dues: dueStats, growth: growthStats, customers }),
-    [filteredOrders, products, dueStats, growthStats, customers]
+  const aiInsights = useMemo(
+    () =>
+      buildAIInsights({
+        orders: filteredOrders,
+        products,
+        customers,
+        dues: dueStats,
+        growth: growthStats,
+        dailyTrend,
+        totalRevenue,
+        averageOrder,
+      }),
+    [filteredOrders, products, customers, dueStats, growthStats, dailyTrend, totalRevenue, averageOrder]
   );
 
   const categoryOptions = useMemo(() => {
@@ -221,7 +258,10 @@ const CustomerAnalytics = () => {
     return Array.from(set).filter(Boolean);
   }, [dateFilteredOrders]);
 
-  const busiestDay = useMemo(() => [...weekdayHeatmap].sort((a, b) => Number(b.sales || 0) - Number(a.sales || 0))[0] || null, [weekdayHeatmap]);
+  const peakSalesDay = useMemo(
+    () => [...dailyTrend].sort((a, b) => Number(b.value || 0) - Number(a.value || 0))[0] || null,
+    [dailyTrend]
+  );
   const highestInvoice = useMemo(() => [...filteredOrders].sort((a, b) => Number(b.totalAmount || 0) - Number(a.totalAmount || 0))[0] || null, [filteredOrders]);
   const topCustomersLite = useMemo(() => customers.slice(0, 5).map((c) => ({ name: c.name, spend: Number(c.total || 0), bills: c.count || 0 })), [customers]);
   const topProductsLite = useMemo(() => products.slice(0, 5).map((p) => ({ name: p.name, qty: p.qty, revenue: p.revenue })), [products]);
@@ -241,7 +281,7 @@ const CustomerAnalytics = () => {
         { label: "Current Period Sales", value: `Rs. ${growthStats.currentSales.toFixed(2)}` },
         { label: "Previous Period Sales", value: `Rs. ${growthStats.previousSales.toFixed(2)}` },
         { label: "Growth", value: `${growthStats.growthPercent.toFixed(2)}%` },
-        { label: "Busiest Day", value: busiestDay ? `${busiestDay.label} (Rs. ${Number(busiestDay.sales || 0).toFixed(2)})` : "-" },
+        { label: "Peak Day", value: peakSalesDay ? `${peakSalesDay.label} (Rs. ${Number(peakSalesDay.value || 0).toFixed(2)})` : "-" },
       ],
       [
         ...topProductsLite.map((item) => ({ name: item.name, detailA: `${item.qty} qty`, detailB: `Rs. ${item.revenue.toFixed(2)}` })),
@@ -323,6 +363,52 @@ const CustomerAnalytics = () => {
     );
   };
 
+  const openAICardInsight = (card) => {
+    if (!card) return;
+    openInsight(
+      card.title,
+      `${card.message} (Confidence: ${card.confidence}% — rule-based analysis from your shop data, not external AI.)`,
+      [
+        { label: "Signal type", value: card.type },
+        { label: "Confidence", value: `${card.confidence}%` },
+        { label: "Health score", value: `${aiInsights.healthScore}/100` },
+      ],
+      topCustomersLite.slice(0, 5).map((c) => ({
+        name: c.name,
+        detailA: `${c.bills} bills`,
+        detailB: `Rs. ${c.spend.toFixed(2)}`,
+      }))
+    );
+  };
+
+  const openDailyGrowthInsight = (dayRow) => {
+    if (!dayRow) return;
+    const related = filteredOrders.filter((order) => {
+      const date = parseOrderDate(order);
+      return date && dayjs(date).format("YYYY-MM-DD") === dayRow.key;
+    });
+    const growthLabel =
+      dayRow.growthPercent === null
+        ? "First day in range"
+        : `${dayRow.growthValue >= 0 ? "+" : ""}Rs. ${dayRow.growthValue.toFixed(2)} (${dayRow.growthPercent >= 0 ? "+" : ""}${dayRow.growthPercent}%)`;
+
+    openInsight(
+      `Day-by-day: ${dayRow.label}`,
+      "Day-by-day growth compares each day's total sales with the previous day. Growth % = ((Today − Yesterday) / Yesterday) × 100.",
+      [
+        { label: "Date", value: dayRow.label },
+        { label: "Sales", value: `Rs. ${dayRow.value.toFixed(2)}` },
+        { label: "Bills", value: dayRow.bills },
+        { label: "vs Previous Day", value: growthLabel },
+      ],
+      related.slice(0, 10).map((order) => ({
+        name: order.customerName || order.name || "Unknown",
+        detailA: order.id ? `Bill ${order.id}` : "Bill",
+        detailB: `Rs. ${Number(order.totalAmount || 0).toFixed(2)}`,
+      }))
+    );
+  };
+
   const openChartPointInsight = (title, point, source = []) => {
     if (!point) return;
     const label = point.label || point.name || "Selected Point";
@@ -331,7 +417,14 @@ const CustomerAnalytics = () => {
       .filter((order) => {
         const date = parseOrderDate(order);
         if (!date) return false;
-        return dayjs(date).format("MMM YYYY") === label || dayjs(date).format("ddd").startsWith(label);
+        const dayKey = dayjs(date).format("YYYY-MM-DD");
+        const dayLabel = dayjs(date).format("DD MMM");
+        return (
+          dayKey === point.key ||
+          dayLabel === label ||
+          dayjs(date).format("MMM YYYY") === label ||
+          dayjs(date).format("ddd").startsWith(label)
+        );
       })
       .slice(0, 10);
 
@@ -366,19 +459,8 @@ const CustomerAnalytics = () => {
 
   return (
     <Stack component={motion.div} spacing={2} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45 }}>
-      <Card
-        component={motion.div}
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.35 }}
-        sx={{
-          overflow: "hidden",
-          background:
-            "linear-gradient(120deg, rgba(37,99,235,0.2) 0%, rgba(124,58,237,0.18) 38%, rgba(20,184,166,0.16) 100%)",
-          border: "1px solid rgba(96,165,250,0.28)",
-        }}
-      >
-        <CardContent>
+      <Card component={motion.div} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
+        <CardContent sx={{ p: { xs: 2, md: 3 } }}>
           <Stack direction={{ xs: "column", md: "row" }} justifyContent="space-between" spacing={2}>
             <Box>
               <Typography variant="h5">Business Intelligence Hub</Typography>
@@ -388,7 +470,7 @@ const CustomerAnalytics = () => {
               <Chip
                 sx={{ mt: 1.25 }}
                 color={growthStats.growthPercent >= 0 ? "success" : "warning"}
-                label={`AI Insight: ${smartInsights[0] || "Track more bills to unlock richer insights."}`}
+                label={`Dokan AI · ${aiInsights.healthLabel} (${aiInsights.healthScore}/100)`}
               />
             </Box>
             <Stack direction="row" spacing={2}>
@@ -447,14 +529,222 @@ const CustomerAnalytics = () => {
         <Grid item xs={12} md={3}><StatCard label="Growth" value={`${growthStats.growthPercent >= 0 ? "↑" : "↓"} ${Math.abs(growthStats.growthPercent)}%`} description={`Vs last ${comparisonRange}. Click for formula.`} onClick={openGrowthInsight} /></Grid>
         <Grid item xs={12} md={3}><StatCard label="Gross Profit (Est.)" value={`Rs. ${grossProfit.toFixed(2)}`} description={highestProfitItem ? `Best: ${highestProfitItem.name}` : "Add purchase price for richer profit view"} onClick={() => openInsight("Profit Estimation", "Estimated profit = selling revenue - estimated cost from purchase/cost price fields.", [{ label: "Gross Profit", value: `Rs. ${grossProfit.toFixed(2)}` }, { label: "Highest Profit Item", value: highestProfitItem ? `${highestProfitItem.name} (Rs. ${Number(highestProfitItem.profit || 0).toFixed(2)})` : "-" }], products.slice(0, 10).map((p) => ({ name: p.name, detailA: `${p.qty} qty`, detailB: `Rs. ${Number(p.profit || 0).toFixed(2)}` })))} /></Grid>
 
-        <Grid item xs={12} md={8}><Card><CardContent><Typography variant="h6">Monthly Sales Trend</Typography>{loading ? <Typography color="text.secondary">Loading trend...</Typography> : <LineChartWrapper data={monthlyTrend} xKey="label" dataKey="value" name="Revenue" onPointClick={(p) => openChartPointInsight("Monthly Trend", p, filteredOrders)} />}</CardContent></Card></Grid>
-        <Grid item xs={12} md={4}><Card><CardContent><Typography variant="h6">Top Customers</Typography>{loading ? <Typography color="text.secondary">Loading customers...</Typography> : <BarChartWrapper data={customers} xKey="name" dataKey="total" name="Spend" onPointClick={(p) => openInsight("Top Customer Point", "This bar represents total spend by this customer in selected filters.", [{ label: "Customer", value: p?.name || "-" }, { label: "Spend", value: `Rs. ${Number(p?.total || 0).toFixed(2)}` }, { label: "Bills", value: p?.count || 0 }], (p?.topItems || []).slice(0, 8).map((i) => ({ name: i.name, detailA: `${i.qty} qty`, detailB: `Rs. ${Number(i.sales || 0).toFixed(2)}` })))} />}</CardContent></Card></Grid>
-        <Grid item xs={12} md={6}><Card><CardContent><Typography variant="h6">Category Share</Typography>{loading ? <Typography color="text.secondary">Loading categories...</Typography> : <PieChartWrapper data={favCategories} nameKey="name" valueKey="sales" onPointClick={(p) => openInsight("Category Contribution", "Category contribution is category sales divided by total revenue.", [{ label: "Category", value: p?.name || "-" }, { label: "Sales", value: `Rs. ${Number(p?.sales || 0).toFixed(2)}` }, { label: "Share", value: `${totalRevenue ? ((Number(p?.sales || 0) / totalRevenue) * 100).toFixed(2) : 0}%` }], products.filter((item) => item.category === p?.name).slice(0, 8).map((item) => ({ name: item.name, detailA: `${item.qty} qty`, detailB: `Rs. ${Number(item.revenue || 0).toFixed(2)}` })))} />}</CardContent></Card></Grid>
-        <Grid item xs={12} md={6}><Card><CardContent><Typography variant="h6">Top Products (Revenue)</Typography>{loading ? <Typography color="text.secondary">Loading products...</Typography> : <BarChartWrapper data={topProductsChart} xKey="name" dataKey="revenue" name="Revenue" onPointClick={(p) => openChartPointInsight("Top Products", p, filteredOrders)} />}</CardContent></Card></Grid>
-        <Grid item xs={12} md={6}><Card><CardContent><Typography variant="h6">Sales Heatmap (By Day)</Typography>{loading ? <Typography color="text.secondary">Loading day pattern...</Typography> : <AreaChartWrapper data={weekdayHeatmap} xKey="label" dataKey="sales" name="Sales" onPointClick={(p) => openChartPointInsight("Busy Day", p, filteredOrders)} />}</CardContent></Card></Grid>
-        <Grid item xs={12} md={6}>{loading ? <Card><CardContent><Typography variant="h6">Recent Activity</Typography><Typography color="text.secondary">Loading latest invoices...</Typography></CardContent></Card> : <ActivityFeed orders={filteredOrders} />}</Grid>
+        <Grid item xs={12} md={8}>
+          <Card>
+            <CardContent>
+              {loading ? (
+                <Typography color="text.secondary">Loading trend...</Typography>
+              ) : (
+                <ChartShell title="Total Sales" subtitle="Revenue trend over time">
+                  <LineChartWrapper
+                    data={monthlyTrend}
+                    xKey="label"
+                    dataKey="value"
+                    name="Revenue"
+                    height={320}
+                    onPointClick={(p) => openChartPointInsight("Monthly Trend", p, filteredOrders)}
+                  />
+                </ChartShell>
+              )}
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} md={4}>
+          <Card sx={{ height: "100%" }}>
+            <CardContent>
+              {loading ? (
+                <Typography color="text.secondary">Loading customers...</Typography>
+              ) : (
+                <ChartShell title="Top Customers" subtitle="By total spend">
+                  <BarChartWrapper
+                    data={customers}
+                    xKey="name"
+                    dataKey="total"
+                    name="Spend"
+                    height={320}
+                    orientation="horizontal"
+                    onPointClick={(p) =>
+                      openInsight(
+                        "Top Customer Point",
+                        "This bar represents total spend by this customer in selected filters.",
+                        [
+                          { label: "Customer", value: p?.name || "-" },
+                          { label: "Spend", value: `Rs. ${Number(p?.total || 0).toFixed(2)}` },
+                          { label: "Bills", value: p?.count || 0 },
+                        ],
+                        (p?.topItems || []).slice(0, 8).map((i) => ({
+                          name: i.name,
+                          detailA: `${i.qty} qty`,
+                          detailB: `Rs. ${Number(i.sales || 0).toFixed(2)}`,
+                        }))
+                      )
+                    }
+                  />
+                </ChartShell>
+              )}
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} md={6}>
+          <Card>
+            <CardContent>
+              {loading ? (
+                <Typography color="text.secondary">Loading categories...</Typography>
+              ) : (
+                <ChartShell title="Sales by Category" subtitle="Share of revenue">
+                  <PieChartWrapper
+                    data={favCategories}
+                    nameKey="name"
+                    valueKey="sales"
+                    height={300}
+                    onPointClick={(p) =>
+                      openInsight(
+                        "Category Contribution",
+                        "Category contribution is category sales divided by total revenue.",
+                        [
+                          { label: "Category", value: p?.name || "-" },
+                          { label: "Sales", value: `Rs. ${Number(p?.sales || 0).toFixed(2)}` },
+                          {
+                            label: "Share",
+                            value: `${totalRevenue ? ((Number(p?.sales || 0) / totalRevenue) * 100).toFixed(2) : 0}%`,
+                          },
+                        ],
+                        products
+                          .filter((item) => item.category === p?.name)
+                          .slice(0, 8)
+                          .map((item) => ({
+                            name: item.name,
+                            detailA: `${item.qty} qty`,
+                            detailB: `Rs. ${Number(item.revenue || 0).toFixed(2)}`,
+                          }))
+                      )
+                    }
+                  />
+                </ChartShell>
+              )}
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} md={6}>
+          <Card>
+            <CardContent>
+              {loading ? (
+                <Typography color="text.secondary">Loading products...</Typography>
+              ) : (
+                <ChartShell title="Top Selling Items" subtitle="By revenue">
+                  <BarChartWrapper
+                    data={topProductsChart}
+                    xKey="name"
+                    dataKey="revenue"
+                    name="Revenue"
+                    height={300}
+                    orientation="horizontal"
+                    onPointClick={(p) => openChartPointInsight("Top Products", p, filteredOrders)}
+                  />
+                </ChartShell>
+              )}
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12}>
+          <Card>
+            <CardContent>
+              {loading ? (
+                <Typography color="text.secondary">Loading daily growth...</Typography>
+              ) : (
+                <>
+                  <ChartShell
+                    title="Day-by-Day Growth"
+                    subtitle="Daily sales (bars) and % change vs previous day (line)"
+                  >
+                    <DailyGrowthChart
+                      data={dailyTrend}
+                      height={340}
+                      onPointClick={openDailyGrowthInsight}
+                    />
+                  </ChartShell>
+                  {dailyGrowthHighlight ? (
+                    <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ mt: 2 }}>
+                      <Chip
+                        color="success"
+                        variant="outlined"
+                        label={`Best day: ${dailyGrowthHighlight.best.label} (+${dailyGrowthHighlight.best.growthPercent}%)`}
+                      />
+                      <Chip
+                        color="warning"
+                        variant="outlined"
+                        label={`Slowest day: ${dailyGrowthHighlight.worst.label} (${dailyGrowthHighlight.worst.growthPercent}%)`}
+                      />
+                    </Stack>
+                  ) : null}
+                  {dailyTrend.length ? (
+                    <Box sx={{ mt: 3, overflowX: "auto" }}>
+                      <Table size="small">
+                        <TableHead>
+                          <TableRow>
+                            <TableCell>Date</TableCell>
+                            <TableCell align="right">Sales</TableCell>
+                            <TableCell align="right">Bills</TableCell>
+                            <TableCell align="right">vs Yesterday</TableCell>
+                            <TableCell align="right">Growth</TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {[...dailyTrend].reverse().map((row) => (
+                            <TableRow
+                              key={row.key}
+                              hover
+                              sx={{ cursor: "pointer" }}
+                              onClick={() => openDailyGrowthInsight(row)}
+                            >
+                              <TableCell>{row.label}</TableCell>
+                              <TableCell align="right">Rs. {row.value.toFixed(2)}</TableCell>
+                              <TableCell align="right">{row.bills}</TableCell>
+                              <TableCell align="right">
+                                {row.growthPercent === null
+                                  ? "—"
+                                  : `${row.growthValue >= 0 ? "+" : ""}Rs. ${row.growthValue.toFixed(2)}`}
+                              </TableCell>
+                              <TableCell align="right">
+                                {row.growthPercent === null ? (
+                                  "—"
+                                ) : (
+                                  <Chip
+                                    size="small"
+                                    label={`${row.growthPercent >= 0 ? "+" : ""}${row.growthPercent}%`}
+                                    color={row.growthPercent >= 0 ? "success" : "warning"}
+                                    variant="outlined"
+                                  />
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </Box>
+                  ) : null}
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </Grid>
 
-        <Grid item xs={12}><Card><CardContent><Typography variant="h6">Smart Insights</Typography><Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ mt: 1 }}>{smartInsights.map((insight) => <Chip key={insight} label={insight} color="primary" variant="outlined" />)}</Stack></CardContent></Card></Grid>
+        <Grid item xs={12}>
+          <AIInsightsPanel loading={loading} aiData={aiInsights} onCardClick={openAICardInsight} />
+        </Grid>
+
+        <Grid item xs={12}>
+          {loading ? (
+            <Card>
+              <CardContent>
+                <Typography variant="h6">Recent Activity</Typography>
+                <Typography color="text.secondary">Loading latest invoices…</Typography>
+              </CardContent>
+            </Card>
+          ) : (
+            <ActivityFeed orders={filteredOrders} />
+          )}
+        </Grid>
       </Grid>
 
       <Dialog open={insightDialog.open} onClose={closeInsight} fullWidth maxWidth="md">
@@ -465,7 +755,7 @@ const CustomerAnalytics = () => {
             <Grid container spacing={1}>
               {insightDialog.metrics.map((m) => (
                 <Grid key={m.label} item xs={12} sm={6} md={4}>
-                  <Card sx={{ bgcolor: "rgba(37,99,235,0.06)" }}>
+                  <Card sx={{ bgcolor: "rgba(34,197,94,0.06)" }}>
                     <CardContent sx={{ py: 1.25 }}>
                       <Typography variant="caption" color="text.secondary">{m.label}</Typography>
                       <Typography variant="h6">{m.value}</Typography>

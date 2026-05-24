@@ -9,6 +9,9 @@ export const buildThermalBillHtml = ({
   items = [],
   extraChargeEntries = [],
   subtotal = 0,
+  gstEnabled = false,
+  gstRate = 0,
+  gstAmount = 0,
   extraTotal = 0,
   grandTotal = 0,
 }) => {
@@ -228,6 +231,11 @@ export const buildThermalBillHtml = ({
 
         <div class="summary">
           <div>Subtotal: ${Math.round(Number(subtotal || 0))}</div>
+          ${
+            gstEnabled
+              ? `<div>GST (${Number(gstRate || 0)}%): ${Math.round(Number(gstAmount || 0))}</div>`
+              : ""
+          }
           <div>Extra Cost: ${Math.round(Number(extraTotal || 0))}</div>
         </div>
 

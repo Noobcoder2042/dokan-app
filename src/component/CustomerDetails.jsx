@@ -213,7 +213,7 @@ const CustomerDetails = ({
                 {...other}
                 elevation={12}
                 sx={{
-                  borderRadius: "16px",
+                  borderRadius: "8px",
                   mt: 1,
                   border: "1px solid rgba(148, 163, 184, 0.12)",
                   overflow: "hidden",
@@ -271,7 +271,7 @@ const CustomerDetails = ({
                   sx={{
                     width: 36,
                     height: 36,
-                    borderRadius: "10px",
+                    borderRadius: "8px",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
@@ -357,7 +357,7 @@ const CustomerDetails = ({
               }}
               sx={{
                 "& .MuiOutlinedInput-root": {
-                  borderRadius: "16px",
+                  borderRadius: "8px",
                   backgroundColor: "#fff",
                 },
               }}
@@ -375,7 +375,7 @@ const CustomerDetails = ({
               top: "calc(100% + 6px)",
               zIndex: 1400,
               p: 1,
-              borderRadius: "12px",
+              borderRadius: "8px",
               border: "1px solid rgba(148, 163, 184, 0.2)",
               backgroundColor: "rgba(255,255,255,0.96)",
               backdropFilter: "blur(8px)",
@@ -452,7 +452,7 @@ const CustomerDetails = ({
           fullWidth
           sx={{
             "& .MuiOutlinedInput-root": {
-              borderRadius: "16px",
+              borderRadius: "8px",
               backgroundColor: "#fff",
             },
           }}
@@ -470,7 +470,7 @@ const CustomerDetails = ({
           fullWidth
           sx={{
             "& .MuiOutlinedInput-root": {
-              borderRadius: "16px",
+              borderRadius: "8px",
               backgroundColor: "#fff",
             },
           }}
@@ -481,3 +481,4 @@ const CustomerDetails = ({
 };
 
 export default CustomerDetails;
+

@@ -1,56 +1,52 @@
 import { Box, Typography, Paper } from "@mui/material";
+import { useTheme } from "@mui/material/styles";
 import PropTypes from "prop-types";
 
-const StatCard = ({ label, value, description, icon, sx = {}, onClick }) => (
-  <Paper
-    onClick={onClick}
-    sx={{
-      p: 2.5,
-      minHeight: 140,
-      display: "flex",
-      flexDirection: "column",
-      justifyContent: "space-between",
-      background: (theme) =>
-        theme.palette.mode === "dark"
-          ? "rgba(15,23,42,0.9)"
-          : "rgba(255,255,255,0.64)",
-      backdropFilter: "blur(16px)",
-      border: (theme) =>
-        theme.palette.mode === "dark"
-          ? "1px solid rgba(255,255,255,0.10)"
-          : "1px solid rgba(255,255,255,0.72)",
-      boxShadow: (theme) =>
-        theme.palette.mode === "dark"
-          ? "0 20px 46px rgba(2,6,23,0.48)"
-          : "0 24px 60px rgba(15, 23, 42, 0.08)",
-      cursor: onClick ? "pointer" : "default",
-      transition: "transform .2s ease, box-shadow .2s ease",
-      "&:hover": onClick
-        ? {
-            transform: "translateY(-2px)",
-            boxShadow: "0 28px 72px rgba(15, 23, 42, 0.14)",
-          }
-        : undefined,
-      ...sx,
-    }}
-  >
-    <Box>
-      <Typography color="text.secondary" variant="subtitle2">
-        {label}
-      </Typography>
-      <Typography variant="h4" sx={{ mt: 1, fontWeight: 700 }}>
-        {value}
-      </Typography>
-    </Box>
+const StatCard = ({ label, value, description, icon, sx = {}, onClick }) => {
+  const theme = useTheme();
 
-    {description ? (
-      <Typography color="text.secondary" variant="body2" sx={{ mt: 1 }}>
-        {description}
-      </Typography>
-    ) : null}
-    {icon ? <Box sx={{ mt: 2 }}>{icon}</Box> : null}
-  </Paper>
-);
+  return (
+    <Paper
+      onClick={onClick}
+      sx={{
+        p: 2.5,
+        minHeight: 132,
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "space-between",
+        bgcolor: theme.palette.background.paper,
+        border: `1px solid ${theme.palette.divider}`,
+        borderRadius: 2,
+        boxShadow: "none",
+        cursor: onClick ? "pointer" : "default",
+        transition: "border-color .2s ease, transform .2s ease",
+        "&:hover": onClick
+          ? {
+              transform: "translateY(-2px)",
+              borderColor: theme.palette.mode === "dark" ? "rgba(74,222,128,0.35)" : "rgba(22,163,74,0.35)",
+            }
+          : undefined,
+        ...sx,
+      }}
+    >
+      <Box>
+        <Typography color="text.secondary" variant="subtitle2">
+          {label}
+        </Typography>
+        <Typography variant="h5" sx={{ mt: 1, fontWeight: 700 }}>
+          {value}
+        </Typography>
+      </Box>
+
+      {description ? (
+        <Typography color="text.secondary" variant="body2" sx={{ mt: 1 }}>
+          {description}
+        </Typography>
+      ) : null}
+      {icon ? <Box sx={{ mt: 1.5, color: "primary.main" }}>{icon}</Box> : null}
+    </Paper>
+  );
+};
 
 export default StatCard;
 

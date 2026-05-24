@@ -53,19 +53,22 @@ const App = () => {
       createTheme({
         palette: {
           mode: themeMode,
-          primary: { main: themeMode === "dark" ? "#60a5fa" : "#1d4ed8" },
-          secondary: { main: themeMode === "dark" ? "#22d3ee" : "#0f766e" },
+          primary: { main: themeMode === "dark" ? "#4ade80" : "#15803d" },
+          secondary: { main: themeMode === "dark" ? "#86efac" : "#166534" },
+          success: { main: themeMode === "dark" ? "#22c55e" : "#16a34a" },
+          warning: { main: themeMode === "dark" ? "#fbbf24" : "#d97706" },
+          error: { main: themeMode === "dark" ? "#f87171" : "#dc2626" },
           background: {
-            default: themeMode === "dark" ? "#071028" : "#edf2f9",
-            paper: themeMode === "dark" ? "#111827" : "#ffffff",
+            default: themeMode === "dark" ? "#0a0f0d" : "#f6f8f7",
+            paper: themeMode === "dark" ? "#121a17" : "#ffffff",
           },
           text: {
-            primary: themeMode === "dark" ? "#ffffff" : "#0f172a",
-            secondary: themeMode === "dark" ? "#cbd5e1" : "#475569",
+            primary: themeMode === "dark" ? "#f1f5f9" : "#0f172a",
+            secondary: themeMode === "dark" ? "#94a3b8" : "#475569",
           },
-          divider: themeMode === "dark" ? "rgba(255,255,255,0.10)" : "rgba(15,23,42,0.12)",
+          divider: themeMode === "dark" ? "rgba(255,255,255,0.08)" : "rgba(15,23,42,0.10)",
         },
-        shape: { borderRadius: 12 },
+        shape: { borderRadius: 8 },
         typography: {
           fontFamily: `"Plus Jakarta Sans", "Segoe UI", "Inter", sans-serif`,
           h4: { fontWeight: 700, letterSpacing: "-0.03em" },
@@ -80,16 +83,16 @@ const App = () => {
                 backgroundImage: "none",
                 backdropFilter: "blur(14px)",
                 border: themeMode === "dark" ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(148,163,184,0.14)",
-                boxShadow: themeMode === "dark" ? "0 24px 64px rgba(2, 6, 23, 0.55)" : "0 20px 54px rgba(15, 23, 42, 0.09)",
+                boxShadow: themeMode === "dark" ? "0 24px 64px rgba(0, 0, 0, 0.45)" : "0 20px 54px rgba(15, 23, 42, 0.08)",
               },
             },
           },
-          MuiCard: { styleOverrides: { root: { borderRadius: 14 } } },
+          MuiCard: { styleOverrides: { root: { borderRadius: 8 } } },
           MuiButton: {
             defaultProps: { disableElevation: true },
             styleOverrides: {
               root: {
-                borderRadius: 10,
+                borderRadius: 8,
                 minHeight: 40,
                 transition: "all .2s ease",
                 "&.Mui-disabled": {
@@ -97,21 +100,30 @@ const App = () => {
                   color: themeMode === "dark" ? "#94a3b8" : undefined,
                 },
               },
-              containedPrimary: themeMode === "dark"
-                ? {
-                    background: "linear-gradient(120deg, #2563eb 0%, #7c3aed 100%)",
-                    color: "#ffffff",
-                    boxShadow: "0 8px 22px rgba(37,99,235,0.45)",
-                    "&:hover": { boxShadow: "0 10px 26px rgba(124,58,237,0.50)" },
-                  }
-                : undefined,
+              containedPrimary: {
+                background:
+                  themeMode === "dark"
+                    ? "linear-gradient(120deg, #22c55e 0%, #16a34a 100%)"
+                    : "linear-gradient(120deg, #16a34a 0%, #15803d 100%)",
+                color: "#ffffff",
+                boxShadow:
+                  themeMode === "dark"
+                    ? "0 8px 22px rgba(34,197,94,0.35)"
+                    : "0 8px 20px rgba(22,163,74,0.28)",
+                "&:hover": {
+                  boxShadow:
+                    themeMode === "dark"
+                      ? "0 10px 26px rgba(34,197,94,0.45)"
+                      : "0 10px 24px rgba(22,163,74,0.36)",
+                },
+              },
             },
           },
           MuiOutlinedInput: {
             styleOverrides: {
               root: {
-                borderRadius: 10,
-                backgroundColor: themeMode === "dark" ? "rgba(15,23,42,0.95) !important" : "#ffffff",
+                borderRadius: 8,
+                backgroundColor: themeMode === "dark" ? "rgba(18,26,22,0.95) !important" : "#ffffff",
                 color: themeMode === "dark" ? "#ffffff" : "#0f172a",
                 "& .MuiOutlinedInput-input": {
                   color: themeMode === "dark" ? "#ffffff" : "#0f172a",
@@ -124,15 +136,15 @@ const App = () => {
                   borderColor: themeMode === "dark" ? "rgba(255,255,255,0.18)" : "rgba(15,23,42,0.2)",
                 },
                 "&:hover .MuiOutlinedInput-notchedOutline": {
-                  borderColor: themeMode === "dark" ? "rgba(96,165,250,0.55)" : "rgba(37,99,235,0.45)",
+                  borderColor: themeMode === "dark" ? "rgba(74,222,128,0.55)" : "rgba(22,163,74,0.45)",
                 },
                 "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                  borderColor: themeMode === "dark" ? "#60a5fa" : "#2563eb",
-                  boxShadow: themeMode === "dark" ? "0 0 0 3px rgba(96,165,250,0.22)" : "0 0 0 3px rgba(37,99,235,0.14)",
+                  borderColor: themeMode === "dark" ? "#4ade80" : "#16a34a",
+                  boxShadow: themeMode === "dark" ? "0 0 0 3px rgba(74,222,128,0.22)" : "0 0 0 3px rgba(22,163,74,0.14)",
                 },
                 "& input:-webkit-autofill": {
                   WebkitBoxShadow: themeMode === "dark"
-                    ? "0 0 0 100px rgba(15,23,42,0.95) inset"
+                    ? "0 0 0 100px rgba(18,26,22,0.95) inset"
                     : "0 0 0 100px #ffffff inset",
                   WebkitTextFillColor: themeMode === "dark" ? "#ffffff" : "#0f172a",
                   transition: "background-color 9999s ease-out 0s",
@@ -149,7 +161,7 @@ const App = () => {
                   color: themeMode === "dark" ? "#e2e8f0" : undefined,
                 },
                 "&.Mui-focused": {
-                  color: themeMode === "dark" ? "#93c5fd" : undefined,
+                  color: themeMode === "dark" ? "#86efac" : undefined,
                 },
               },
             },
@@ -195,8 +207,8 @@ const App = () => {
             styleOverrides: {
               root: themeMode === "dark" ? {
                 color: "#e2e8f0",
-                "&.Mui-selected": { backgroundColor: "rgba(96,165,250,0.16)" },
-                "&:hover": { backgroundColor: "rgba(96,165,250,0.12)" },
+                "&.Mui-selected": { backgroundColor: "rgba(74,222,128,0.16)" },
+                "&:hover": { backgroundColor: "rgba(74,222,128,0.12)" },
               } : undefined,
             },
           },
@@ -235,8 +247,8 @@ const App = () => {
 
   const appBackground =
     themeMode === "dark"
-      ? "radial-gradient(circle at 20% 12%, rgba(37,99,235,0.24), transparent 40%), radial-gradient(circle at 82% 24%, rgba(168,85,247,0.2), transparent 48%), linear-gradient(180deg,#060912 0%, #0a1324 52%, #060912 100%)"
-      : "radial-gradient(circle at 20% 14%, rgba(37,99,235,0.16), transparent 40%), radial-gradient(circle at 82% 22%, rgba(20,184,166,0.14), transparent 46%), linear-gradient(180deg,#f8fbff 0%, #edf3fb 48%, #e9eef8 100%)";
+      ? "radial-gradient(circle at 20% 12%, rgba(34,197,94,0.14), transparent 42%), radial-gradient(circle at 82% 24%, rgba(22,163,74,0.10), transparent 48%), linear-gradient(180deg,#0a0f0d 0%, #0d1411 52%, #0a0f0d 100%)"
+      : "radial-gradient(circle at 20% 14%, rgba(34,197,94,0.10), transparent 40%), radial-gradient(circle at 82% 22%, rgba(22,163,74,0.08), transparent 46%), linear-gradient(180deg,#f8faf9 0%, #f0f5f2 48%, #ecf2ee 100%)";
 
   if (!user) {
     return (
@@ -267,3 +279,4 @@ const App = () => {
 };
 
 export default App;
+
