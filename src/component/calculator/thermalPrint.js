@@ -4,8 +4,6 @@ export const buildThermalBillHtml = ({
   billDate = "",
   billTime = "",
   customerName = "",
-  customerPhone = "",
-  customerAddress = "",
   items = [],
   extraChargeEntries = [],
   subtotal = 0,
@@ -69,6 +67,7 @@ export const buildThermalBillHtml = ({
               height: max-content;
               overflow: visible;
             }
+
             table, tr, td, th, .item, tbody {
               page-break-inside: avoid !important;
               break-inside: avoid !important;
@@ -142,11 +141,30 @@ export const buildThermalBillHtml = ({
             font-weight: bold;
           }
 
-          th:nth-child(1), td:nth-child(1) { width: 8%; }
-          th:nth-child(2), td:nth-child(2) { width: 36%; }
-          th:nth-child(3), td:nth-child(3) { width: 18%; }
-          th:nth-child(4), td:nth-child(4) { width: 14%; }
-          th:nth-child(5), td:nth-child(5) { width: 24%; }
+          th:nth-child(1),
+          td:nth-child(1) {
+            width: 8%;
+          }
+
+          th:nth-child(2),
+          td:nth-child(2) {
+            width: 36%;
+          }
+
+          th:nth-child(3),
+          td:nth-child(3) {
+            width: 18%;
+          }
+
+          th:nth-child(4),
+          td:nth-child(4) {
+            width: 14%;
+          }
+
+          th:nth-child(5),
+          td:nth-child(5) {
+            width: 24%;
+          }
 
           .right {
             text-align: right;
@@ -183,34 +201,18 @@ export const buildThermalBillHtml = ({
 
         <div class="meta-row">
           <div class="meta-left">
-            Name: ${customerName}
+            Party: ${customerName}
           </div>
+
           <div class="meta-right">
             ${billDate ? `Date: ${billDate}` : ""}
           </div>
         </div>
 
-        <div class="meta-row">
-          <div class="meta-left">
-            Phone: ${customerPhone}
-          </div>
           <div class="meta-right">
             ${billTime ? `Time: ${billTime}` : ""}
           </div>
         </div>
-
-        ${
-          customerAddress
-            ? `
-        <div class="meta-row">
-          <div class="meta-left">
-            Address: ${customerAddress}
-          </div>
-          <div></div>
-        </div>
-        `
-            : ""
-        }
 
         <table>
           <thead>
@@ -230,13 +232,22 @@ export const buildThermalBillHtml = ({
         </table>
 
         <div class="summary">
-          <div>Subtotal: ${Math.round(Number(subtotal || 0))}</div>
+          <div>
+            Subtotal: ${Math.round(Number(subtotal || 0))}
+          </div>
+
           ${
             gstEnabled
-              ? `<div>GST (${Number(gstRate || 0)}%): ${Math.round(Number(gstAmount || 0))}</div>`
+              ? `<div>
+                  GST (${Number(gstRate || 0)}%):
+                  ${Math.round(Number(gstAmount || 0))}
+                </div>`
               : ""
           }
-          <div>Extra Cost: ${Math.round(Number(extraTotal || 0))}</div>
+
+          <div>
+            Extra Cost: ${Math.round(Number(extraTotal || 0))}
+          </div>
         </div>
 
         <div class="total">

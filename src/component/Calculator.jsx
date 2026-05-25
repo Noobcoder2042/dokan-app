@@ -90,11 +90,18 @@ const Calculator = () => {
   const [verifiedItems, setVerifiedItems] = useState([]);
   const { user } = useAuth();
   const { activeShopId, shop } = useShop();
-  const draftScopeKey = activeShopId && user?.uid ? `${activeShopId}-${user.uid}` : null;
+  const draftScopeKey =
+    activeShopId && user?.uid ? `${activeShopId}-${user.uid}` : null;
   const draftsStorageKey = draftScopeKey ? `savedBills-${draftScopeKey}` : null;
-  const inProgressDraftStorageKey = draftScopeKey ? `inProgressBill-${draftScopeKey}` : null;
-  const itemHistoryStorageKey = draftScopeKey ? `item-history-${draftScopeKey}` : null;
-  const offlineBillQueueStorageKey = draftScopeKey ? `offline-bill-queue-${draftScopeKey}` : null;
+  const inProgressDraftStorageKey = draftScopeKey
+    ? `inProgressBill-${draftScopeKey}`
+    : null;
+  const itemHistoryStorageKey = draftScopeKey
+    ? `item-history-${draftScopeKey}`
+    : null;
+  const offlineBillQueueStorageKey = draftScopeKey
+    ? `offline-bill-queue-${draftScopeKey}`
+    : null;
 
   const itemNameRef = useRef(null);
   const itemPriceRef = useRef(null);
@@ -135,7 +142,9 @@ const Calculator = () => {
       },
     );
     setItems(Array.isArray(snapshot.items) ? snapshot.items : []);
-    setVerifiedItems(Array.isArray(snapshot.verifiedItems) ? snapshot.verifiedItems : []);
+    setVerifiedItems(
+      Array.isArray(snapshot.verifiedItems) ? snapshot.verifiedItems : [],
+    );
     setItemName(snapshot.itemName || "");
     setItemPrice(snapshot.itemPrice || "");
     setQuantity(snapshot.quantity || "");
@@ -170,7 +179,9 @@ const Calculator = () => {
     setLocalItemNameHistory((current) => {
       const next = [
         itemNameValue,
-        ...current.filter((entry) => entry.toLowerCase() !== normalizedItemName),
+        ...current.filter(
+          (entry) => entry.toLowerCase() !== normalizedItemName,
+        ),
       ].slice(0, 300);
       localStorage.setItem(itemHistoryStorageKey, JSON.stringify(next));
       return next;
@@ -211,7 +222,8 @@ const Calculator = () => {
         hour12: true,
       }),
     };
-    const shareMode = shop.whatsappBillShareMode || WHATSAPP_BILL_SHARE_MODES.TOTAL_TEXT;
+    const shareMode =
+      shop.whatsappBillShareMode || WHATSAPP_BILL_SHARE_MODES.TOTAL_TEXT;
     const message = buildWhatsAppMessage({
       template: shop.whatsappMessage,
       customerName,
@@ -224,11 +236,17 @@ const Calculator = () => {
 
     if (shareMode === WHATSAPP_BILL_SHARE_MODES.PDF_BILL) {
       if (!items.length) {
-        openToast("Add at least one item before preparing the PDF bill", "error");
+        openToast(
+          "Add at least one item before preparing the PDF bill",
+          "error",
+        );
         return;
       }
       saveBillPdf(currentBill, shop);
-      openToast("PDF bill downloaded. Attach it in WhatsApp after the chat opens.", "info");
+      openToast(
+        "PDF bill downloaded. Attach it in WhatsApp after the chat opens.",
+        "info",
+      );
     }
 
     openWhatsAppMessage(cleanDigits, message);
@@ -344,7 +362,8 @@ const Calculator = () => {
     const inventoryMatch = findInventoryItemByName(name);
     if (!inventoryMatch) return;
 
-    const matchedUnit = inventoryMatch.stockUnit === "dozen" ? "dozen" : "piece";
+    const matchedUnit =
+      inventoryMatch.stockUnit === "dozen" ? "dozen" : "piece";
     if (inventoryMatch.price !== undefined && inventoryMatch.price !== null) {
       setItemPrice(String(inventoryMatch.price));
     }
@@ -378,7 +397,9 @@ const Calculator = () => {
 
   const getOfflineBillQueue = () => {
     if (!offlineBillQueueStorageKey) return [];
-    const parsed = JSON.parse(localStorage.getItem(offlineBillQueueStorageKey) || "[]");
+    const parsed = JSON.parse(
+      localStorage.getItem(offlineBillQueueStorageKey) || "[]",
+    );
     return Array.isArray(parsed) ? parsed : [];
   };
 
@@ -389,7 +410,8 @@ const Calculator = () => {
 
   const buildStockRequests = (currentItems) =>
     currentItems.reduce((acc, entry) => {
-      const itemId = entry.inventoryItemId || findInventoryItemByName(entry.name)?.id;
+      const itemId =
+        entry.inventoryItemId || findInventoryItemByName(entry.name)?.id;
       if (!itemId) return acc;
       acc.push({
         itemId,
@@ -671,11 +693,12 @@ const Calculator = () => {
   const getVerifiedItemCount = () =>
     items.reduce(
       (count, _, index) => count + (verifiedItems[index] === true ? 1 : 0),
-      0
+      0,
     );
 
   const allItemsVerified = () =>
-    items.length > 0 && items.every((_, index) => verifiedItems[index] === true);
+    items.length > 0 &&
+    items.every((_, index) => verifiedItems[index] === true);
 
   const toggleCheckAllItems = () => {
     const isAllChecked = allItemsVerified();
@@ -698,7 +721,9 @@ const Calculator = () => {
     const nextStatus = isEditFlow ? "Edited" : "Finalized";
     const nextHistory = isEditFlow
       ? [
-          ...(Array.isArray(editingBill.editHistory) ? editingBill.editHistory : []),
+          ...(Array.isArray(editingBill.editHistory)
+            ? editingBill.editHistory
+            : []),
           {
             version: nextVersion,
             editedAt: createdAtIso,
@@ -728,7 +753,10 @@ const Calculator = () => {
         version: nextVersion,
         editHistory: nextHistory,
         billId: editingBill?.id || "",
-        originalCreatedAt: editingBill?.originalCreatedAt || editingBill?.createdAt || createdAtIso,
+        originalCreatedAt:
+          editingBill?.originalCreatedAt ||
+          editingBill?.createdAt ||
+          createdAtIso,
       },
     );
 
@@ -739,10 +767,14 @@ const Calculator = () => {
           editingBill.id,
           billPayload,
           currentItems,
-          Array.isArray(editingBill.items) ? editingBill.items : []
+          Array.isArray(editingBill.items) ? editingBill.items : [],
         );
       } else {
-        const newBillRef = await saveBillAndConsumeStockForShop(shopId, billPayload, stockRequests);
+        const newBillRef = await saveBillAndConsumeStockForShop(
+          shopId,
+          billPayload,
+          stockRequests,
+        );
         billPayload.billId = newBillRef.id;
       }
     } catch (error) {
@@ -793,13 +825,14 @@ const Calculator = () => {
       new Date().toISOString(),
       {
         editingBill: activeBillMeta,
-      }
+      },
     );
 
     if (savedBillId) {
       setActiveBillMeta((current) => ({
         id: savedBillId,
-        version: current?.id === savedBillId ? Number(current.version || 1) + 1 : 1,
+        version:
+          current?.id === savedBillId ? Number(current.version || 1) + 1 : 1,
       }));
     }
 
@@ -815,39 +848,65 @@ const Calculator = () => {
     if (!allItemsVerified()) {
       openToast(
         `Verify every item before generating the bill (${getVerifiedItemCount()}/${items.length})`,
-        "error"
+        "error",
       );
       return;
     }
 
     const doc = new jsPDF("landscape", "mm", [148, 210]);
+
     const currentDate = new Date();
+
     const formattedDate = `${currentDate
       .getDate()
       .toString()
       .padStart(2, "0")}/${(currentDate.getMonth() + 1)
       .toString()
       .padStart(2, "0")}/${currentDate.getFullYear().toString().slice(-2)}`;
+
     let hours = currentDate.getHours();
+
     const minutes = currentDate.getMinutes().toString().padStart(2, "0");
+
     const ampm = hours >= 12 ? "pm" : "am";
+
     hours = hours % 12 || 12;
-    const formattedTime = `${hours.toString().padStart(2, "0")}.${minutes}${ampm}`;
+
+    const formattedTime = `${hours
+      .toString()
+      .padStart(2, "0")}.${minutes}${ampm}`;
 
     doc.setFontSize(10);
+
     if (activeBillMeta?.id) {
       doc.setFont("helvetica", "bold");
       doc.text("Updated Bill", 10, 6);
       doc.setFont("helvetica", "normal");
     }
+
+    // =========================
+    // HEADER
+    // =========================
+
     doc.text(`Date - ${formattedDate}`, 175, 10);
     doc.text(`Time - ${formattedTime}`, 175, 15);
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(14);
+
     doc.text(`${shop.name || "Demo Shop"}`, 10, 10);
-    doc.text(`Customer Name: ${customerName}`, 10, 15);
-    doc.text(`Customer Phone: ${customerPhone}`, 10, 20);
-    if (customerAddress) {
-      doc.text(`Address: ${customerAddress}`, 10, 25);
-    }
+
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+
+    // SAFE CUSTOMER INFO
+    // Phone + Address hidden
+
+    doc.text(`Party: ${customerName}`, 10, 18);
+
+    // =========================
+    // TABLE
+    // =========================
 
     const columns = [
       { header: "No.", dataKey: "no" },
@@ -859,47 +918,102 @@ const Calculator = () => {
 
     const rows = items.map((item, index) => ({
       no: String(index + 1),
+
+      // OPTIONAL:
+      // Replace item.name with category name
+      // if you want competitor protection
+
       item: item.name,
+
       price: `${item.price} ${item.priceUnit}`,
+
       qty: `${item.quantity} ${item.quantityUnit}`,
+
       total: item.totalPrice.toFixed(2),
     }));
 
     doc.autoTable({
       head: [columns.map((col) => col.header)],
+
       body: rows.map((row) => columns.map((col) => row[col.dataKey])),
-      startY: customerAddress ? 30 : 25,
+
+      // FIXED POSITION
+      startY: 30,
+
       styles: {
         fontSize: 10,
         fillColor: [255, 255, 255],
         textColor: [0, 0, 0],
       },
-      headStyles: { fillColor: [255, 255, 255], textColor: [0, 0, 0] },
+
+      headStyles: {
+        fillColor: [255, 255, 255],
+        textColor: [0, 0, 0],
+      },
+
       tableLineColor: [0, 0, 0],
       tableLineWidth: 0.1,
-      margin: { top: 10, left: 10, right: 10, bottom: 10 },
+
+      margin: {
+        top: 10,
+        left: 10,
+        right: 10,
+        bottom: 10,
+      },
+
       rowHeight: 5,
     });
 
+    // =========================
+    // TOTAL SECTION
+    // =========================
+
     const finalY = doc.lastAutoTable.finalY || 20;
+
     let summaryY = finalY + 8;
+
     if (isGstEnabled()) {
       doc.setFontSize(10);
+
       doc.setFont("helvetica", "normal");
-      doc.text(`GST (${getGstRate()}%) - RS. ${calculateGstAmount().toFixed(2)}`, 140, summaryY);
+
+      doc.text(
+        `GST (${getGstRate()}%) - RS. ${calculateGstAmount().toFixed(2)}`,
+        140,
+        summaryY,
+      );
+
       summaryY += 6;
     }
+
     doc.setFontSize(12);
+
     doc.setFont("helvetica", "bold");
+
     doc.text(
       `Grand Total - RS. ${Math.round(calculateGrandTotal())}`,
       140,
       summaryY,
     );
+
+    // =========================
+    // FOOTER
+    // =========================
+
     doc.setFont("helvetica", "normal");
+
+    doc.setFontSize(9);
+
+    doc.text("Thank You! Visit Again", 10, summaryY + 10);
+
+    // =========================
+    // SAVE PDF
+    // =========================
+
     doc.save(`invoice_${new Date().toISOString()}.pdf`);
 
     await ensureBillSaved();
+
     openToast("Bill generated successfully");
   };
 
@@ -976,12 +1090,16 @@ const Calculator = () => {
     if (!allItemsVerified()) {
       openToast(
         `Verify every item before printing (${getVerifiedItemCount()}/${items.length})`,
-        "error"
+        "error",
       );
       return;
     }
 
-    const isElectron = !!(window.electronAPI || window.ipcRenderer || (window.require && window.require('electron')));
+    const isElectron = !!(
+      window.electronAPI ||
+      window.ipcRenderer ||
+      (window.require && window.require("electron"))
+    );
     let printWindow = null;
 
     if (!isElectron) {
@@ -1015,7 +1133,7 @@ const Calculator = () => {
         });
         openToast(
           "Printed offline. Bill queued and will auto-sync when internet returns.",
-          "warning"
+          "warning",
         );
       } else {
         if (printWindow) printWindow.close();
@@ -1024,30 +1142,31 @@ const Calculator = () => {
       }
     }
 
-    const displayItems = mode === "customer"
-      ? items.map((item) => {
-          let protectedName = item.name;
-          
-          let targetCategoryId = item.categoryId;
-          if (!targetCategoryId) {
-            const inventoryMatch = findInventoryItemByName(item.name);
-            if (inventoryMatch && inventoryMatch.categoryId) {
-              targetCategoryId = inventoryMatch.categoryId;
-            }
-          }
+    const displayItems =
+      mode === "customer"
+        ? items.map((item) => {
+            let protectedName = item.name;
 
-          if (targetCategoryId) {
-            const cat = categories.find((c) => c.id === targetCategoryId);
-            if (cat && cat.name) {
-              protectedName = cat.name;
+            let targetCategoryId = item.categoryId;
+            if (!targetCategoryId) {
+              const inventoryMatch = findInventoryItemByName(item.name);
+              if (inventoryMatch && inventoryMatch.categoryId) {
+                targetCategoryId = inventoryMatch.categoryId;
+              }
             }
-          }
-          return {
-            ...item,
-            name: protectedName
-          };
-        })
-      : items;
+
+            if (targetCategoryId) {
+              const cat = categories.find((c) => c.id === targetCategoryId);
+              if (cat && cat.name) {
+                protectedName = cat.name;
+              }
+            }
+            return {
+              ...item,
+              name: protectedName,
+            };
+          })
+        : items;
 
     const extraChargeEntries = [
       { label: "Colie", value: Number(extraCharges.rickshaw || 0) },
@@ -1090,7 +1209,9 @@ const Calculator = () => {
         if (window.electronAPI && window.electronAPI.printReceipt) {
           window.electronAPI.printReceipt(thermalHtml);
         } else {
-          const ipcRenderer = window.ipcRenderer || (window.require && window.require('electron').ipcRenderer);
+          const ipcRenderer =
+            window.ipcRenderer ||
+            (window.require && window.require("electron").ipcRenderer);
           if (ipcRenderer) {
             ipcRenderer.send("print-thermal-receipt", thermalHtml);
           } else {
@@ -1120,21 +1241,24 @@ const Calculator = () => {
   useEffect(() => {
     if (!inProgressDraftStorageKey) return;
     hasHydratedInProgressRef.current = false;
-    const stored = JSON.parse(localStorage.getItem(inProgressDraftStorageKey) || "null");
+    const stored = JSON.parse(
+      localStorage.getItem(inProgressDraftStorageKey) || "null",
+    );
     if (stored) {
       applyEditorSnapshot(stored);
       previousSnapshotRef.current = {
         customerName: stored.customerName || "",
         customerPhone: stored.customerPhone || "",
         customerAddress: stored.customerAddress || "",
-        extraCharges:
-          stored.extraCharges || {
-            rickshaw: "",
-            bus: "",
-            other: "",
-          },
+        extraCharges: stored.extraCharges || {
+          rickshaw: "",
+          bus: "",
+          other: "",
+        },
         items: Array.isArray(stored.items) ? stored.items : [],
-        verifiedItems: Array.isArray(stored.verifiedItems) ? stored.verifiedItems : [],
+        verifiedItems: Array.isArray(stored.verifiedItems)
+          ? stored.verifiedItems
+          : [],
         itemName: stored.itemName || "",
         itemPrice: stored.itemPrice || "",
         quantity: stored.quantity || "",
@@ -1292,7 +1416,10 @@ const Calculator = () => {
     setVerifiedItems((current) => {
       if (current.length === items.length) return current;
       if (current.length < items.length) {
-        return [...current, ...Array(items.length - current.length).fill(false)];
+        return [
+          ...current,
+          ...Array(items.length - current.length).fill(false),
+        ];
       }
       return current.slice(0, items.length);
     });
@@ -1304,7 +1431,8 @@ const Calculator = () => {
       setLocalItemNameHistory([]);
       return;
     }
-    const storedHistory = JSON.parse(localStorage.getItem(itemHistoryStorageKey)) || [];
+    const storedHistory =
+      JSON.parse(localStorage.getItem(itemHistoryStorageKey)) || [];
     setLocalItemNameHistory(Array.isArray(storedHistory) ? storedHistory : []);
   }, [itemHistoryStorageKey]);
 
@@ -1427,7 +1555,7 @@ const Calculator = () => {
       (error) => {
         console.error("Categories subscribe failed:", error);
         setCategories([]);
-      }
+      },
     );
 
     return () => unsubscribe();
@@ -1489,7 +1617,8 @@ const Calculator = () => {
     return sorted
       .filter((bill) => {
         if (!normalized) return true;
-        const haystack = `${bill.id || ""} ${bill.billId || ""} ${bill.name || ""} ${bill.phoneNumber || ""} ${bill.date || ""}`.toLowerCase();
+        const haystack =
+          `${bill.id || ""} ${bill.billId || ""} ${bill.name || ""} ${bill.phoneNumber || ""} ${bill.date || ""}`.toLowerCase();
         return haystack.includes(normalized);
       })
       .slice(0, 20);
@@ -1506,7 +1635,9 @@ const Calculator = () => {
     setCustomerPhone(bill.phoneNumber || "");
     setCustomerAddress(bill.address || "");
     setItems(Array.isArray(bill.items) ? bill.items : []);
-    setVerifiedItems(Array.isArray(bill.items) ? bill.items.map(() => true) : []);
+    setVerifiedItems(
+      Array.isArray(bill.items) ? bill.items.map(() => true) : [],
+    );
     setExtraCharges(
       bill.extraCharges || {
         rickshaw: "",
@@ -1570,660 +1701,725 @@ const Calculator = () => {
       <Grid container spacing={4}>
         <Grid item xs={12} lg={8}>
           <Stack spacing={4}>
-            <Card sx={{ borderRadius: 1, boxShadow: "0 4px 20px rgba(0,0,0,0.04)", border: "1px solid", borderColor: "divider" }}>
-            <CardContent sx={{ p: { xs: 2, md: 3 } }}>
-              <Stack spacing={3}>
-                <Box>
-                  <Typography variant="h6">Customer Details</Typography>
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    sx={{ mt: 0.5 }}
-                  >
-                    Select an existing customer or create a new one in a few
-                    taps.
-                  </Typography>
-                  <Typography
-                    variant="caption"
-                    color="text.secondary"
-                    sx={{ mt: 0.75, display: "block" }}
-                  >
-                    Keyboard: Enter moves Name {"->"} Phone {"->"} Address{" "}
-                    {"->"} Item Name
-                  </Typography>
-                </Box>
-
-                <Grid container spacing={2}>
-                  <CustomerDetails
-                    customerName={customerName}
-                    customerPhone={customerPhone}
-                    customerAddress={customerAddress}
-                    customerOptions={mergedCustomerOptions}
-                    onNameChange={handleCustomerNameChange}
-                    onPhoneChange={handleCustomerPhoneChange}
-                    onAddressChange={handleCustomerAddressChange}
-                    onCustomerSelect={handleCustomerSelect}
-                    nameInputRef={customerNameRef}
-                    phoneInputRef={customerPhoneRef}
-                    addressInputRef={customerAddressRef}
-                    onNameKeyDown={(event) =>
-                      handleKeyPress(event, customerPhoneRef)
-                    }
-                    onPhoneKeyDown={(event) =>
-                      handleKeyPress(event, customerAddressRef)
-                    }
-                    onAddressKeyDown={(event) =>
-                      handleKeyPress(event, itemNameRef)
-                    }
-                  />
-                </Grid>
-
-                <Divider />
-
-                <Box>
-                  <Typography variant="h6">Item Entry</Typography>
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    sx={{ mt: 0.5 }}
-                  >
-                    Add product lines quickly and keep the bill moving.
-                  </Typography>
-                  <Typography
-                    variant="caption"
-                    color="text.secondary"
-                    sx={{ mt: 0.75, display: "block" }}
-                  >
-                    Keyboard: Enter moves fields and Enter on Quantity/Quantity
-                    Unit adds item.
-                  </Typography>
-                </Box>
-
-                <Grid container spacing={2}>
-                  <Grid item xs={12}>
-                    <Autocomplete
-                      freeSolo
-                      options={itemNameOptions}
-                      inputValue={itemName}
-                      getOptionLabel={(option) =>
-                        typeof option === "string" ? option : option.name
-                      }
-                      filterOptions={(options, state) => {
-                        const term = normalizeValue(state.inputValue);
-                        if (!term) return options.slice(0, 100);
-                        return options.filter((option) => {
-                          const optionName = normalizeValue(option.name);
-                          const optionCode = normalizeValue(option.code);
-                          return optionName.includes(term) || optionCode.includes(term);
-                        });
-                      }}
-                      onInputChange={(_, value) => {
-                        setItemName(value);
-                        const codeMatch = findInventoryItemByCode(value);
-                        if (codeMatch) applyInventoryAutofill(codeMatch.name);
-                      }}
-                      onChange={(_, value) => {
-                        if (typeof value === "string") {
-                          applyInventoryAutofill(value);
-                          return;
-                        }
-                        if (value?.name) applyInventoryAutofill(value.name);
-                      }}
-                      renderOption={(props, option) => (
-                        <li {...props}>
-                          {option.name}
-                          {option.code ? ` (${option.code})` : ""}
-                        </li>
-                      )}
-                      renderInput={(params) => (
-                        <TextField
-                          {...params}
-                          label="Item Name or Code"
-                          fullWidth
-                          inputRef={itemNameRef}
-                          onKeyDown={(event) => {
-                            if (event.key === "Enter") {
-                              const codeMatch = findInventoryItemByCode(itemName);
-                              if (codeMatch) {
-                                applyInventoryAutofill(codeMatch.name);
-                              }
-                            }
-                            handleAddMoreShortcut(event);
-                            handleUnitShortcut(event);
-                            handleKeyPress(event, itemPriceRef);
-                          }}
-                        />
-                      )}
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <TextField
-                      label="Item Price"
-                      type="number"
-                      value={itemPrice}
-                      onChange={handleItemPriceChange}
-                      onKeyDown={(event) => {
-                        handleAddMoreShortcut(event);
-                        handleUnitShortcut(event);
-                        handleKeyPress(event, quantityRef);
-                      }}
-                      fullWidth
-                      inputRef={itemPriceRef}
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <FormControl fullWidth>
-                      <InputLabel>Price Unit</InputLabel>
-                      <Select
-                        value={priceUnit}
-                        onChange={handlePriceUnitChange}
-                        onKeyDown={(event) => {
-                          handleAddMoreShortcut(event);
-                          handleUnitShortcut(event);
-                          handleKeyPress(event, quantityRef);
-                        }}
-                        label="Price Unit"
-                      >
-                        <MenuItem value="piece">Per Piece</MenuItem>
-                        <MenuItem value="dozen">Per Dozen</MenuItem>
-                      </Select>
-                    </FormControl>
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <TextField
-                      label="Quantity"
-                      type="number"
-                      value={quantity}
-                      onChange={handleQuantityChange}
-                      onKeyDown={(event) => {
-                        handleAddMoreShortcut(event);
-                        handleUnitShortcut(event);
-                        handleEnterAddItem(event);
-                      }}
-                      fullWidth
-                      inputRef={quantityRef}
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <FormControl fullWidth>
-                      <InputLabel>Quantity Unit</InputLabel>
-                      <Select
-                        value={quantityUnit}
-                        onChange={handleQuantityUnitChange}
-                        onKeyDown={(event) => {
-                          handleAddMoreShortcut(event);
-                          handleUnitShortcut(event);
-                          handleEnterAddItem(event);
-                        }}
-                        label="Quantity Unit"
-                      >
-                        <MenuItem value="piece">Piece</MenuItem>
-                        <MenuItem value="dozen">Dozen</MenuItem>
-                      </Select>
-                    </FormControl>
-                  </Grid>
-                </Grid>
-
-                <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
-                  <Button
-                    variant="contained"
-                    onClick={() => addItem(false)}
-                    disabled={!itemName || !itemPrice || !quantity}
-                  >
-                    Add Item
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    color="secondary"
-                    onClick={() => addItem(true)}
-                    disabled={!itemName || !itemPrice || !quantity}
-                  >
-                    Add More of Same Item
-                  </Button>
-                  <Button variant="text" color="inherit" onClick={resetForm}>
-                    Reset Fields
-                  </Button>
-                  <Button variant="outlined" color="error" onClick={resetAllFields}>
-                    Reset All
-                  </Button>
-                </Stack>
-
-                <Divider />
-
-                <Box>
-                  <Typography variant="h6">Extra Charges</Typography>
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    sx={{ mt: 0.5 }}
-                  >
-                    Add transport or delivery charges before the final bill.
-                  </Typography>
-                </Box>
-
-                <Grid container spacing={2}>
-                  <Grid item xs={12} md={4}>
-                    <TextField
-                      label="Colie Cost"
-                      type="number"
-                      value={extraCharges.rickshaw}
-                      onChange={handleExtraChargeChange("rickshaw")}
-                      fullWidth
-                    />
-                  </Grid>
-                  <Grid item xs={12} md={4}>
-                    <TextField
-                      label="Bus Cost"
-                      type="number"
-                      value={extraCharges.bus}
-                      onChange={handleExtraChargeChange("bus")}
-                      fullWidth
-                    />
-                  </Grid>
-                  <Grid item xs={12} md={4}>
-                    <TextField
-                      label="Other Charges"
-                      type="number"
-                      value={extraCharges.other}
-                      onChange={handleExtraChargeChange("other")}
-                      fullWidth
-                    />
-                  </Grid>
-                </Grid>
-              </Stack>
-            </CardContent>
-          </Card>
-            <Card sx={{ borderRadius: 1, boxShadow: "0 4px 20px rgba(0,0,0,0.04)", border: "1px solid", borderColor: "divider" }}>
-            <CardContent sx={{ p: { xs: 2, md: 3 } }}>
-              <Stack spacing={2}>
-                <Stack direction="row" justifyContent="space-between" alignItems="center">
+            <Card
+              sx={{
+                borderRadius: 1,
+                boxShadow: "0 4px 20px rgba(0,0,0,0.04)",
+                border: "1px solid",
+                borderColor: "divider",
+              }}
+            >
+              <CardContent sx={{ p: { xs: 2, md: 3 } }}>
+                <Stack spacing={3}>
                   <Box>
-                    <Typography variant="h6">Bill Items</Typography>
+                    <Typography variant="h6">Customer Details</Typography>
                     <Typography
                       variant="body2"
                       color="text.secondary"
                       sx={{ mt: 0.5 }}
                     >
-                      Review, edit, and remove line items before the final print.
+                      Select an existing customer or create a new one in a few
+                      taps.
+                    </Typography>
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      sx={{ mt: 0.75, display: "block" }}
+                    >
+                      Keyboard: Enter moves Name {"->"} Phone {"->"} Address{" "}
+                      {"->"} Item Name
                     </Typography>
                   </Box>
-                  {items.length > 0 && (
+
+                  <Grid container spacing={2}>
+                    <CustomerDetails
+                      customerName={customerName}
+                      customerPhone={customerPhone}
+                      customerAddress={customerAddress}
+                      customerOptions={mergedCustomerOptions}
+                      onNameChange={handleCustomerNameChange}
+                      onPhoneChange={handleCustomerPhoneChange}
+                      onAddressChange={handleCustomerAddressChange}
+                      onCustomerSelect={handleCustomerSelect}
+                      nameInputRef={customerNameRef}
+                      phoneInputRef={customerPhoneRef}
+                      addressInputRef={customerAddressRef}
+                      onNameKeyDown={(event) =>
+                        handleKeyPress(event, customerPhoneRef)
+                      }
+                      onPhoneKeyDown={(event) =>
+                        handleKeyPress(event, customerAddressRef)
+                      }
+                      onAddressKeyDown={(event) =>
+                        handleKeyPress(event, itemNameRef)
+                      }
+                    />
+                  </Grid>
+
+                  <Divider />
+
+                  <Box>
+                    <Typography variant="h6">Item Entry</Typography>
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{ mt: 0.5 }}
+                    >
+                      Add product lines quickly and keep the bill moving.
+                    </Typography>
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      sx={{ mt: 0.75, display: "block" }}
+                    >
+                      Keyboard: Enter moves fields and Enter on
+                      Quantity/Quantity Unit adds item.
+                    </Typography>
+                  </Box>
+
+                  <Grid container spacing={2}>
+                    <Grid item xs={12}>
+                      <Autocomplete
+                        freeSolo
+                        options={itemNameOptions}
+                        inputValue={itemName}
+                        getOptionLabel={(option) =>
+                          typeof option === "string" ? option : option.name
+                        }
+                        filterOptions={(options, state) => {
+                          const term = normalizeValue(state.inputValue);
+                          if (!term) return options.slice(0, 100);
+                          return options.filter((option) => {
+                            const optionName = normalizeValue(option.name);
+                            const optionCode = normalizeValue(option.code);
+                            return (
+                              optionName.includes(term) ||
+                              optionCode.includes(term)
+                            );
+                          });
+                        }}
+                        onInputChange={(_, value) => {
+                          setItemName(value);
+                          const codeMatch = findInventoryItemByCode(value);
+                          if (codeMatch) applyInventoryAutofill(codeMatch.name);
+                        }}
+                        onChange={(_, value) => {
+                          if (typeof value === "string") {
+                            applyInventoryAutofill(value);
+                            return;
+                          }
+                          if (value?.name) applyInventoryAutofill(value.name);
+                        }}
+                        renderOption={(props, option) => (
+                          <li {...props}>
+                            {option.name}
+                            {option.code ? ` (${option.code})` : ""}
+                          </li>
+                        )}
+                        renderInput={(params) => (
+                          <TextField
+                            {...params}
+                            label="Item Name or Code"
+                            fullWidth
+                            inputRef={itemNameRef}
+                            onKeyDown={(event) => {
+                              if (event.key === "Enter") {
+                                const codeMatch =
+                                  findInventoryItemByCode(itemName);
+                                if (codeMatch) {
+                                  applyInventoryAutofill(codeMatch.name);
+                                }
+                              }
+                              handleAddMoreShortcut(event);
+                              handleUnitShortcut(event);
+                              handleKeyPress(event, itemPriceRef);
+                            }}
+                          />
+                        )}
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <TextField
+                        label="Item Price"
+                        type="number"
+                        value={itemPrice}
+                        onChange={handleItemPriceChange}
+                        onKeyDown={(event) => {
+                          handleAddMoreShortcut(event);
+                          handleUnitShortcut(event);
+                          handleKeyPress(event, quantityRef);
+                        }}
+                        fullWidth
+                        inputRef={itemPriceRef}
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <FormControl fullWidth>
+                        <InputLabel>Price Unit</InputLabel>
+                        <Select
+                          value={priceUnit}
+                          onChange={handlePriceUnitChange}
+                          onKeyDown={(event) => {
+                            handleAddMoreShortcut(event);
+                            handleUnitShortcut(event);
+                            handleKeyPress(event, quantityRef);
+                          }}
+                          label="Price Unit"
+                        >
+                          <MenuItem value="piece">Per Piece</MenuItem>
+                          <MenuItem value="dozen">Per Dozen</MenuItem>
+                        </Select>
+                      </FormControl>
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <TextField
+                        label="Quantity"
+                        type="number"
+                        value={quantity}
+                        onChange={handleQuantityChange}
+                        onKeyDown={(event) => {
+                          handleAddMoreShortcut(event);
+                          handleUnitShortcut(event);
+                          handleEnterAddItem(event);
+                        }}
+                        fullWidth
+                        inputRef={quantityRef}
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <FormControl fullWidth>
+                        <InputLabel>Quantity Unit</InputLabel>
+                        <Select
+                          value={quantityUnit}
+                          onChange={handleQuantityUnitChange}
+                          onKeyDown={(event) => {
+                            handleAddMoreShortcut(event);
+                            handleUnitShortcut(event);
+                            handleEnterAddItem(event);
+                          }}
+                          label="Quantity Unit"
+                        >
+                          <MenuItem value="piece">Piece</MenuItem>
+                          <MenuItem value="dozen">Dozen</MenuItem>
+                        </Select>
+                      </FormControl>
+                    </Grid>
+                  </Grid>
+
+                  <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
+                    <Button
+                      variant="contained"
+                      onClick={() => addItem(false)}
+                      disabled={!itemName || !itemPrice || !quantity}
+                    >
+                      Add Item
+                    </Button>
                     <Button
                       variant="outlined"
-                      size="small"
-                      onClick={toggleCheckAllItems}
+                      color="secondary"
+                      onClick={() => addItem(true)}
+                      disabled={!itemName || !itemPrice || !quantity}
                     >
-                      {allItemsVerified() ? "Uncheck All" : "Check All Items"}
+                      Add More of Same Item
                     </Button>
+                    <Button variant="text" color="inherit" onClick={resetForm}>
+                      Reset Fields
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      color="error"
+                      onClick={resetAllFields}
+                    >
+                      Reset All
+                    </Button>
+                  </Stack>
+
+                  <Divider />
+
+                  <Box>
+                    <Typography variant="h6">Extra Charges</Typography>
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{ mt: 0.5 }}
+                    >
+                      Add transport or delivery charges before the final bill.
+                    </Typography>
+                  </Box>
+
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} md={4}>
+                      <TextField
+                        label="Colie Cost"
+                        type="number"
+                        value={extraCharges.rickshaw}
+                        onChange={handleExtraChargeChange("rickshaw")}
+                        fullWidth
+                      />
+                    </Grid>
+                    <Grid item xs={12} md={4}>
+                      <TextField
+                        label="Bus Cost"
+                        type="number"
+                        value={extraCharges.bus}
+                        onChange={handleExtraChargeChange("bus")}
+                        fullWidth
+                      />
+                    </Grid>
+                    <Grid item xs={12} md={4}>
+                      <TextField
+                        label="Other Charges"
+                        type="number"
+                        value={extraCharges.other}
+                        onChange={handleExtraChargeChange("other")}
+                        fullWidth
+                      />
+                    </Grid>
+                  </Grid>
+                </Stack>
+              </CardContent>
+            </Card>
+            <Card
+              sx={{
+                borderRadius: 1,
+                boxShadow: "0 4px 20px rgba(0,0,0,0.04)",
+                border: "1px solid",
+                borderColor: "divider",
+              }}
+            >
+              <CardContent sx={{ p: { xs: 2, md: 3 } }}>
+                <Stack spacing={2}>
+                  <Stack
+                    direction="row"
+                    justifyContent="space-between"
+                    alignItems="center"
+                  >
+                    <Box>
+                      <Typography variant="h6">Bill Items</Typography>
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                        sx={{ mt: 0.5 }}
+                      >
+                        Review, edit, and remove line items before the final
+                        print.
+                      </Typography>
+                    </Box>
+                    {items.length > 0 && (
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        onClick={toggleCheckAllItems}
+                      >
+                        {allItemsVerified() ? "Uncheck All" : "Check All Items"}
+                      </Button>
+                    )}
+                  </Stack>
+
+                  {items.length ? (
+                    <List sx={{ p: 0 }}>
+                      {items.map((item, index) => (
+                        <ListItem
+                          key={index}
+                          sx={{
+                            px: 0,
+                            py: 1.5,
+                            borderBottom:
+                              index === items.length - 1
+                                ? "none"
+                                : "1px solid rgba(226, 232, 240, 0.9)",
+                          }}
+                          secondaryAction={
+                            <Stack direction="row" spacing={0.5}>
+                              <Checkbox
+                                checked={Boolean(verifiedItems[index])}
+                                onChange={() => toggleVerifiedItem(index)}
+                                color="success"
+                              />
+                              <IconButton onClick={() => editItem(index)}>
+                                <EditIcon />
+                              </IconButton>
+                              <IconButton onClick={() => deleteItem(index)}>
+                                <DeleteIcon />
+                              </IconButton>
+                            </Stack>
+                          }
+                        >
+                          <ListItemText
+                            primary={`${item.name} - ${item.price} ${item.priceUnit} x ${item.quantity} ${item.quantityUnit}`}
+                            secondary={`Total: Rs. ${item.totalPrice.toFixed(2)}${verifiedItems[index] ? " | Verified" : " | Pending check"}`}
+                          />
+                        </ListItem>
+                      ))}
+                    </List>
+                  ) : (
+                    <Paper
+                      variant="outlined"
+                      sx={{ p: 3, textAlign: "center" }}
+                    >
+                      <Typography variant="h6">No items added yet</Typography>
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                        sx={{ mt: 1 }}
+                      >
+                        Add your first line item to start the bill.
+                      </Typography>
+                    </Paper>
                   )}
                 </Stack>
-
-                {items.length ? (
-                  <List sx={{ p: 0 }}>
-                    {items.map((item, index) => (
-                      <ListItem
-                        key={index}
-                        sx={{
-                          px: 0,
-                          py: 1.5,
-                          borderBottom:
-                            index === items.length - 1
-                              ? "none"
-                              : "1px solid rgba(226, 232, 240, 0.9)",
-                        }}
-                        secondaryAction={
-                          <Stack direction="row" spacing={0.5}>
-                            <Checkbox
-                              checked={Boolean(verifiedItems[index])}
-                              onChange={() => toggleVerifiedItem(index)}
-                              color="success"
-                            />
-                            <IconButton onClick={() => editItem(index)}>
-                              <EditIcon />
-                            </IconButton>
-                            <IconButton onClick={() => deleteItem(index)}>
-                              <DeleteIcon />
-                            </IconButton>
-                          </Stack>
-                        }
-                      >
-                        <ListItemText
-                          primary={`${item.name} - ${item.price} ${item.priceUnit} x ${item.quantity} ${item.quantityUnit}`}
-                          secondary={`Total: Rs. ${item.totalPrice.toFixed(2)}${verifiedItems[index] ? " | Verified" : " | Pending check"}`}
+              </CardContent>
+            </Card>
+          </Stack>
+        </Grid>
+        <Grid item xs={12} lg={4}>
+          <Stack
+            spacing={4}
+            sx={{ position: { lg: "sticky" }, top: { lg: 104 } }}
+          >
+            <Card>
+              <CardContent sx={{ p: { xs: 2, md: 3 } }}>
+                <Stack spacing={2.5}>
+                  <Box>
+                    <Typography variant="h6">Bill Summary</Typography>
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{ mt: 0.5 }}
+                    >
+                      Keep the final amount and print actions within reach.
+                    </Typography>
+                    {activeBillMeta?.id ? (
+                      <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
+                        <Chip
+                          size="small"
+                          label={`Editing Bill: ${activeBillMeta.id}`}
+                          color="primary"
+                          variant="outlined"
                         />
-                      </ListItem>
-                    ))}
-                  </List>
-                ) : (
-                  <Paper variant="outlined" sx={{ p: 3, textAlign: "center" }}>
-                    <Typography variant="h6">No items added yet</Typography>
+                        <Chip
+                          size="small"
+                          label={`v${Number(activeBillMeta.version || 1)}`}
+                          color="warning"
+                          variant="outlined"
+                        />
+                      </Stack>
+                    ) : null}
+                  </Box>
+
+                  <Paper
+                    variant="outlined"
+                    sx={{
+                      p: 2.5,
+                      borderRadius: 1,
+                      borderColor: (theme) =>
+                        theme.palette.mode === "dark"
+                          ? "rgba(255,255,255,0.12)"
+                          : "rgba(148, 163, 184, 0.18)",
+                      background: (theme) =>
+                        theme.palette.mode === "dark"
+                          ? "linear-gradient(180deg, rgba(15,23,42,0.98) 0%, rgba(17,24,39,0.96) 100%)"
+                          : "linear-gradient(180deg, rgba(248, 250, 252, 0.95) 0%, rgba(241, 245, 249, 0.9) 100%)",
+                      boxShadow: (theme) =>
+                        theme.palette.mode === "dark"
+                          ? "0 0 0 1px rgba(74,222,128,0.14), 0 20px 36px rgba(0,0,0,0.48)"
+                          : undefined,
+                    }}
+                  >
+                    <Typography variant="body2" color="text.secondary">
+                      Subtotal
+                    </Typography>
+                    <Typography
+                      variant="h5"
+                      sx={{
+                        mt: 0.75,
+                        color: "text.secondary",
+                        fontWeight: 700,
+                      }}
+                    >
+                      Rs. {calculateTotalBill().toFixed(2)}
+                    </Typography>
                     <Typography
                       variant="body2"
                       color="text.secondary"
                       sx={{ mt: 1 }}
                     >
-                      Add your first line item to start the bill.
+                      GST {isGstEnabled() ? `(${getGstRate()}%)` : "(off)"}: Rs.{" "}
+                      {calculateGstAmount().toFixed(2)}
                     </Typography>
-                  </Paper>
-                )}
-              </Stack>
-            </CardContent>
-          </Card>
-          </Stack>
-        </Grid>
-        <Grid item xs={12} lg={4}>
-          <Stack spacing={4} sx={{ position: { lg: "sticky" }, top: { lg: 104 } }}>
-            <Card >
-            <CardContent sx={{ p: { xs: 2, md: 3 } }}>
-              <Stack spacing={2.5}>
-                <Box>
-                  <Typography variant="h6">Bill Summary</Typography>
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    sx={{ mt: 0.5 }}
-                  >
-                    Keep the final amount and print actions within reach.
-                  </Typography>
-                  {activeBillMeta?.id ? (
-                    <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
-                      <Chip
-                        size="small"
-                        label={`Editing Bill: ${activeBillMeta.id}`}
-                        color="primary"
-                        variant="outlined"
-                      />
-                      <Chip
-                        size="small"
-                        label={`v${Number(activeBillMeta.version || 1)}`}
-                        color="warning"
-                        variant="outlined"
-                      />
-                    </Stack>
-                  ) : null}
-                </Box>
-
-                <Paper
-                  variant="outlined"
-                  sx={{
-                    p: 2.5,
-                    borderRadius: 1,
-                    borderColor: (theme) =>
-                      theme.palette.mode === "dark"
-                        ? "rgba(255,255,255,0.12)"
-                        : "rgba(148, 163, 184, 0.18)",
-                    background: (theme) =>
-                      theme.palette.mode === "dark"
-                        ? "linear-gradient(180deg, rgba(15,23,42,0.98) 0%, rgba(17,24,39,0.96) 100%)"
-                        : "linear-gradient(180deg, rgba(248, 250, 252, 0.95) 0%, rgba(241, 245, 249, 0.9) 100%)",
-                    boxShadow: (theme) =>
-                      theme.palette.mode === "dark"
-                        ? "0 0 0 1px rgba(74,222,128,0.14), 0 20px 36px rgba(0,0,0,0.48)"
-                        : undefined,
-                  }}
-                >
-                  <Typography variant="body2" color="text.secondary">
-                    Subtotal
-                  </Typography>
-                  <Typography variant="h5" sx={{ mt: 0.75, color: "text.secondary", fontWeight: 700 }}>
-                    Rs. {calculateTotalBill().toFixed(2)}
-                  </Typography>
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    sx={{ mt: 1 }}
-                  >
-                    GST {isGstEnabled() ? `(${getGstRate()}%)` : "(off)"}: Rs.{" "}
-                    {calculateGstAmount().toFixed(2)}
-                  </Typography>
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    sx={{ mt: 1 }}
-                  >
-                    Extra charges: Rs. {calculateExtraChargesTotal().toFixed(2)}
-                  </Typography>
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    sx={{ mt: 1.25, fontWeight: 700 }}
-                  >
-                    Grand total
-                  </Typography>
-                  <Typography
-                    variant="h3"
-                    color="primary.main"
-                    sx={{ mt: 0.25, fontWeight: 900, letterSpacing: "-0.02em" }}
-                  >
-                    Rs. {calculateRoundedGrandTotal()}
-                  </Typography>
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    sx={{ mt: 1 }}
-                  >
-                    Verified {verifiedItems.filter(Boolean).length} of{" "}
-                    {items.length} items
-                  </Typography>
-                </Paper>
-
-                <Paper
-                  variant="outlined"
-                  sx={{
-                    
-                    p: 1.25,
-                    borderRadius: 1,
-                    borderColor: (theme) =>
-                      theme.palette.mode === "dark"
-                        ? "rgba(255,255,255,0.16)"
-                        : "rgba(148,163,184,0.26)",
-                    bgcolor: (theme) =>
-                      theme.palette.mode === "dark"
-                        ? "rgba(15,23,42,0.92)"
-                        : "rgba(255,255,255,0.94)",
-                    backdropFilter: "blur(8px)",
-                  }}
-                >
-                <Stack
-                  direction={{ xs: "column", sm: "row", lg: "column" }}
-                  spacing={1}
-                >
-                  <Stack direction="row" spacing={1}>
-                    <Button
-                      variant="text"
-                      onClick={handleUndo}
-                      disabled={!undoStack.length}
-                      fullWidth
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{ mt: 1 }}
                     >
-                      Undo
-                    </Button>
-                    <Button
-                      variant="text"
-                      onClick={handleRedo}
-                      disabled={!redoStack.length}
-                      fullWidth
+                      Extra charges: Rs.{" "}
+                      {calculateExtraChargesTotal().toFixed(2)}
+                    </Typography>
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{ mt: 1.25, fontWeight: 700 }}
                     >
-                      Redo
-                    </Button>
-                  </Stack>
-                  <Button
-                    variant="contained"
-                    onClick={generatePDF}
-                    disabled={
-                      !customerName || !customerPhone || items.length === 0
-                    }
-                  >
-                    {activeBillMeta?.id ? "Reprint Updated Bill" : "Generate Bill"}
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    startIcon={<PrintIcon />}
-                    onClick={() => printThermalBill("original")}
-                    disabled={
-                      !customerName || !customerPhone || items.length === 0
-                    }
-                  >
-                    Original Bill
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    startIcon={<PrintIcon />}
-                    onClick={() => printThermalBill("customer")}
-                    disabled={
-                      !customerName || !customerPhone || items.length === 0
-                    }
-                    color="secondary"
-                  >
-                    Privacy Copy
-                  </Button>
-                  <Button
-                    variant="contained"
-                    color="success"
-                    onClick={saveBillForLaterEditing}
-                    disabled={
-                      !customerName || !customerPhone || items.length === 0
-                    }
-                  >
-                    Save for Later
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    color="success"
-                    startIcon={<WhatsAppIcon />}
-                    onClick={sendWhatsAppFromBilling}
-                    disabled={!customerName || !customerPhone}
-                  >
-                    WhatsApp
-                  </Button>
-                </Stack>
-                </Paper>
-              </Stack>
-            </CardContent>
-          </Card>
-            <Card sx={{ borderRadius: 1, boxShadow: "0 4px 20px rgba(0,0,0,0.04)", border: "1px solid", borderColor: "divider" }}>
-            <CardContent sx={{ p: { xs: 2, md: 3 } }}>
-              <Stack spacing={2}>
-                <List
-                  sx={{ p: 0 }}
-                  subheader={
-                    <ListSubheader
+                      Grand total
+                    </Typography>
+                    <Typography
+                      variant="h3"
+                      color="primary.main"
                       sx={{
-                        px: 0,
-                        py: 0,
-                        mb: 1.5,
-                        bgcolor: "transparent",
-                        color: "text.primary",
-                        fontSize: 18,
-                        fontWeight: 700,
+                        mt: 0.25,
+                        fontWeight: 900,
+                        letterSpacing: "-0.02em",
                       }}
                     >
-                      Saved Draft Bills
-                    </ListSubheader>
-                  }
-                >
-                  {savedBills.length ? (
-                    savedBills.map((bill, index) => (
-                      <ListItem
-                        key={index}
-                        button
-                        onClick={() => loadBill(index)}
-                        sx={{
-                          px: 0,
-                          py: 1.5,
-                          borderBottom:
-                            index === savedBills.length - 1
-                              ? "none"
-                              : "1px solid rgba(226, 232, 240, 0.9)",
-                        }}
-                        secondaryAction={
-                          <IconButton
-                            aria-label="delete"
-                            onClick={() => deleteBill(index)}
-                            sx={{ color: "error.main" }}
-                          >
-                            <ClearIcon />
-                          </IconButton>
+                      Rs. {calculateRoundedGrandTotal()}
+                    </Typography>
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{ mt: 1 }}
+                    >
+                      Verified {verifiedItems.filter(Boolean).length} of{" "}
+                      {items.length} items
+                    </Typography>
+                  </Paper>
+
+                  <Paper
+                    variant="outlined"
+                    sx={{
+                      p: 1.25,
+                      borderRadius: 1,
+                      borderColor: (theme) =>
+                        theme.palette.mode === "dark"
+                          ? "rgba(255,255,255,0.16)"
+                          : "rgba(148,163,184,0.26)",
+                      bgcolor: (theme) =>
+                        theme.palette.mode === "dark"
+                          ? "rgba(15,23,42,0.92)"
+                          : "rgba(255,255,255,0.94)",
+                      backdropFilter: "blur(8px)",
+                    }}
+                  >
+                    <Stack
+                      direction={{ xs: "column", sm: "row", lg: "column" }}
+                      spacing={1}
+                    >
+                      <Stack direction="row" spacing={1}>
+                        <Button
+                          variant="text"
+                          onClick={handleUndo}
+                          disabled={!undoStack.length}
+                          fullWidth
+                        >
+                          Undo
+                        </Button>
+                        <Button
+                          variant="text"
+                          onClick={handleRedo}
+                          disabled={!redoStack.length}
+                          fullWidth
+                        >
+                          Redo
+                        </Button>
+                      </Stack>
+                      <Button
+                        variant="contained"
+                        onClick={generatePDF}
+                        disabled={
+                          !customerName || !customerPhone || items.length === 0
                         }
                       >
-                        <ListItemText
-                          primary={`Bill for ${bill.customerName}`}
-                          secondary={`Phone: ${bill.customerPhone}${bill.customerAddress ? ` | Address: ${bill.customerAddress}` : ""}`}
-                        />
-                      </ListItem>
-                    ))
-                  ) : (
-                    <Typography variant="body2" color="text.secondary">
-                      Saved draft bills will appear here for quick reload.
-                    </Typography>
-                  )}
-                </List>
-
-                <Divider />
-
-                <Typography variant="h6">Resume Recent Bills</Typography>
-                <TextField
-                  size="small"
-                  label="Search by name, phone, date"
-                  value={resumeSearch}
-                  onChange={(event) => setResumeSearch(event.target.value)}
-                  fullWidth
-                />
-                <List sx={{ p: 0, maxHeight: 320, overflowY: "auto" }}>
-                  {resumableBills.length ? (
-                    resumableBills.map((bill) => {
-                      const locked = isBillLocked(bill);
-                      const statusValue = locked ? "Locked" : bill.status || "Finalized";
-                      return (
+                        {activeBillMeta?.id
+                          ? "Reprint Updated Bill"
+                          : "Generate Bill"}
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        startIcon={<PrintIcon />}
+                        onClick={() => printThermalBill("original")}
+                        disabled={
+                          !customerName || !customerPhone || items.length === 0
+                        }
+                      >
+                        Original Bill
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        startIcon={<PrintIcon />}
+                        onClick={() => printThermalBill("customer")}
+                        disabled={
+                          !customerName || !customerPhone || items.length === 0
+                        }
+                        color="secondary"
+                      >
+                        Privacy Copy
+                      </Button>
+                      <Button
+                        variant="contained"
+                        color="success"
+                        onClick={saveBillForLaterEditing}
+                        disabled={
+                          !customerName || !customerPhone || items.length === 0
+                        }
+                      >
+                        Save for Later
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        color="success"
+                        startIcon={<WhatsAppIcon />}
+                        onClick={sendWhatsAppFromBilling}
+                        disabled={!customerName || !customerPhone}
+                      >
+                        WhatsApp
+                      </Button>
+                    </Stack>
+                  </Paper>
+                </Stack>
+              </CardContent>
+            </Card>
+            <Card
+              sx={{
+                borderRadius: 1,
+                boxShadow: "0 4px 20px rgba(0,0,0,0.04)",
+                border: "1px solid",
+                borderColor: "divider",
+              }}
+            >
+              <CardContent sx={{ p: { xs: 2, md: 3 } }}>
+                <Stack spacing={2}>
+                  <List
+                    sx={{ p: 0 }}
+                    subheader={
+                      <ListSubheader
+                        sx={{
+                          px: 0,
+                          py: 0,
+                          mb: 1.5,
+                          bgcolor: "transparent",
+                          color: "text.primary",
+                          fontSize: 18,
+                          fontWeight: 700,
+                        }}
+                      >
+                        Saved Draft Bills
+                      </ListSubheader>
+                    }
+                  >
+                    {savedBills.length ? (
+                      savedBills.map((bill, index) => (
                         <ListItem
-                          key={bill.id}
+                          key={index}
+                          button
+                          onClick={() => loadBill(index)}
                           sx={{
                             px: 0,
-                            py: 1.25,
-                            borderBottom: "1px solid rgba(226,232,240,0.28)",
+                            py: 1.5,
+                            borderBottom:
+                              index === savedBills.length - 1
+                                ? "none"
+                                : "1px solid rgba(226, 232, 240, 0.9)",
                           }}
-                          className="flex flex-row"
-                        >
-                          <div className="flex-1 min-w-0 pr-4">
-                            <ListItemText
-                              primary={
-                                <Stack direction="row" spacing={1} alignItems="center">
-                                  <span>{bill.name || "Customer"}</span>
-                                  <Chip
-                                    size="small"
-                                    label={statusValue}
-                                    color={getBillStatusColor(statusValue)}
-                                    variant="outlined"
-                                  />
-                                  <Chip size="small" label={`v${Number(bill.version || 1)}`} variant="outlined" />
-                                </Stack>
-                              }
-                              secondary={`Phone: ${bill.phoneNumber || "-"} | Total: Rs. ${Number(
-                                bill.totalAmount || 0
-                              ).toFixed(2)}`}
-                            />
-                          </div>
-                          <div className="flex items-center gap-2 shrink-0">
+                          secondaryAction={
                             <IconButton
-                              disabled={locked}
-                              onClick={() => loadFirestoreBillForEditing(bill)}
-                              color="primary"
-                              title={locked ? "Bill Locked" : "Edit Bill"}
+                              aria-label="delete"
+                              onClick={() => deleteBill(index)}
+                              sx={{ color: "error.main" }}
                             >
-                              {locked ? <LockRoundedIcon /> : <EditIcon />}
+                              <ClearIcon />
                             </IconButton>
-                          </div>
+                          }
+                        >
+                          <ListItemText
+                            primary={`Bill for ${bill.customerName}`}
+                            secondary={`Phone: ${bill.customerPhone}${bill.customerAddress ? ` | Address: ${bill.customerAddress}` : ""}`}
+                          />
                         </ListItem>
-                      );
-                    })
-                  ) : (
-                    <Typography variant="body2" color="text.secondary">
-                      No bills found for resume.
-                    </Typography>
-                  )}
-                </List>
-              </Stack>
-            </CardContent>
-          </Card>
+                      ))
+                    ) : (
+                      <Typography variant="body2" color="text.secondary">
+                        Saved draft bills will appear here for quick reload.
+                      </Typography>
+                    )}
+                  </List>
+
+                  <Divider />
+
+                  <Typography variant="h6">Resume Recent Bills</Typography>
+                  <TextField
+                    size="small"
+                    label="Search by name, phone, date"
+                    value={resumeSearch}
+                    onChange={(event) => setResumeSearch(event.target.value)}
+                    fullWidth
+                  />
+                  <List sx={{ p: 0, maxHeight: 320, overflowY: "auto" }}>
+                    {resumableBills.length ? (
+                      resumableBills.map((bill) => {
+                        const locked = isBillLocked(bill);
+                        const statusValue = locked
+                          ? "Locked"
+                          : bill.status || "Finalized";
+                        return (
+                          <ListItem
+                            key={bill.id}
+                            sx={{
+                              px: 0,
+                              py: 1.25,
+                              borderBottom: "1px solid rgba(226,232,240,0.28)",
+                            }}
+                            className="flex flex-row"
+                          >
+                            <div className="flex-1 min-w-0 pr-4">
+                              <ListItemText
+                                primary={
+                                  <Stack
+                                    direction="row"
+                                    spacing={1}
+                                    alignItems="center"
+                                  >
+                                    <span>{bill.name || "Customer"}</span>
+                                    <Chip
+                                      size="small"
+                                      label={statusValue}
+                                      color={getBillStatusColor(statusValue)}
+                                      variant="outlined"
+                                    />
+                                    <Chip
+                                      size="small"
+                                      label={`v${Number(bill.version || 1)}`}
+                                      variant="outlined"
+                                    />
+                                  </Stack>
+                                }
+                                secondary={`Phone: ${bill.phoneNumber || "-"} | Total: Rs. ${Number(
+                                  bill.totalAmount || 0,
+                                ).toFixed(2)}`}
+                              />
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <IconButton
+                                disabled={locked}
+                                onClick={() =>
+                                  loadFirestoreBillForEditing(bill)
+                                }
+                                color="primary"
+                                title={locked ? "Bill Locked" : "Edit Bill"}
+                              >
+                                {locked ? <LockRoundedIcon /> : <EditIcon />}
+                              </IconButton>
+                            </div>
+                          </ListItem>
+                        );
+                      })
+                    ) : (
+                      <Typography variant="body2" color="text.secondary">
+                        No bills found for resume.
+                      </Typography>
+                    )}
+                  </List>
+                </Stack>
+              </CardContent>
+            </Card>
           </Stack>
         </Grid>
       </Grid>
@@ -2322,4 +2518,3 @@ const Calculator = () => {
 };
 
 export default Calculator;
-

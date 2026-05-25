@@ -16,6 +16,11 @@ import {
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import PrintRoundedIcon from "@mui/icons-material/PrintRounded";
+import Tooltip from "@mui/material/Tooltip";
+import PictureAsPdfRoundedIcon from "@mui/icons-material/PictureAsPdfRounded";
+import LocalPrintshopRoundedIcon from "@mui/icons-material/LocalPrintshopRounded";
+import CategoryRoundedIcon from "@mui/icons-material/CategoryRounded";
+import AccountTreeRoundedIcon from "@mui/icons-material/AccountTreeRounded";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
 import CategoryFilter from "./CategoryFilter";
@@ -65,7 +70,8 @@ const parseDate = (value) => {
 };
 
 const normalizeText = (value) => (value || "").toString().trim().toLowerCase();
-const ENABLE_STORAGE_UPLOAD = import.meta.env.VITE_ENABLE_STORAGE_UPLOAD === "true";
+const ENABLE_STORAGE_UPLOAD =
+  import.meta.env.VITE_ENABLE_STORAGE_UPLOAD === "true";
 
 const dataUrlSizeBytes = (dataUrl) => {
   if (!dataUrl || typeof dataUrl !== "string") return 0;
@@ -163,9 +169,9 @@ const InventoryContent = () => {
           error?.code === "permission-denied"
             ? "Shop access denied. Switching to your default shop..."
             : "Failed to load categories",
-          "error"
+          "error",
         );
-      }
+      },
     );
     return () => unsubscribe();
   }, [activeShopId, showSnackbar]);
@@ -180,27 +186,23 @@ const InventoryContent = () => {
           error?.code === "permission-denied"
             ? "Shop access denied. Switching to your default shop..."
             : "Failed to load subcategories",
-          "error"
+          "error",
         );
-      }
+      },
     );
     return () => unsubscribe();
   }, [activeShopId, showSnackbar]);
 
   useEffect(() => {
-    const unsubscribe = subscribeItems(
-      activeShopId,
-      setItems,
-      (error) => {
-        console.error("Item subscription failed:", error);
-        showSnackbar(
-          error?.code === "permission-denied"
-            ? "Shop access denied. Switching to your default shop..."
-            : "Failed to load items",
-          "error"
-        );
-      }
-    );
+    const unsubscribe = subscribeItems(activeShopId, setItems, (error) => {
+      console.error("Item subscription failed:", error);
+      showSnackbar(
+        error?.code === "permission-denied"
+          ? "Shop access denied. Switching to your default shop..."
+          : "Failed to load items",
+        "error",
+      );
+    });
     return () => unsubscribe();
   }, [activeShopId, showSnackbar]);
 
@@ -210,7 +212,7 @@ const InventoryContent = () => {
         acc[current.id] = current;
         return acc;
       }, {}),
-    [categories]
+    [categories],
   );
 
   const subcategoriesById = useMemo(
@@ -219,7 +221,7 @@ const InventoryContent = () => {
         acc[current.id] = current;
         return acc;
       }, {}),
-    [subcategories]
+    [subcategories],
   );
 
   const filteredItems = useMemo(() => {
@@ -232,7 +234,9 @@ const InventoryContent = () => {
 
       if (!term) return true;
       const categoryName = normalizeText(categoriesById[item.categoryId]?.name);
-      const subcategoryName = normalizeText(subcategoriesById[item.subcategoryId]?.name);
+      const subcategoryName = normalizeText(
+        subcategoriesById[item.subcategoryId]?.name,
+      );
       const name = normalizeText(item.name);
       const code = normalizeText(item.code);
 
@@ -277,7 +281,14 @@ const InventoryContent = () => {
     });
 
     return sorted;
-  }, [categoriesById, items, searchTerm, selectedCategoryId, sortBy, subcategoriesById]);
+  }, [
+    categoriesById,
+    items,
+    searchTerm,
+    selectedCategoryId,
+    sortBy,
+    subcategoriesById,
+  ]);
 
   const recentItems = useMemo(() => {
     return [...items]
@@ -461,12 +472,15 @@ const InventoryContent = () => {
     if (confirmState.kind === "category") {
       const category = confirmState.payload;
       const linkedSubcategories = subcategories.filter(
-        (subcategory) => subcategory.categoryId === category.id
+        (subcategory) => subcategory.categoryId === category.id,
       );
-      const linkedSubcategoryIds = new Set(linkedSubcategories.map((entry) => entry.id));
+      const linkedSubcategoryIds = new Set(
+        linkedSubcategories.map((entry) => entry.id),
+      );
       const linkedItems = items.filter(
         (item) =>
-          item.categoryId === category.id || linkedSubcategoryIds.has(item.subcategoryId)
+          item.categoryId === category.id ||
+          linkedSubcategoryIds.has(item.subcategoryId),
       );
 
       try {
@@ -485,11 +499,13 @@ const InventoryContent = () => {
           current.filter(
             (item) =>
               item.categoryId !== category.id &&
-              !linkedSubcategoryIds.has(item.subcategoryId)
-          )
+              !linkedSubcategoryIds.has(item.subcategoryId),
+          ),
         );
         setSubcategories((current) =>
-          current.filter((subcategory) => subcategory.categoryId !== category.id)
+          current.filter(
+            (subcategory) => subcategory.categoryId !== category.id,
+          ),
         );
 
         if (selectedCategoryId === category.id) {
@@ -507,9 +523,14 @@ const InventoryContent = () => {
 
     if (confirmState.kind === "subcategory") {
       const subcategory = confirmState.payload;
-      const hasItems = items.some((item) => item.subcategoryId === subcategory.id);
+      const hasItems = items.some(
+        (item) => item.subcategoryId === subcategory.id,
+      );
       if (hasItems) {
-        showSnackbar("Move or delete items before deleting this subcategory", "error");
+        showSnackbar(
+          "Move or delete items before deleting this subcategory",
+          "error",
+        );
         setDeleting(false);
         return;
       }
@@ -558,16 +579,22 @@ const InventoryContent = () => {
       if (formData.imageFile) {
         if (ENABLE_STORAGE_UPLOAD) {
           try {
-            const uploadResult = await uploadItemImage(activeShopId, formData.imageFile);
+            const uploadResult = await uploadItemImage(
+              activeShopId,
+              formData.imageFile,
+            );
             uploadedImageUrl = uploadResult.imageUrl;
             uploadedImagePath = uploadResult.imagePath;
           } catch (uploadError) {
-            console.error("Storage upload failed, using inline fallback:", uploadError);
+            console.error(
+              "Storage upload failed, using inline fallback:",
+              uploadError,
+            );
             uploadedImageUrl = await compressImageToDataUrl(formData.imageFile);
             uploadedImagePath = "";
             showSnackbar(
               "Storage upload failed, item saved with local image fallback",
-              "warning"
+              "warning",
             );
           }
         } else {
@@ -576,7 +603,10 @@ const InventoryContent = () => {
         }
 
         if (dataUrlSizeBytes(uploadedImageUrl) > 700 * 1024) {
-          showSnackbar("Image is too large. Please choose a smaller image.", "error");
+          showSnackbar(
+            "Image is too large. Please choose a smaller image.",
+            "error",
+          );
           setSubmitting(false);
           return;
         }
@@ -603,12 +633,16 @@ const InventoryContent = () => {
                   ...entry,
                   ...payload,
                 }
-              : entry
-          )
+              : entry,
+          ),
         );
 
         await updateItem(activeShopId, activeItemId, payload);
-        if (formData.imageFile && formData.imagePath && formData.imagePath !== uploadedImagePath) {
+        if (
+          formData.imageFile &&
+          formData.imagePath &&
+          formData.imagePath !== uploadedImagePath
+        ) {
           await removeItemImageByPath(formData.imagePath);
         }
         showSnackbar("Item updated");
@@ -655,14 +689,18 @@ const InventoryContent = () => {
     ]);
 
     doc.autoTable({
-      head: [["No.", "Item", "Category", "Subcategory", "Price", "Stock", "Code"]],
+      head: [
+        ["No.", "Item", "Category", "Subcategory", "Price", "Stock", "Code"],
+      ],
       body: rows,
       startY: 26,
       styles: { fontSize: 9 },
       headStyles: { fillColor: [29, 78, 216] },
     });
 
-    doc.save(`inventory-price-list-${new Date().toISOString().slice(0, 10)}.pdf`);
+    doc.save(
+      `inventory-price-list-${new Date().toISOString().slice(0, 10)}.pdf`,
+    );
   };
 
   const handleThermalPrintPriceList = () => {
@@ -679,7 +717,7 @@ const InventoryContent = () => {
             <td>${item.name || "-"}</td>
             <td style="text-align:right;">${Number(item.price || 0).toFixed(2)}</td>
           </tr>
-        `
+        `,
       )
       .join("");
 
@@ -768,7 +806,8 @@ const InventoryContent = () => {
       >
         <Typography variant="h5">Inventory Management</Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-          Track stock with a fast, clean workflow designed for daily shop billing.
+          Track stock with a fast, clean workflow designed for daily shop
+          billing.
         </Typography>
       </Paper>
 
@@ -814,67 +853,150 @@ const InventoryContent = () => {
       <Paper
         sx={{
           p: 2,
-          borderRadius: 1,
+          borderRadius: 3,
           border: (theme) =>
             theme.palette.mode === "dark"
               ? "1px solid rgba(255,255,255,0.10)"
               : "1px solid rgba(148,163,184,0.15)",
+
+          background: (theme) =>
+            theme.palette.mode === "dark" ? "rgba(10,15,12,0.92)" : "#fff",
         }}
       >
-        <Stack direction={{ xs: "column", md: "row" }} spacing={1.5} alignItems="stretch">
+        {/* CONTROLS */}
+        <Stack spacing={2}>
+          {/* SEARCH BAR */}
           <TextField
-            size="small"
-            label="Search items, code, category..."
+            fullWidth
+            size="medium"
+            label="Search items..."
             value={searchTerm}
-            onChange={(event) => setSearchTerm(event.target.value)}
-            sx={{ flex: 1 }}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            sx={{
+              "& .MuiOutlinedInput-root": {
+                borderRadius: "16px",
+                height: 56,
+              },
+            }}
           />
-          <FormControl size="small" sx={{ minWidth: 180 }}>
-            <InputLabel>Sort</InputLabel>
-            <Select
-              value={sortBy}
-              label="Sort"
-              onChange={(event) => setSortBy(event.target.value)}
-            >
-              <MenuItem value="name-asc">Name (A-Z)</MenuItem>
-              <MenuItem value="name-desc">Name (Z-A)</MenuItem>
-              <MenuItem value="price-asc">Price (Low-High)</MenuItem>
-              <MenuItem value="price-desc">Price (High-Low)</MenuItem>
-              <MenuItem value="stock-asc">Stock (Low-High)</MenuItem>
-              <MenuItem value="stock-desc">Stock (High-Low)</MenuItem>
-              <MenuItem value="newest">Newest</MenuItem>
-              <MenuItem value="oldest">Oldest</MenuItem>
-            </Select>
-          </FormControl>
-          <CategoryFilter
-            categories={categories}
-            selectedCategoryId={selectedCategoryId}
-            onSelectCategory={setSelectedCategoryId}
-            onAddCategory={handleAddCategory}
-            onUpdateCategory={handleUpdateCategory}
-            onRequestDeleteCategory={handleCategoryDeleteRequest}
-          />
-          <SubcategoryManager
-            categories={categories}
-            subcategories={subcategories}
-            selectedCategoryId={selectedCategoryId}
-            onAddSubcategory={handleAddSubcategory}
-            onUpdateSubcategory={handleUpdateSubcategory}
-            onRequestDeleteSubcategory={handleSubcategoryDeleteRequest}
-          />
-          <Button variant="contained" startIcon={<AddIcon />} onClick={openCreateDrawer}>
-            Add Item
-          </Button>
-          <Button variant="outlined" startIcon={<PrintRoundedIcon />} onClick={handlePrintPriceList}>
-            Print Price List
-          </Button>
-          <Button
-            variant="outlined"
-            startIcon={<PrintRoundedIcon />}
-            onClick={handleThermalPrintPriceList}
+
+          {/* CONTROLS */}
+          <Stack
+            direction="row"
+            justifyContent="space-between"
+            alignItems="center"
+            flexWrap="wrap"
+            spacing={2}
           >
-            Thermal Print
-          </Button>
+            {/* LEFT SIDE */}
+            <Stack
+              direction="row"
+              spacing={1.5}
+              alignItems="center"
+              flexWrap="wrap"
+            >
+              {/* SORT */}
+              <FormControl
+                size="small"
+                sx={{
+                  width: 130,
+
+                  "& .MuiOutlinedInput-root": {
+                    borderRadius: "14px",
+                    height: 50,
+                  },
+                }}
+              >
+                <InputLabel>Sort</InputLabel>
+
+                <Select
+                  value={sortBy}
+                  label="Sort"
+                  onChange={(e) => setSortBy(e.target.value)}
+                >
+                  <MenuItem value="name-asc">A-Z</MenuItem>
+                  <MenuItem value="name-desc">Z-A</MenuItem>
+                  <MenuItem value="price-asc">Low</MenuItem>
+                  <MenuItem value="price-desc">High</MenuItem>
+                </Select>
+              </FormControl>
+
+              {/* CATEGORY */}
+              <Box sx={{ minWidth: 220 }}>
+                <CategoryFilter
+                  categories={categories}
+                  selectedCategoryId={selectedCategoryId}
+                  onSelectCategory={setSelectedCategoryId}
+                  onAddCategory={handleAddCategory}
+                  onUpdateCategory={handleUpdateCategory}
+                  onRequestDeleteCategory={handleCategoryDeleteRequest}
+                />
+              </Box>
+
+              {/* SUBCATEGORY */}
+              <Box sx={{ minWidth: 220 }}>
+                <SubcategoryManager
+                  categories={categories}
+                  subcategories={subcategories}
+                  selectedCategoryId={selectedCategoryId}
+                  onAddSubcategory={handleAddSubcategory}
+                  onUpdateSubcategory={handleUpdateSubcategory}
+                  onRequestDeleteSubcategory={handleSubcategoryDeleteRequest}
+                />
+              </Box>
+            </Stack>
+
+            {/* RIGHT SIDE ICONS */}
+            <Stack direction="row" spacing={1}>
+              <Tooltip title="Add Item" arrow>
+                <Button
+                  variant="contained"
+                  onClick={openCreateDrawer}
+                  sx={{
+                    minWidth: 50,
+                    width: 50,
+                    height: 50,
+                    borderRadius: "14px",
+                    p: 0,
+                  }}
+                >
+                  <AddIcon />
+                </Button>
+              </Tooltip>
+
+              <Tooltip title="Print PDF" arrow>
+                <Button
+                  variant="outlined"
+                  onClick={handlePrintPriceList}
+                  sx={{
+                    minWidth: 50,
+                    width: 50,
+                    height: 50,
+                    borderRadius: "14px",
+                    p: 0,
+                  }}
+                >
+                  <PictureAsPdfRoundedIcon />
+                </Button>
+              </Tooltip>
+
+              <Tooltip title="Thermal Print" arrow>
+                <Button
+                  variant="outlined"
+                  onClick={handleThermalPrintPriceList}
+                  sx={{
+                    minWidth: 50,
+                    width: 50,
+                    height: 50,
+                    borderRadius: "14px",
+                    p: 0,
+                  }}
+                >
+                  <LocalPrintshopRoundedIcon />
+                </Button>
+              </Tooltip>
+            </Stack>
+          </Stack>
         </Stack>
       </Paper>
 
@@ -900,7 +1022,11 @@ const InventoryContent = () => {
           Recently Added Items
         </Typography>
         {recentItems.length ? (
-          <Stack direction="row" spacing={1} sx={{ mt: 1, flexWrap: "wrap", rowGap: 1 }}>
+          <Stack
+            direction="row"
+            spacing={1}
+            sx={{ mt: 1, flexWrap: "wrap", rowGap: 1 }}
+          >
             {recentItems.map((entry) => (
               <Box
                 key={entry.id}
@@ -954,8 +1080,8 @@ const InventoryContent = () => {
         message={
           confirmState.kind === "item"
             ? `Delete "${confirmState.payload?.name || "this item"}"?`
-              : confirmState.kind === "subcategory"
-                ? `Delete subcategory "${confirmState.payload?.name || ""}"?`
+            : confirmState.kind === "subcategory"
+              ? `Delete subcategory "${confirmState.payload?.name || ""}"?`
               : `Delete category "${confirmState.payload?.name || ""}" and all related subcategories/items?`
         }
         warningText={
@@ -964,7 +1090,9 @@ const InventoryContent = () => {
             : ""
         }
         loading={deleting}
-        onCancel={() => setConfirmState({ open: false, kind: "", payload: null })}
+        onCancel={() =>
+          setConfirmState({ open: false, kind: "", payload: null })
+        }
         onConfirm={handleConfirmDelete}
         confirmText="Confirm"
       />
@@ -979,4 +1107,3 @@ const InventoryPage = () => (
 );
 
 export default InventoryPage;
-
