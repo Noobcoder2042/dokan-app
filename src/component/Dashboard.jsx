@@ -20,13 +20,20 @@ import {
   Tabs,
   TextField,
   Typography,
+  Tooltip,
+  IconButton,
+  InputAdornment,
+  useTheme,
+  alpha
 } from "@mui/material";
 import FilterAltRoundedIcon from "@mui/icons-material/FilterAltRounded";
 import VisibilityOffRoundedIcon from "@mui/icons-material/VisibilityOffRounded";
 import VisibilityRoundedIcon from "@mui/icons-material/VisibilityRounded";
-import PrintIcon from "@mui/icons-material/Print";
+import PrintRoundedIcon from "@mui/icons-material/PrintRounded";
 import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
 import FileDownloadRoundedIcon from "@mui/icons-material/FileDownloadRounded";
+import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
+import MergeTypeRoundedIcon from "@mui/icons-material/MergeTypeRounded";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
 import Fuse from "fuse.js";
@@ -136,6 +143,7 @@ const Dashboard = () => {
   });
 
   const { activeShopId, shop } = useShop();
+  const theme = useTheme();
 
   const openToast = (message, severity = "success") => {
     setToast({ open: true, message, severity });
@@ -213,11 +221,6 @@ const Dashboard = () => {
   useEffect(() => {
     localStorage.setItem(dashboardStatsStorageKey, JSON.stringify(showStats));
   }, [dashboardStatsStorageKey, showStats]);
-
-  useEffect(() => {
-    const savedValue = localStorage.getItem(dashboardStatsStorageKey);
-    setShowStats(savedValue ? JSON.parse(savedValue) : true);
-  }, [dashboardStatsStorageKey]);
 
   useEffect(() => {
     if (activeTab !== "customers") return undefined;
@@ -886,56 +889,106 @@ const Dashboard = () => {
   return (
     <Stack spacing={3}>
       <Paper
+        elevation={0}
         sx={{
           p: { xs: 2.5, md: 3.5 },
-          borderRadius: 1,
-          background: (theme) =>
-            theme.palette.mode === "dark"
-              ? "linear-gradient(135deg, rgba(12,20,16,0.96) 0%, rgba(18,26,22,0.98) 52%, rgba(12,20,16,0.96) 100%)"
-              : "linear-gradient(135deg, rgba(255,255,255,0.96) 0%, rgba(236,253,245,0.98) 52%, rgba(240,253,244,0.96) 100%)",
-          border: (theme) =>
-            theme.palette.mode === "dark"
-              ? "1px solid rgba(255, 255, 255, 0.1)"
-              : "1px solid rgba(148, 163, 184, 0.12)",
+          borderRadius: 4,
+          background: theme.palette.mode === "dark"
+              ? `linear-gradient(135deg, ${alpha(theme.palette.background.paper, 0.8)} 0%, ${alpha(theme.palette.background.paper, 0.4)} 100%)`
+              : `linear-gradient(135deg, ${alpha(theme.palette.primary.light, 0.05)} 0%, ${alpha(theme.palette.background.paper, 0.8)} 100%)`,
+          backdropFilter: "blur(12px)",
+          border: `1px solid ${theme.palette.divider}`,
+          boxShadow: theme.palette.mode === "dark" 
+              ? `0 8px 32px 0 ${alpha('#000', 0.3)}` 
+              : `0 8px 32px 0 ${alpha(theme.palette.primary.main, 0.05)}`,
         }}
       >
         <Stack
           direction={{ xs: "column", md: "row" }}
           justifyContent="space-between"
+          alignItems={{ xs: "flex-start", md: "center" }}
           spacing={2}
         >
           <Box>
-            <Typography variant="h4">Sales Dashboard</Typography>
-            <Typography variant="body1" color="text.secondary" sx={{ mt: 1 }}>
+            <Typography variant="h4" fontWeight="700" sx={{ mb: 0.5, letterSpacing: '-0.02em' }}>
+              Sales Dashboard
+            </Typography>
+            <Typography variant="body1" color="text.secondary">
               Track shop performance, customer activity, and billing history for{" "}
-              {shop.name || "your active shop"}.
+              <Box component="span" fontWeight="600" color="text.primary">
+                {shop.name || "your active shop"}
+              </Box>.
             </Typography>
           </Box>
-          <Stack direction="row" spacing={1} alignItems="center">
+          <Tooltip title={showStats ? "Hide analytical summary" : "Show analytical summary"}>
             <Button
-              variant="outlined"
-              startIcon={
-                showStats ? <VisibilityOffRoundedIcon /> : <VisibilityRoundedIcon />
-              }
+              variant="contained"
+              color={showStats ? "secondary" : "primary"}
+              startIcon={showStats ? <VisibilityOffRoundedIcon /> : <VisibilityRoundedIcon />}
               onClick={() => setShowStats((current) => !current)}
+              sx={{
+                borderRadius: 3,
+                textTransform: 'none',
+                fontWeight: 600,
+                px: 3,
+                boxShadow: `0 4px 14px 0 ${alpha(theme.palette[showStats ? 'secondary' : 'primary'].main, 0.4)}`,
+                '&:hover': {
+                  boxShadow: `0 6px 20px 0 ${alpha(theme.palette[showStats ? 'secondary' : 'primary'].main, 0.6)}`,
+                }
+              }}
             >
               {showStats ? "Hide Summary" : "Show Summary"}
             </Button>
-          </Stack>
+          </Tooltip>
         </Stack>
       </Paper>
 
-      <Card>
-        <CardContent sx={{ p: { xs: 2, md: 3 } }}>
-          <Stack spacing={2.5}>
+      {activeTab === "bills" && showStats && (
+        <Box sx={{ animation: 'fadeIn 0.5s ease-in-out' }}>
+          <StatsCards bills={filteredByDateBills} />
+        </Box>
+      )}
+
+      <Card
+        elevation={0}
+        sx={{
+          borderRadius: 4,
+          border: `1px solid ${theme.palette.divider}`,
+          background: theme.palette.mode === "dark" 
+              ? alpha(theme.palette.background.paper, 0.6)
+              : theme.palette.background.paper,
+          backdropFilter: theme.palette.mode === "dark" ? "blur(12px)" : "none",
+        }}
+      >
+        <CardContent sx={{ p: { xs: 2, md: 3 }, '&:last-child': { pb: { xs: 2, md: 3 } } }}>
+          <Stack spacing={3}>
             <Tabs
               value={activeTab}
               onChange={(_, value) => setActiveTab(value)}
               variant="scrollable"
               allowScrollButtonsMobile
+              sx={{
+                minHeight: 48,
+                '& .MuiTabs-indicator': {
+                  height: 3,
+                  borderRadius: '3px 3px 0 0',
+                },
+                '& .MuiTab-root': {
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  fontSize: '1rem',
+                  minHeight: 48,
+                  color: 'text.secondary',
+                  '&.Mui-selected': {
+                    color: 'primary.main',
+                  },
+                },
+                borderBottom: 1,
+                borderColor: 'divider'
+              }}
             >
-              <Tab label="Bills" value="bills" />
-              <Tab label="Customer Info" value="customers" />
+              <Tab label="Bills & Invoices" value="bills" />
+              <Tab label="Customer Directory" value="customers" />
             </Tabs>
 
             {activeTab === "bills" ? (
@@ -944,33 +997,85 @@ const Dashboard = () => {
                 spacing={2}
                 alignItems={{ xs: "stretch", xl: "center" }}
               >
-                <TextField
-                  select
-                  label="Date Filter"
-                  value={dateFilter}
-                  onChange={(event) => setDateFilter(event.target.value)}
-                  sx={{ minWidth: { xl: 180 } }}
-                  InputProps={{
-                    startAdornment: (
-                      <FilterAltRoundedIcon sx={{ mr: 1, color: "text.secondary" }} />
-                    ),
-                  }}
-                >
-                  {filterOptions.map((option) => (
-                    <MenuItem key={option.value} value={option.value}>
-                      {option.label}
-                    </MenuItem>
-                  ))}
-                </TextField>
+                <Stack direction={{ xs: "column", sm: "row" }} spacing={2} sx={{ flexGrow: 1 }}>
+                   <Autocomplete
+                    freeSolo
+                    fullWidth
+                    options={smartCustomerOptions}
+                    inputValue={search}
+                    getOptionLabel={(option) =>
+                      typeof option === "string"
+                        ? option
+                        : isPhoneSearch
+                          ? option.phoneNumber || option.name || ""
+                          : option.name || option.phoneNumber || ""
+                    }
+                    onInputChange={(_, value) => setSearch(value)}
+                    onChange={(_, value) => {
+                      if (typeof value === "string") {
+                        setSearch(value);
+                        return;
+                      }
+                      if (value) {
+                        setSearch(
+                          isPhoneSearch
+                            ? value.phoneNumber || value.name || ""
+                            : value.name || value.phoneNumber || ""
+                        );
+                      }
+                    }}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        placeholder="Search bills by customer or phone..."
+                        variant="outlined"
+                        InputProps={{
+                          ...params.InputProps,
+                          startAdornment: (
+                            <>
+                              <InputAdornment position="start" sx={{ pl: 1 }}>
+                                <SearchRoundedIcon color="action" />
+                              </InputAdornment>
+                              {params.InputProps.startAdornment}
+                            </>
+                          ),
+                          sx: { borderRadius: 3, backgroundColor: 'background.paper' }
+                        }}
+                      />
+                    )}
+                  />
 
-                {dateFilter === "custom" ? (
-                  <>
+                  <TextField
+                    select
+                    label="Date Filter"
+                    value={dateFilter}
+                    onChange={(event) => setDateFilter(event.target.value)}
+                    sx={{ minWidth: { sm: 200 }, '& .MuiOutlinedInput-root': { borderRadius: 3, backgroundColor: 'background.paper' } }}
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <FilterAltRoundedIcon color="action" />
+                        </InputAdornment>
+                      ),
+                    }}
+                  >
+                    {filterOptions.map((option) => (
+                      <MenuItem key={option.value} value={option.value}>
+                        {option.label}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                </Stack>
+
+                {dateFilter === "custom" && (
+                  <Stack direction="row" spacing={2}>
                     <TextField
                       label="Start Date"
                       type="date"
                       value={customStartDate}
                       onChange={(event) => setCustomStartDate(event.target.value)}
                       InputLabelProps={{ shrink: true }}
+                      sx={{ '& .MuiOutlinedInput-root': { borderRadius: 3, backgroundColor: 'background.paper' } }}
                     />
                     <TextField
                       label="End Date"
@@ -978,206 +1083,231 @@ const Dashboard = () => {
                       value={customEndDate}
                       onChange={(event) => setCustomEndDate(event.target.value)}
                       InputLabelProps={{ shrink: true }}
+                      sx={{ '& .MuiOutlinedInput-root': { borderRadius: 3, backgroundColor: 'background.paper' } }}
                     />
-                  </>
-                ) : null}
+                  </Stack>
+                )}
 
-                <Stack direction={{ xs: "column", sm: "row" }} spacing={1} sx={{ ml: { xl: "auto" } }}>
-                  <Button
-                    variant="outlined"
-                    startIcon={<DownloadRoundedIcon />}
-                    onClick={handleDownloadDateRangeBills}
-                    disabled={actionLoading || !filteredByDateBills.length}
-                  >
-                    Download Bills
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    startIcon={<PrintIcon />}
-                    onClick={handlePrintDateRangeBills}
-                    disabled={actionLoading || !filteredByDateBills.length}
-                  >
-                    Print Bills
-                  </Button>
+                <Stack direction="row" spacing={1} sx={{ ml: { xl: "auto" }, justifyContent: { xs: 'flex-start', xl: 'flex-end' } }}>
+                  <Tooltip title="Download Bills PDF">
+                    <span>
+                      <Button
+                        variant="outlined"
+                        color="inherit"
+                        onClick={handleDownloadDateRangeBills}
+                        disabled={actionLoading || !filteredByDateBills.length}
+                        sx={{ borderRadius: 3, textTransform: 'none', fontWeight: 600, minWidth: 48, width: { xs: '100%', sm: 'auto' }, px: { xs: 2, sm: 2 } }}
+                        startIcon={<DownloadRoundedIcon />}
+                      >
+                         <Box sx={{ display: { xs: 'block', sm: 'none', md: 'block' } }}>Download</Box>
+                      </Button>
+                    </span>
+                  </Tooltip>
+                  <Tooltip title="Print Bills">
+                    <span>
+                      <Button
+                        variant="outlined"
+                        color="inherit"
+                        onClick={handlePrintDateRangeBills}
+                        disabled={actionLoading || !filteredByDateBills.length}
+                        sx={{ borderRadius: 3, textTransform: 'none', fontWeight: 600, minWidth: 48, width: { xs: '100%', sm: 'auto' }, px: { xs: 2, sm: 2 } }}
+                        startIcon={<PrintRoundedIcon />}
+                      >
+                        <Box sx={{ display: { xs: 'block', sm: 'none', md: 'block' } }}>Print</Box>
+                      </Button>
+                    </span>
+                  </Tooltip>
                 </Stack>
               </Stack>
-            ) : null}
-
-            {activeTab === "bills" ? (
-              <Autocomplete
-                freeSolo
-                fullWidth
-                options={smartCustomerOptions}
-                inputValue={search}
-                getOptionLabel={(option) =>
-                  typeof option === "string"
-                    ? option
-                    : isPhoneSearch
-                      ? option.phoneNumber || option.name || ""
-                      : option.name || option.phoneNumber || ""
-                }
-                onInputChange={(_, value) => setSearch(value)}
-                onChange={(_, value) => {
-                  if (typeof value === "string") {
-                    setSearch(value);
-                    return;
-                  }
-
-                  if (value) {
-                    setSearch(
-                      isPhoneSearch
-                        ? value.phoneNumber || value.name || ""
-                        : value.name || value.phoneNumber || ""
-                    );
-                  }
-                }}
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    label="Search by customer or phone"
-                  />
-                )}
-              />
             ) : (
-              <Stack spacing={1}>
-                <TextField
-                  fullWidth
-                  label="Search customer, mobile or address"
-                  value={search}
-                  onChange={(event) => setSearch(event.target.value)}
-                />
-                {customerTabTypoSuggestions.length ? (
-                  <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap", rowGap: 1 }}>
-                    <Typography variant="caption" color="text.secondary" sx={{ pt: 0.5 }}>
-                      Did you mean:
-                    </Typography>
-                    {customerTabTypoSuggestions.map((name) => (
-                      <Button
-                        key={`cust-typo-${name}`}
-                        size="small"
-                        variant="outlined"
-                        onClick={() => setSearch(name)}
-                      >
-                        {name}
-                      </Button>
-                    ))}
+              <Stack spacing={2}>
+                <Stack direction={{ xs: "column", md: "row" }} spacing={2} alignItems="center">
+                  <TextField
+                    fullWidth
+                    placeholder="Search customer, mobile or address..."
+                    value={search}
+                    onChange={(event) => setSearch(event.target.value)}
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <SearchRoundedIcon color="action" />
+                        </InputAdornment>
+                      ),
+                      sx: { borderRadius: 3, backgroundColor: 'background.paper' }
+                    }}
+                  />
+                  <Stack direction="row" spacing={1} sx={{ width: { xs: '100%', md: 'auto' } }}>
+                    <TextField
+                      select
+                      size="medium"
+                      value={customerRecentFilter}
+                      onChange={(event) => setCustomerRecentFilter(event.target.value)}
+                      sx={{ minWidth: 180, '& .MuiOutlinedInput-root': { borderRadius: 3, backgroundColor: 'background.paper' } }}
+                      InputProps={{
+                        startAdornment: (
+                          <InputAdornment position="start">
+                            <FilterAltRoundedIcon color="action" />
+                          </InputAdornment>
+                        ),
+                      }}
+                    >
+                      <MenuItem value="all">All Customers</MenuItem>
+                      <MenuItem value="30">Active (30d)</MenuItem>
+                      <MenuItem value="90">Active (90d)</MenuItem>
+                    </TextField>
+
+                    <Tooltip title="Export as CSV">
+                      <span>
+                        <IconButton
+                          color="primary"
+                          onClick={handleExportCustomersCsv}
+                          disabled={!filteredCustomers.length}
+                          sx={{ border: `1px solid ${theme.palette.divider}`, borderRadius: 3, p: 1.5, backgroundColor: 'background.paper' }}
+                        >
+                          <FileDownloadRoundedIcon />
+                        </IconButton>
+                      </span>
+                    </Tooltip>
+                    
+                    <Tooltip title="Export as PDF">
+                      <span>
+                        <IconButton
+                          color="secondary"
+                          onClick={handleExportCustomersPdf}
+                          disabled={!filteredCustomers.length}
+                          sx={{ border: `1px solid ${theme.palette.divider}`, borderRadius: 3, p: 1.5, backgroundColor: 'background.paper' }}
+                        >
+                          <DownloadRoundedIcon />
+                        </IconButton>
+                      </span>
+                    </Tooltip>
                   </Stack>
-                ) : null}
+                </Stack>
+                
+                <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'stretch', sm: 'center' }} sx={{ flexWrap: 'wrap', gap: 2 }}>
+                  <Box>
+                    {customerTabTypoSuggestions.length > 0 && (
+                      <Stack direction="row" spacing={1} alignItems="center" sx={{ flexWrap: "wrap", rowGap: 1 }}>
+                        <Typography variant="caption" color="text.secondary">
+                          Did you mean:
+                        </Typography>
+                        {customerTabTypoSuggestions.map((name) => (
+                          <Button
+                            key={`cust-typo-${name}`}
+                            size="small"
+                            variant="outlined"
+                            onClick={() => setSearch(name)}
+                            sx={{ borderRadius: 4, textTransform: 'none', py: 0 }}
+                          >
+                            {name}
+                          </Button>
+                        ))}
+                      </Stack>
+                    )}
+                  </Box>
+
+                  <Tooltip title="Merge duplicate customer records into single profiles">
+                    <span>
+                      <Button
+                        variant="outlined"
+                        color="warning"
+                        startIcon={<MergeTypeRoundedIcon />}
+                        onClick={prepareDuplicateCustomerMerge}
+                        disabled={actionLoading || !mergedCustomers.length}
+                        sx={{ borderRadius: 3, textTransform: 'none', fontWeight: 600, width: { xs: '100%', sm: 'auto' } }}
+                      >
+                        Merge Duplicates
+                      </Button>
+                    </span>
+                  </Tooltip>
+                </Stack>
               </Stack>
             )}
-
-            {activeTab === "customers" ? (
-              <Stack
-                direction={{ xs: "column", md: "row" }}
-                justifyContent="space-between"
-                spacing={1}
-              >
-                <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
-                  <TextField
-                    select
-                    size="small"
-                    label="Recent Filter"
-                    value={customerRecentFilter}
-                    onChange={(event) => setCustomerRecentFilter(event.target.value)}
-                    sx={{ minWidth: 180 }}
-                  >
-                    <MenuItem value="all">All Customers</MenuItem>
-                    <MenuItem value="30">Last 30 Days</MenuItem>
-                    <MenuItem value="90">Last 90 Days</MenuItem>
-                  </TextField>
-                  <Button
-                    variant="outlined"
-                    startIcon={<FileDownloadRoundedIcon />}
-                    onClick={handleExportCustomersCsv}
-                    disabled={!filteredCustomers.length}
-                  >
-                    Export CSV
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    startIcon={<DownloadRoundedIcon />}
-                    onClick={handleExportCustomersPdf}
-                    disabled={!filteredCustomers.length}
-                  >
-                    Export PDF
-                  </Button>
-                </Stack>
-                <Button
-                  variant="outlined"
-                  color="warning"
-                  onClick={prepareDuplicateCustomerMerge}
-                  disabled={actionLoading || !mergedCustomers.length}
-                >
-                  Merge Duplicate Customers
-                </Button>
-              </Stack>
-            ) : null}
           </Stack>
         </CardContent>
       </Card>
 
-      {activeTab === "bills" && showStats ? <StatsCards bills={filteredByDateBills} /> : null}
-
-      {loading ? (
-        <Paper sx={{ p: 5, textAlign: "center" }}>
-          <CircularProgress />
-        </Paper>
-      ) : activeTab === "customers" && customerTabLoading ? (
-        <Paper sx={{ p: 2.5 }}>
-          <Stack spacing={1.5}>
-            {Array.from({ length: 6 }).map((_, index) => (
-              <Box key={`customer-skeleton-${index}`} sx={{ display: "grid", gap: 0.75 }}>
-                <Skeleton variant="rectangular" height={16} width="28%" />
-                <Skeleton variant="rectangular" height={12} width="22%" />
-                <Skeleton variant="rectangular" height={12} width="34%" />
-                <Skeleton variant="rectangular" height={1} width="100%" />
-              </Box>
-            ))}
-          </Stack>
-        </Paper>
-      ) : activeTab === "bills" ? (
-        <BillsTable
-          bills={filteredBills}
-          onPreview={setSelectedBill}
-          onEdit={(bill) => setEditingBill({ ...bill })}
-          onDelete={(bill) => openConfirm("deleteBill", bill)}
-          onWhatsApp={handleSendBillWhatsApp}
-        />
-      ) : (
-        <CustomerInfoTable
-          customers={filteredCustomers}
-          onView={setViewingCustomer}
-          onEdit={(customer) => setEditingCustomer({ ...customer })}
-          onDelete={(customer) => openConfirm("deleteCustomer", customer)}
-          onCall={handleCallCustomer}
-          onWhatsApp={handleCustomerWhatsApp}
-          onCopyPhone={handleCopyPhone}
-        />
-      )}
+      {/* Tables Section */}
+      <Box sx={{ animation: 'fadeIn 0.4s ease-in-out' }}>
+        {loading ? (
+          <Paper elevation={0} sx={{ p: 8, textAlign: "center", borderRadius: 4, border: `1px dashed ${theme.palette.divider}`, background: 'transparent' }}>
+            <CircularProgress size={48} thickness={4} />
+            <Typography variant="body1" color="text.secondary" sx={{ mt: 2 }}>
+              Loading your data...
+            </Typography>
+          </Paper>
+        ) : activeTab === "customers" && customerTabLoading ? (
+          <Paper elevation={0} sx={{ p: 3, borderRadius: 4, border: `1px solid ${theme.palette.divider}`, background: 'transparent' }}>
+            <Stack spacing={2.5}>
+              {Array.from({ length: 6 }).map((_, index) => (
+                <Box key={`customer-skeleton-${index}`} sx={{ display: "grid", gap: 1 }}>
+                  <Skeleton variant="rounded" height={24} width="30%" />
+                  <Skeleton variant="rounded" height={16} width="20%" />
+                  <Skeleton variant="rounded" height={16} width="40%" />
+                  <Skeleton variant="rounded" height={2} width="100%" sx={{ mt: 1 }} />
+                </Box>
+              ))}
+            </Stack>
+          </Paper>
+        ) : activeTab === "bills" ? (
+          <BillsTable
+            bills={filteredBills}
+            onPreview={setSelectedBill}
+            onEdit={(bill) => setEditingBill({ ...bill })}
+            onDelete={(bill) => openConfirm("deleteBill", bill)}
+            onWhatsApp={handleSendBillWhatsApp}
+          />
+        ) : (
+          <CustomerInfoTable
+            customers={filteredCustomers}
+            onView={setViewingCustomer}
+            onEdit={(customer) => setEditingCustomer({ ...customer })}
+            onDelete={(customer) => openConfirm("deleteCustomer", customer)}
+            onCall={handleCallCustomer}
+            onWhatsApp={handleCustomerWhatsApp}
+            onCopyPhone={handleCopyPhone}
+          />
+        )}
+      </Box>
 
       <BillDialog bill={selectedBill} onClose={() => setSelectedBill(null)} />
 
-      <Dialog open={Boolean(viewingCustomer)} onClose={() => setViewingCustomer(null)} fullWidth>
-        <DialogTitle>Customer Details</DialogTitle>
+      <Dialog 
+        open={Boolean(viewingCustomer)} 
+        onClose={() => setViewingCustomer(null)} 
+        fullWidth
+        PaperProps={{
+          sx: { borderRadius: 3 }
+        }}
+      >
+        <DialogTitle sx={{ fontWeight: 600 }}>Customer Details</DialogTitle>
         <DialogContent>
           {viewingCustomer ? (
-            <Stack spacing={1}>
+            <Stack spacing={1.5} sx={{ mt: 1 }}>
               <Typography><strong>Name:</strong> {viewingCustomer.name || "-"}</Typography>
               <Typography><strong>Phone:</strong> {viewingCustomer.phoneNumber || "-"}</Typography>
               <Typography><strong>Address:</strong> {viewingCustomer.address || "-"}</Typography>
             </Stack>
           ) : null}
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setViewingCustomer(null)}>Close</Button>
+        <DialogActions sx={{ p: 2, pt: 0 }}>
+          <Button onClick={() => setViewingCustomer(null)} sx={{ borderRadius: 2, textTransform: 'none' }}>Close</Button>
         </DialogActions>
       </Dialog>
 
-      <Dialog open={Boolean(editingBill)} onClose={() => setEditingBill(null)} fullWidth maxWidth="sm">
-        <DialogTitle>Edit Bill</DialogTitle>
+      <Dialog 
+        open={Boolean(editingBill)} 
+        onClose={() => setEditingBill(null)} 
+        fullWidth 
+        maxWidth="sm"
+        PaperProps={{
+          sx: { borderRadius: 3 }
+        }}
+      >
+        <DialogTitle sx={{ fontWeight: 600 }}>Edit Bill</DialogTitle>
         <DialogContent>
           {editingBill ? (
-            <Stack spacing={2} sx={{ mt: 1 }}>
+            <Stack spacing={2} sx={{ mt: 2 }}>
               <TextField
                 label="Customer Name"
                 value={editingBill.name || ""}
@@ -1185,6 +1315,7 @@ const Dashboard = () => {
                   setEditingBill((current) => ({ ...current, name: event.target.value }))
                 }
                 fullWidth
+                sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
               />
               <TextField
                 label="Phone Number"
@@ -1193,6 +1324,7 @@ const Dashboard = () => {
                   setEditingBill((current) => ({ ...current, phoneNumber: event.target.value }))
                 }
                 fullWidth
+                sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
               />
               <TextField
                 label="Address"
@@ -1201,6 +1333,7 @@ const Dashboard = () => {
                   setEditingBill((current) => ({ ...current, address: event.target.value }))
                 }
                 fullWidth
+                sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
               />
               <TextField
                 label="Date"
@@ -1209,17 +1342,20 @@ const Dashboard = () => {
                   setEditingBill((current) => ({ ...current, date: event.target.value }))
                 }
                 fullWidth
+                sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
               />
             </Stack>
           ) : null}
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setEditingBill(null)}>Cancel</Button>
+        <DialogActions sx={{ p: 2, pt: 0 }}>
+          <Button onClick={() => setEditingBill(null)} sx={{ borderRadius: 2, textTransform: 'none' }}>Cancel</Button>
           <Button
+            variant="contained"
             onClick={() => openConfirm("saveBillEdit", editingBill)}
             disabled={!editingBill?.name || !editingBill?.phoneNumber}
+            sx={{ borderRadius: 2, textTransform: 'none' }}
           >
-            Save
+            Save Changes
           </Button>
         </DialogActions>
       </Dialog>
@@ -1229,11 +1365,14 @@ const Dashboard = () => {
         onClose={() => setEditingCustomer(null)}
         fullWidth
         maxWidth="sm"
+        PaperProps={{
+          sx: { borderRadius: 3 }
+        }}
       >
-        <DialogTitle>Edit Customer</DialogTitle>
+        <DialogTitle sx={{ fontWeight: 600 }}>Edit Customer</DialogTitle>
         <DialogContent>
           {editingCustomer ? (
-            <Stack spacing={2} sx={{ mt: 1 }}>
+            <Stack spacing={2} sx={{ mt: 2 }}>
               <TextField
                 label="Name"
                 value={editingCustomer.name || ""}
@@ -1241,6 +1380,7 @@ const Dashboard = () => {
                   setEditingCustomer((current) => ({ ...current, name: event.target.value }))
                 }
                 fullWidth
+                sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
               />
               <TextField
                 label="Phone Number"
@@ -1252,6 +1392,7 @@ const Dashboard = () => {
                   }))
                 }
                 fullWidth
+                sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
               />
               <TextField
                 label="Address"
@@ -1260,34 +1401,43 @@ const Dashboard = () => {
                   setEditingCustomer((current) => ({ ...current, address: event.target.value }))
                 }
                 fullWidth
+                sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
               />
             </Stack>
           ) : null}
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setEditingCustomer(null)}>Cancel</Button>
+        <DialogActions sx={{ p: 2, pt: 0 }}>
+          <Button onClick={() => setEditingCustomer(null)} sx={{ borderRadius: 2, textTransform: 'none' }}>Cancel</Button>
           <Button
+            variant="contained"
             onClick={() => openConfirm("saveCustomerEdit", editingCustomer)}
             disabled={
               !editingCustomer?.name?.trim() ||
               (editingCustomer?.phoneNumber &&
                 cleanPhone(editingCustomer.phoneNumber).length < 10)
             }
+            sx={{ borderRadius: 2, textTransform: 'none' }}
           >
-            Save
+            Save Changes
           </Button>
         </DialogActions>
       </Dialog>
 
-      <Dialog open={confirmState.open} onClose={closeConfirm}>
-        <DialogTitle>{confirmTitle}</DialogTitle>
+      <Dialog 
+        open={confirmState.open} 
+        onClose={closeConfirm}
+        PaperProps={{
+          sx: { borderRadius: 3 }
+        }}
+      >
+        <DialogTitle sx={{ fontWeight: 600 }}>{confirmTitle}</DialogTitle>
         <DialogContent>
           <Typography>{confirmDescription}</Typography>
-          <Typography sx={{ mt: 1, fontWeight: 600 }}>Are you sure?</Typography>
+          <Typography sx={{ mt: 1, fontWeight: 600 }}>Are you sure you want to proceed?</Typography>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={closeConfirm}>Cancel</Button>
-          <Button color="error" onClick={handleConfirm} disabled={actionLoading}>
+        <DialogActions sx={{ p: 2, pt: 0 }}>
+          <Button onClick={closeConfirm} sx={{ borderRadius: 2, textTransform: 'none' }}>Cancel</Button>
+          <Button variant="contained" color="error" onClick={handleConfirm} disabled={actionLoading} sx={{ borderRadius: 2, textTransform: 'none' }}>
             Confirm
           </Button>
         </DialogActions>
@@ -1297,10 +1447,13 @@ const Dashboard = () => {
         open={toast.open}
         autoHideDuration={3000}
         onClose={() => setToast((current) => ({ ...current, open: false }))}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       >
         <Alert
           severity={toast.severity}
           onClose={() => setToast((current) => ({ ...current, open: false }))}
+          sx={{ borderRadius: 2, boxShadow: `0 4px 12px ${alpha('#000', 0.1)}` }}
+          variant="filled"
         >
           {toast.message}
         </Alert>
@@ -1310,4 +1463,3 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
-

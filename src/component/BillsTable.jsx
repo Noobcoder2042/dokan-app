@@ -10,6 +10,10 @@ import {
   TableHead,
   TableRow,
   Typography,
+  Tooltip,
+  alpha,
+  useTheme,
+  Box
 } from "@mui/material";
 import PreviewIcon from "@mui/icons-material/Preview";
 import EditRoundedIcon from "@mui/icons-material/EditRounded";
@@ -23,10 +27,21 @@ const BillsTable = ({
   onDelete,
   onWhatsApp,
 }) => {
+  const theme = useTheme();
+
   if (!bills.length) {
     return (
-      <Paper sx={{ p: 4, textAlign: "center" }}>
-        <Typography variant="h6">No bills found</Typography>
+      <Paper 
+        elevation={0}
+        sx={{ 
+          p: 8, 
+          textAlign: "center", 
+          borderRadius: 4, 
+          border: `1px dashed ${theme.palette.divider}`,
+          background: 'transparent'
+        }}
+      >
+        <Typography variant="h6" fontWeight={600}>No bills found</Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
           Try changing the search text or date filter.
         </Typography>
@@ -36,70 +51,120 @@ const BillsTable = ({
 
   return (
     <Paper
+      elevation={0}
       sx={{
-        border: "1px solid rgba(148, 163, 184, 0.14)",
+        borderRadius: 4,
+        border: `1px solid ${theme.palette.divider}`,
         overflow: "hidden",
+        background: theme.palette.mode === "dark" 
+          ? alpha(theme.palette.background.paper, 0.6) 
+          : theme.palette.background.paper,
+        backdropFilter: theme.palette.mode === "dark" ? "blur(12px)" : "none",
       }}
     >
       <TableContainer sx={{ maxHeight: 560, overflowX: "auto" }}>
-      <Table sx={{ minWidth: 720 }} size="small" stickyHeader>
-        <TableHead>
-          <TableRow>
-            <TableCell>Name</TableCell>
-            <TableCell>Phone</TableCell>
-            <TableCell>Date</TableCell>
-            <TableCell>Total</TableCell>
-            <TableCell>Status</TableCell>
-            <TableCell align="right">Action</TableCell>
-          </TableRow>
-        </TableHead>
-
-        <TableBody>
-          {bills.map((bill, index) => (
-            <TableRow
-              key={bill.id}
-              hover
-              sx={{
-                "& td": {
-                  borderBottom: "1px solid rgba(226, 232, 240, 0.9)",
-                },
-                backgroundColor:
-                  index % 2 === 0 ? "rgba(248, 250, 252, 0.7)" : "transparent",
-              }}
-            >
-              <TableCell sx={{ fontWeight: 600 }}>{bill.name}</TableCell>
-              <TableCell>{bill.phoneNumber}</TableCell>
-              <TableCell>{bill.date}</TableCell>
-              <TableCell>Rs. {Number(bill.totalAmount || 0).toFixed(2)}</TableCell>
-              <TableCell>
-                <Chip label="Paid" size="small" color="success" variant="outlined" />
-              </TableCell>
-              <TableCell align="right">
-                <Button onClick={() => onPreview(bill)} startIcon={<PreviewIcon />} variant="text">
-                  Preview
-                </Button>
-                <IconButton onClick={() => onEdit?.(bill)} aria-label="edit bill">
-                  <EditRoundedIcon />
-                </IconButton>
-                <IconButton
-                  onClick={() => onWhatsApp?.(bill)}
-                  aria-label="send whatsapp"
-                  color="success"
-                >
-                  <WhatsAppIcon />
-                </IconButton>
-                <IconButton
-                  onClick={() => onDelete?.(bill)}
-                  aria-label="delete bill"
-                  color="error"
-                >
-                  <DeleteRoundedIcon />
-                </IconButton>
-              </TableCell>
+        <Table sx={{ minWidth: 720, '& .MuiTableCell-root': { py: 1.5 } }} size="small" stickyHeader>
+          <TableHead>
+            <TableRow>
+              <TableCell sx={{ fontWeight: 600, backgroundColor: 'background.paper' }}>Customer Name</TableCell>
+              <TableCell sx={{ fontWeight: 600, backgroundColor: 'background.paper' }}>Phone</TableCell>
+              <TableCell sx={{ fontWeight: 600, backgroundColor: 'background.paper' }}>Date</TableCell>
+              <TableCell sx={{ fontWeight: 600, backgroundColor: 'background.paper' }}>Total Amount</TableCell>
+              <TableCell sx={{ fontWeight: 600, backgroundColor: 'background.paper' }}>Status</TableCell>
+              <TableCell align="right" sx={{ fontWeight: 600, backgroundColor: 'background.paper' }}>Actions</TableCell>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+          </TableHead>
+
+          <TableBody>
+            {bills.map((bill, index) => (
+              <TableRow
+                key={bill.id}
+                hover
+                sx={{
+                  "& td": {
+                    borderBottom: `1px solid ${theme.palette.divider}`,
+                  },
+                  backgroundColor: theme.palette.mode === "dark"
+                    ? (index % 2 === 0 ? alpha(theme.palette.action.hover, 0.05) : "transparent")
+                    : (index % 2 === 0 ? "rgba(248, 250, 252, 0.7)" : "transparent"),
+                  transition: 'background-color 0.2s ease',
+                  '&:hover': {
+                    backgroundColor: alpha(theme.palette.primary.main, 0.05),
+                  }
+                }}
+              >
+                <TableCell sx={{ fontWeight: 600 }}>{bill.name}</TableCell>
+                <TableCell>{bill.phoneNumber}</TableCell>
+                <TableCell>
+                  <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                    {bill.date}
+                  </Typography>
+                </TableCell>
+                <TableCell>
+                  <Typography variant="body2" fontWeight={600} color="primary.main">
+                    Rs. {Number(bill.totalAmount || 0).toFixed(2)}
+                  </Typography>
+                </TableCell>
+                <TableCell>
+                  <Chip 
+                    label="Paid" 
+                    size="small" 
+                    color="success" 
+                    sx={{ 
+                      fontWeight: 600, 
+                      borderRadius: 1.5,
+                      backgroundColor: alpha(theme.palette.success.main, 0.1),
+                      color: 'success.main',
+                      border: 'none'
+                    }} 
+                  />
+                </TableCell>
+                <TableCell align="right">
+                  <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                    <Tooltip title="Preview Bill">
+                      <Button 
+                        onClick={() => onPreview(bill)} 
+                        startIcon={<PreviewIcon />} 
+                        variant="text"
+                        size="small"
+                        sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600 }}
+                      >
+                        Preview
+                      </Button>
+                    </Tooltip>
+                    <Tooltip title="Edit Bill">
+                      <IconButton onClick={() => onEdit?.(bill)} size="small" aria-label="edit bill" sx={{ border: `1px solid ${theme.palette.divider}`, borderRadius: 2 }}>
+                        <EditRoundedIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Send via WhatsApp">
+                      <IconButton
+                        onClick={() => onWhatsApp?.(bill)}
+                        size="small"
+                        aria-label="send whatsapp"
+                        color="success"
+                        sx={{ border: `1px solid ${alpha(theme.palette.success.main, 0.3)}`, borderRadius: 2, backgroundColor: alpha(theme.palette.success.main, 0.05) }}
+                      >
+                        <WhatsAppIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Delete Bill">
+                      <IconButton
+                        onClick={() => onDelete?.(bill)}
+                        size="small"
+                        aria-label="delete bill"
+                        color="error"
+                        sx={{ border: `1px solid ${alpha(theme.palette.error.main, 0.3)}`, borderRadius: 2 }}
+                      >
+                        <DeleteRoundedIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </Box>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       </TableContainer>
     </Paper>
   );
