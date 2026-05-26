@@ -545,6 +545,7 @@ const Dashboard = () => {
             (bill.items || []).reduce((sum, item) => sum + Number(item.totalPrice || 0), 0),
           extraTotal: bill?.extraCharges?.total || 0,
           grandTotal: bill.totalAmount || 0,
+          showCustomerDetails: true,
         });
 
         const thermalBody = thermalHtml
@@ -949,17 +950,7 @@ const Dashboard = () => {
         </Box>
       )}
 
-      <Card
-        elevation={0}
-        sx={{
-          borderRadius: 4,
-          border: `1px solid ${theme.palette.divider}`,
-          background: theme.palette.mode === "dark" 
-              ? alpha(theme.palette.background.paper, 0.6)
-              : theme.palette.background.paper,
-          backdropFilter: theme.palette.mode === "dark" ? "blur(12px)" : "none",
-        }}
-      >
+      <Card>
         <CardContent sx={{ p: { xs: 2, md: 3 }, '&:last-child': { pb: { xs: 2, md: 3 } } }}>
           <Stack spacing={3}>
             <Tabs

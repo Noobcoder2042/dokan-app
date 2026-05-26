@@ -13,6 +13,8 @@ import {
   Stack,
   TextField,
   Typography,
+  useTheme,
+  alpha,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import PrintRoundedIcon from "@mui/icons-material/PrintRounded";
@@ -21,6 +23,8 @@ import PictureAsPdfRoundedIcon from "@mui/icons-material/PictureAsPdfRounded";
 import LocalPrintshopRoundedIcon from "@mui/icons-material/LocalPrintshopRounded";
 import CategoryRoundedIcon from "@mui/icons-material/CategoryRounded";
 import AccountTreeRoundedIcon from "@mui/icons-material/AccountTreeRounded";
+import Inventory2RoundedIcon from "@mui/icons-material/Inventory2Rounded";
+import NewReleasesRoundedIcon from "@mui/icons-material/NewReleasesRounded";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
 import CategoryFilter from "./CategoryFilter";
@@ -134,6 +138,7 @@ const compressImageToDataUrl = async (file) => {
 };
 
 const InventoryContent = () => {
+  const theme = useTheme();
   const { activeShopId } = useShop();
   const { showSnackbar } = useAppSnackbar();
 
@@ -813,39 +818,72 @@ const InventoryContent = () => {
 
       <Grid container spacing={2}>
         <Grid item xs={12} md={4}>
-          <Card sx={{ borderRadius: 1 }}>
-            <CardContent>
-              <Typography variant="body2" color="text.secondary">
+          <Card sx={{ position: "relative", overflow: "hidden" }}>
+            <CardContent sx={{ position: "relative", zIndex: 2 }}>
+              <Typography variant="body2" color="primary.main" sx={{ fontWeight: 600, textTransform: "uppercase", letterSpacing: "1px" }}>
                 Total Items
               </Typography>
-              <Typography variant="h4" sx={{ mt: 0.5 }}>
+              <Typography variant="h4" sx={{ mt: 1, fontWeight: 800 }}>
                 {items.length}
               </Typography>
             </CardContent>
+            <Inventory2RoundedIcon
+              sx={{
+                position: "absolute",
+                right: -10,
+                bottom: -10,
+                fontSize: "7rem",
+                color: alpha(theme.palette.primary.main, 0.06),
+                transform: "rotate(-15deg)",
+                pointerEvents: "none",
+              }}
+            />
           </Card>
         </Grid>
         <Grid item xs={12} md={4}>
-          <Card sx={{ borderRadius: 1 }}>
-            <CardContent>
-              <Typography variant="body2" color="text.secondary">
+          <Card sx={{ position: "relative", overflow: "hidden" }}>
+            <CardContent sx={{ position: "relative", zIndex: 2 }}>
+              <Typography variant="body2" color="secondary.main" sx={{ fontWeight: 600, textTransform: "uppercase", letterSpacing: "1px" }}>
                 Total Categories
               </Typography>
-              <Typography variant="h4" sx={{ mt: 0.5 }}>
+              <Typography variant="h4" sx={{ mt: 1, fontWeight: 800 }}>
                 {categories.length}
               </Typography>
             </CardContent>
+            <CategoryRoundedIcon
+              sx={{
+                position: "absolute",
+                right: -10,
+                bottom: -10,
+                fontSize: "7rem",
+                color: alpha(theme.palette.secondary.main, 0.06),
+                transform: "rotate(-15deg)",
+                pointerEvents: "none",
+              }}
+            />
           </Card>
         </Grid>
         <Grid item xs={12} md={4}>
-          <Card sx={{ borderRadius: 1 }}>
-            <CardContent>
-              <Typography variant="body2" color="text.secondary">
+          <Card sx={{ position: "relative", overflow: "hidden" }}>
+            <CardContent sx={{ position: "relative", zIndex: 2 }}>
+              <Typography variant="body2" color="success.main" sx={{ fontWeight: 600, textTransform: "uppercase", letterSpacing: "1px" }}>
                 Recently Added (7 days)
               </Typography>
-              <Typography variant="h4" sx={{ mt: 0.5 }}>
+              <Typography variant="h4" sx={{ mt: 1, fontWeight: 800 }}>
                 {recentCount}
               </Typography>
             </CardContent>
+            <NewReleasesRoundedIcon
+              sx={{
+                position: "absolute",
+                right: -10,
+                bottom: -10,
+                fontSize: "7rem",
+                color: alpha(theme.palette.success.main, 0.06),
+                transform: "rotate(-15deg)",
+                pointerEvents: "none",
+              }}
+            />
           </Card>
         </Grid>
       </Grid>

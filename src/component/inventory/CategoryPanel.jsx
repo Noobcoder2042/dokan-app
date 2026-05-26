@@ -26,7 +26,7 @@ const CategoryPanel = ({
   onDelete,
 }) => {
   return (
-    <Card sx={{ borderRadius: 1 }}>
+    <Card>
       <CardContent sx={{ p: { xs: 2, md: 3 } }}>
         <Stack spacing={2}>
           <Typography variant="h6">Categories</Typography>

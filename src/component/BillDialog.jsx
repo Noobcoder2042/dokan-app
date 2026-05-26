@@ -10,6 +10,8 @@ import {
   Grid,
   Stack,
   Typography,
+  useTheme,
+  alpha,
 } from "@mui/material";
 import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
 import PrintRoundedIcon from "@mui/icons-material/PrintRounded";
@@ -119,6 +121,7 @@ const printPreviousBill = (bill) => {
     gstAmount: Number(bill?.gst?.amount || 0),
     extraTotal: bill?.extraCharges?.total || 0,
     grandTotal: bill.totalAmount || 0,
+    showCustomerDetails: true,
   });
 
   printWindow.document.write(thermalHtml);
@@ -160,9 +163,10 @@ const BillDialog = ({ bill, onClose }) => {
             <Box
               sx={{
                 p: 2.5,
-                borderRadius: 1,
-                background:
-                  "linear-gradient(135deg, rgba(34, 197, 94, 0.08) 0%, rgba(22, 163, 74, 0.08) 100%)",
+                borderRadius: 2,
+                background: (theme) =>
+                  `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.08)} 0%, ${alpha(theme.palette.success.main, 0.08)} 100%)`,
+                border: (theme) => `1px solid ${alpha(theme.palette.primary.main, 0.15)}`,
               }}
             >
               <Typography variant="h6">{bill.name}</Typography>

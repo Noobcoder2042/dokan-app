@@ -18,6 +18,8 @@ import {
   Switch,
   TextField,
   Typography,
+  useTheme,
+  alpha,
 } from "@mui/material";
 import SaveRoundedIcon from "@mui/icons-material/SaveRounded";
 import StoreRoundedIcon from "@mui/icons-material/StoreRounded";
@@ -34,7 +36,7 @@ import {
 } from "../utils/whatsappUtils";
 import { useShop } from "../context/ShopContext";
 import { useAuth } from "../context/AuthContext";
-import { useUIExperience } from "../context/UIExperienceContext";
+import { useUIExperience, THEME_PRESETS } from "../context/UIExperienceContext";
 import {
   getShopBackupData,
   importShopBackupData,
@@ -138,10 +140,20 @@ const createBillPdfBlob = (bill) => {
 };
 
 const ShopSettings = () => {
+  const theme = useTheme();
   const { activeShopId, shop } = useShop();
   const { user } = useAuth();
-  const { themeMode, toggleThemeMode, soundEnabled, setSound, immersiveEnabled, setImmersive } =
-    useUIExperience();
+  const {
+    themeMode,
+    toggleThemeMode,
+    soundEnabled,
+    setSound,
+    immersiveEnabled,
+    setImmersive,
+    themePreset,
+    setThemePreset,
+    playSound
+  } = useUIExperience();
   const [form, setForm] = useState(shop);
   const [toastOpen, setToastOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState("Shop settings saved");
@@ -339,15 +351,11 @@ const ShopSettings = () => {
       <Paper
         sx={{
           p: { xs: 2.5, md: 3.5 },
-          borderRadius: 1,
-          background: (theme) =>
-            theme.palette.mode === "dark"
-              ? "linear-gradient(135deg, rgba(12,20,16,0.96) 0%, rgba(18,26,22,0.98) 52%, rgba(12,20,16,0.96) 100%)"
-              : "linear-gradient(135deg, rgba(255,255,255,0.96) 0%, rgba(236,253,245,0.98) 52%, rgba(240,253,244,0.96) 100%)",
-          border: (theme) =>
-            theme.palette.mode === "dark"
-              ? "1px solid rgba(255, 255, 255, 0.1)"
-              : "1px solid rgba(148, 163, 184, 0.12)",
+          borderRadius: 3,
+          background: themeMode === "dark"
+            ? `linear-gradient(135deg, ${alpha(theme.palette.background.paper, 0.95)} 0%, ${alpha(theme.palette.primary.main, 0.08)} 52%, ${alpha(theme.palette.background.paper, 0.95)} 100%)`
+            : `linear-gradient(135deg, ${alpha(theme.palette.background.paper, 0.96)} 0%, ${alpha(theme.palette.primary.main, 0.06)} 52%, ${alpha(theme.palette.background.paper, 0.96)} 100%)`,
+          border: `1px solid ${theme.palette.divider}`,
         }}
       >
         <Stack
@@ -368,11 +376,13 @@ const ShopSettings = () => {
 
       <Card>
         <CardContent sx={{ p: { xs: 2, md: 3 } }}>
-          <Stack spacing={1.5}>
-            <Typography variant="h6">Experience Settings</Typography>
-            <Typography color="text.secondary">
-              Control premium visual mode and UI sound style for your workspace.
-            </Typography>
+          <Stack spacing={2}>
+            <div>
+              <Typography variant="h6">Experience Settings</Typography>
+              <Typography color="text.secondary" sx={{ mt: 0.5 }}>
+                Control premium visual mode, select brand color presets, and set acoustic themes for your workspace.
+              </Typography>
+            </div>
             <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
               <FormControlLabel
                 control={<Switch checked={themeMode === "dark"} onChange={toggleThemeMode} />}
@@ -387,6 +397,85 @@ const ShopSettings = () => {
                 label="Immersive Startup Screen"
               />
             </Stack>
+
+            <Typography variant="subtitle1" sx={{ mt: 1, fontWeight: 700 }}>
+              Brand Theme Presets
+            </Typography>
+            <Grid container spacing={2}>
+              {Object.entries(THEME_PRESETS).map(([key, preset]) => {
+                const isSelected = themePreset === key;
+                const colors = preset.colors[themeMode];
+                return (
+                  <Grid item xs={12} sm={6} md={2.4} key={key}>
+                    <Paper
+                      onClick={() => {
+                        setThemePreset(key);
+                        playSound?.("click");
+                      }}
+                      sx={{
+                        p: 2,
+                        borderRadius: 3,
+                        cursor: "pointer",
+                        border: isSelected 
+                          ? `2px solid ${colors.primary}` 
+                          : "2px solid rgba(148, 163, 184, 0.12)",
+                        boxShadow: isSelected 
+                          ? `0 8px 24px ${colors.primary}22` 
+                          : "none",
+                        backgroundColor: themeMode === "dark" ? "rgba(255,255,255,0.02)" : "#ffffff",
+                        transition: "all 0.25s cubic-bezier(0.16, 1, 0.3, 1)",
+                        transform: isSelected ? "translateY(-4px)" : "none",
+                        "&:hover": {
+                          borderColor: colors.primary,
+                          boxShadow: `0 6px 20px ${colors.primary}15`,
+                          transform: "translateY(-4px)",
+                        }
+                      }}
+                    >
+                      <Stack spacing={1.5} alignItems="center">
+                        <Stack direction="row" spacing={0.75} justifyContent="center">
+                          <Box 
+                            sx={{ 
+                              width: 20, 
+                              height: 20, 
+                              borderRadius: "50%", 
+                              bgcolor: colors.primary,
+                              boxShadow: `0 0 10px ${colors.primary}66`
+                            }} 
+                          />
+                          <Box 
+                            sx={{ 
+                              width: 20, 
+                              height: 20, 
+                              borderRadius: "50%", 
+                              bgcolor: colors.secondary 
+                            }} 
+                          />
+                          <Box 
+                            sx={{ 
+                              width: 20, 
+                              height: 20, 
+                              borderRadius: "50%", 
+                              bgcolor: colors.success 
+                            }} 
+                          />
+                        </Stack>
+                        <Typography 
+                          variant="body2" 
+                          align="center" 
+                          sx={{ 
+                            fontWeight: isSelected ? 800 : 600,
+                            color: isSelected ? "text.primary" : "text.secondary" 
+                          }}
+                        >
+                          {preset.name}
+                        </Typography>
+                      </Stack>
+                    </Paper>
+                  </Grid>
+                );
+              })}
+            </Grid>
           </Stack>
         </CardContent>
       </Card>
@@ -634,30 +723,33 @@ const ShopSettings = () => {
   );
 };
 
-const BoxRow = () => (
-  <Stack direction="row" spacing={1.5} alignItems="center">
-    <Stack
-      sx={{
-        width: 48,
-        height: 48,
-        borderRadius: 1,
-        alignItems: "center",
-        justifyContent: "center",
-        background:
-          "linear-gradient(135deg, rgba(22, 163, 74, 1) 0%, rgba(21, 128, 61, 0.95) 100%)",
-        color: "white",
-      }}
-    >
-      <StoreRoundedIcon />
+const BoxRow = () => {
+  const theme = useTheme();
+  return (
+    <Stack direction="row" spacing={1.5} alignItems="center">
+      <Stack
+        sx={{
+          width: 48,
+          height: 48,
+          borderRadius: 1.5,
+          alignItems: "center",
+          justifyContent: "center",
+          background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.success.main} 100%)`,
+          color: "white",
+          boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.25)}`,
+        }}
+      >
+        <StoreRoundedIcon />
+      </Stack>
+      <div>
+        <Typography variant="h4">Shop Settings</Typography>
+        <Typography variant="body1" color="text.secondary">
+          Configure per-shop identity, printing defaults, and sales metadata.
+        </Typography>
+      </div>
     </Stack>
-    <div>
-      <Typography variant="h4">Shop Settings</Typography>
-      <Typography variant="body1" color="text.secondary">
-        Configure per-shop identity, printing defaults, and sales metadata.
-      </Typography>
-    </div>
-  </Stack>
-);
+  );
+};
 
 export default ShopSettings;
 

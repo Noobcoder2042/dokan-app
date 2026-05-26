@@ -20,30 +20,31 @@ import DashboardRoundedIcon from "@mui/icons-material/DashboardRounded";
 import LocalMallRoundedIcon from "@mui/icons-material/LocalMallRounded";
 import LockRoundedIcon from "@mui/icons-material/LockRounded";
 import ReceiptLongRoundedIcon from "@mui/icons-material/ReceiptLongRounded";
+import AutoAwesomeRoundedIcon from "@mui/icons-material/AutoAwesomeRounded";
 import { useAuth } from "../context/AuthContext";
 import { useUIExperience } from "../context/UIExperienceContext";
 
 const highlights = [
   {
-    icon: <BoltRoundedIcon fontSize="small" />,
-    title: "Quick billing",
-    text: "Keep counter work fast during busy hours.",
+    icon: <BoltRoundedIcon sx={{ fontSize: 20 }} />,
+    title: "Quick Billing POS Desk",
+    text: "Keep checkout operations fast during peak rush hours.",
   },
   {
-    icon: <PersonAddAlt1RoundedIcon fontSize="small" />,
-    title: "Customer memory",
-    text: "Bring back saved buyer details when needed.",
+    icon: <PersonAddAlt1RoundedIcon sx={{ fontSize: 20 }} />,
+    title: "Customer Memory Sync",
+    text: "Instantly recall buyer details and autofill dues forms.",
   },
   {
-    icon: <DashboardRoundedIcon fontSize="small" />,
-    title: "Daily clarity",
-    text: "See the shop pulse before closing time.",
+    icon: <DashboardRoundedIcon sx={{ fontSize: 20 }} />,
+    title: "Daily Pulse Analytics",
+    text: "See real-time shop performance metrics at a glance.",
   },
 ];
 
 const AuthScreen = () => {
   const { loginWithGoogle } = useAuth();
-  const { playSound } = useUIExperience();
+  const { playSound, themeMode } = useUIExperience();
   const theme = useTheme();
   const [error, setError] = useState("");
   const mutedText = "#94a3b8";
@@ -65,30 +66,48 @@ const AuthScreen = () => {
         alignItems: "center",
         justifyContent: "center",
         px: { xs: 2, sm: 3, md: 5 },
-        py: { xs: 2, md: 4 },
+        py: { xs: 3, md: 5 },
         background:
-          "radial-gradient(circle at 16% 12%, rgba(34,197,94,0.16), transparent 38%), radial-gradient(circle at 86% 18%, rgba(22,163,74,0.12), transparent 42%), linear-gradient(180deg, #0a0f0d 0%, #0d1411 52%, #0a0f0d 100%)",
+          "radial-gradient(circle at 10% 20%, rgba(34,197,94,0.18), transparent 40%), radial-gradient(circle at 90% 80%, rgba(6,182,212,0.12), transparent 45%), #050807",
       }}
     >
+      {/* Background Cyber Grid */}
+      <Box
+        sx={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundImage:
+            "linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px)",
+          backgroundSize: "40px 40px",
+          opacity: 0.7,
+          pointerEvents: "none",
+        }}
+      />
+
       <Card
         component={motion.div}
-        initial={{ opacity: 0, y: 18, scale: 0.99 }}
+        initial={{ opacity: 0, y: 30, scale: 0.98 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ duration: 0.42, ease: "easeOut" }}
+        transition={{ duration: 0.6, cubicBezier: [0.16, 1, 0.3, 1] }}
         sx={{
           width: "100%",
-          maxWidth: 1120,
-          minHeight: { md: 640 },
+          maxWidth: 1080,
+          minHeight: { md: 620 },
           overflow: "hidden",
           display: "grid",
-          gridTemplateColumns: { xs: "1fr", md: "1.08fr 0.92fr" },
-          borderRadius: { xs: 2, md: 3 },
-          border: "1px solid rgba(255,255,255,0.08)",
-          background:
-            "linear-gradient(140deg, rgba(18,26,23,0.98), rgba(10,15,13,0.98))",
-          boxShadow: "0 30px 80px rgba(0, 0, 0, 0.5)",
+          gridTemplateColumns: { xs: "1fr", md: "1.05fr 0.95fr" },
+          borderRadius: 4,
+          border: `1px solid ${alpha(theme.palette.success.main, 0.12)}`,
+          background: "rgba(10, 18, 14, 0.45)",
+          backdropFilter: "blur(24px)",
+          boxShadow:
+            "0 30px 80px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255,255,255,0.03)",
         }}
       >
+        {/* Left Interactive Art Panel */}
         <Box
           sx={{
             position: "relative",
@@ -97,70 +116,128 @@ const AuthScreen = () => {
             flexDirection: "column",
             justifyContent: "space-between",
             gap: { xs: 4, md: 5 },
-            minHeight: { xs: 430, md: "auto" },
-            p: { xs: 3, sm: 4, md: 5.5 },
+            minHeight: { xs: 460, md: "auto" },
+            p: { xs: 4, sm: 5, md: 6 },
             color: "#ffffff",
+            overflow: "hidden",
             background:
-              "linear-gradient(145deg, rgba(5,46,22,0.82), rgba(20,83,45,0.58) 44%, rgba(3,7,18,0.72)), url('/branding/dokan-login-shop-scene.jpg')",
-            backgroundSize: "cover",
-            backgroundPosition: { xs: "45% center", md: "center" },
-            "&::before": {
-              content: '""',
-              position: "absolute",
-              inset: 0,
-              zIndex: -1,
-              background:
-                "linear-gradient(90deg, rgba(6,78,59,0.58), rgba(6,78,59,0.08)), radial-gradient(circle at 18% 14%, rgba(255,255,255,0.2), transparent 34%)",
-            },
+              "linear-gradient(135deg, rgba(5,46,22,0.85) 0%, rgba(3,7,18,0.92) 100%)",
           }}
         >
-          <Stack spacing={{ xs: 3, md: 4 }}>
-            <Stack direction="row" alignItems="center" spacing={1.4}>
+          {/* Shifting Nebula Glob Inside Left Panel */}
+          <motion.div
+            animate={{
+              scale: [1, 1.15, 1],
+              opacity: [0.5, 0.75, 0.5],
+            }}
+            transition={{
+              duration: 8,
+              repeat: Infinity,
+              ease: "easeInOut",
+            }}
+            style={{
+              position: "absolute",
+              top: "-20%",
+              right: "-10%",
+              width: 320,
+              height: 320,
+              borderRadius: "50%",
+              background: `radial-gradient(circle, ${alpha(theme.palette.success.main, 0.25)} 0%, transparent 70%)`,
+              filter: "blur(40px)",
+              zIndex: -1,
+            }}
+          />
+
+          <Stack spacing={{ xs: 4, md: 5 }}>
+            {/* Header Branding */}
+            <Stack direction="row" alignItems="center" spacing={1.5}>
               <Box
                 sx={{
-                  width: 46,
-                  height: 46,
-                  borderRadius: 2,
-                  display: "grid",
-                  placeItems: "center",
-                  background: "rgba(255,255,255,0.18)",
-                  border: "1px solid rgba(255,255,255,0.26)",
+                  width: 44,
+                  height: 44,
+                  borderRadius: 1.5,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  bgcolor: "rgba(18,26,22,0.85)",
+                  border: `1px solid ${alpha(theme.palette.success.main, 0.25)}`,
+                  boxShadow: `0 0 20px ${alpha(theme.palette.success.main, 0.25)}`,
+                  p: 0.75,
                 }}
               >
-                <LocalMallRoundedIcon />
+                <Box
+                  component="img"
+                  src="/branding/dokan pro logo sm.png"
+                  alt="Dokan Pro"
+                  sx={{ width: "100%", height: "100%", objectFit: "contain" }}
+                />
               </Box>
               <Box>
-                <Typography variant="h6" sx={{ lineHeight: 1.1 }}>
-                  Dokan Pro
+                <Typography
+                  variant="h6"
+                  sx={{
+                    fontWeight: 900,
+                    lineHeight: 1.1,
+                    letterSpacing: "-0.01em",
+                  }}
+                >
+                  DOKAN PRO
                 </Typography>
-                <Typography variant="caption" sx={{ opacity: 0.82 }}>
-                  Shop billing workspace
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: "success.main",
+                    fontWeight: 700,
+                    letterSpacing: "0.05em",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  Smart Billing Workspace
+                </Typography>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: "rgba(255,255,255,0.55)",
+                    fontWeight: 700,
+                    letterSpacing: "0.04em",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 0.7,
+                  }}
+                >
+                  🇮🇳 Built by an Indian Dukandar, for Indian Dukandars
                 </Typography>
               </Box>
             </Stack>
 
+            {/* Core Message */}
             <Box>
               <Chip
                 size="small"
-                icon={<ReceiptLongRoundedIcon />}
-                label="Counter ready"
+                icon={
+                  <ReceiptLongRoundedIcon
+                    style={{ color: theme.palette.success.main }}
+                  />
+                }
+                label="Version 2.3.0 - Ready"
                 variant="outlined"
                 sx={{
-                  mb: 2.2,
-                  color: "#ffffff",
-                  borderColor: "rgba(255,255,255,0.34)",
-                  background: "rgba(255,255,255,0.14)",
-                  "& .MuiChip-icon": { color: "#ffffff" },
+                  mb: 2.5,
+                  color: "success.main",
+                  fontWeight: 800,
+                  borderColor: alpha(theme.palette.success.main, 0.35),
+                  background: alpha(theme.palette.success.main, 0.08),
+                  backdropFilter: "blur(4px)",
                 }}
               />
               <Typography
                 variant="h3"
                 sx={{
-                  maxWidth: 560,
-                  fontWeight: 800,
-                  lineHeight: { xs: 1.08, md: 1.02 },
-                  fontSize: { xs: "2.25rem", sm: "2.8rem", md: "3.45rem" },
-                  letterSpacing: 0,
+                  maxWidth: 520,
+                  fontWeight: 900,
+                  lineHeight: 1.1,
+                  fontSize: { xs: "2.1rem", sm: "2.6rem", md: "3.2rem" },
+                  letterSpacing: "-0.02em",
                 }}
               >
                 Start every sale from one calm screen.
@@ -169,37 +246,52 @@ const AuthScreen = () => {
                 variant="body1"
                 sx={{
                   mt: 2.2,
-                  maxWidth: 500,
-                  color: "rgba(255,255,255,0.86)",
-                  fontSize: { xs: "0.98rem", md: "1.05rem" },
+                  maxWidth: 480,
+                  color: "rgba(255,255,255,0.72)",
+                  fontSize: { xs: "0.95rem", md: "1rem" },
+                  lineHeight: 1.6,
                 }}
               >
-                Sign in and open the billing desk, customer records, inventory,
-                and sales dashboard for your shop.
+                Open the digital POS desk, record dues chronologically, manage
+                inventory stock, and monitor analytics with real-time sync.
               </Typography>
             </Box>
           </Stack>
 
+          {/* Highlights Stack with Frosted Cards */}
           <Stack
             direction={{ xs: "column", sm: "row" }}
-            spacing={1.5}
-            sx={{ width: "100%" }}
+            spacing={2}
+            sx={{ width: "100%", mt: 2 }}
           >
             {highlights.map((item) => (
               <Box
                 key={item.title}
+                component={motion.div}
+                whileHover={{ y: -6, scale: 1.02 }}
+                transition={{ duration: 0.25 }}
                 sx={{
                   flex: 1,
                   minWidth: 0,
-                  p: 1.6,
-                  borderRadius: 1.5,
-                  background: "rgba(255,255,255,0.12)",
-                  border: "1px solid rgba(255,255,255,0.2)",
+                  p: 2,
+                  borderRadius: 2,
+                  background: "rgba(255,255,255,0.03)",
+                  border: "1px solid rgba(255,255,255,0.06)",
                   backdropFilter: "blur(10px)",
+                  boxShadow: "0 8px 32px rgba(0,0,0,0.15)",
                 }}
               >
-                <Box sx={{ mb: 1, opacity: 0.9 }}>{item.icon}</Box>
-                <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>
+                <Box sx={{ mb: 1.25, color: "success.main", display: "flex" }}>
+                  {item.icon}
+                </Box>
+                <Typography
+                  variant="subtitle2"
+                  sx={{
+                    fontWeight: 800,
+                    fontSize: "0.85rem",
+                    color: "text.primary",
+                  }}
+                >
                   {item.title}
                 </Typography>
                 <Typography
@@ -207,7 +299,8 @@ const AuthScreen = () => {
                   sx={{
                     display: "block",
                     mt: 0.5,
-                    color: "rgba(255,255,255,0.78)",
+                    color: "rgba(255,255,255,0.48)",
+                    lineHeight: 1.4,
                   }}
                 >
                   {item.text}
@@ -217,91 +310,163 @@ const AuthScreen = () => {
           </Stack>
         </Box>
 
+        {/* Right Authentication Form Panel */}
         <Box
           sx={{
             display: "flex",
             alignItems: "center",
-            p: { xs: 3, sm: 4, md: 6 },
-            background:
-              "linear-gradient(180deg, rgba(18,26,23,0.98), rgba(10,15,13,0.99))",
+            p: { xs: 4, sm: 5, md: 7 },
+            background: "rgba(10,18,14,0.35)",
+            backdropFilter: "blur(20px)",
+            borderLeft: {
+              md: `1px solid ${alpha(theme.palette.success.main, 0.08)}`,
+            },
           }}
         >
-          <Stack spacing={3} sx={{ width: "100%" }}>
-            <Box
-              component="img"
-              src="/branding/dokan-pro-long-logo.png"
-              alt="Dokan Pro"
-              sx={{
-                width: "min(100%, 360px)",
-                display: "block",
-                mx: { xs: "auto", md: 0 },
-                borderRadius: 1,
-                filter: "drop-shadow(0 12px 28px rgba(34,197,94,0.16))",
-              }}
-            />
-
-            <Box>
+          <Stack spacing={4.5} sx={{ width: "100%" }}>
+            {/* Form Title */}
+            <Stack spacing={1}>
               <Typography
                 variant="h4"
-                sx={{ color: "#f1f5f9", fontWeight: 800, letterSpacing: 0 }}
+                sx={{
+                  color: "#ffffff",
+                  fontWeight: 900,
+                  letterSpacing: "-0.02em",
+                  textShadow: `0 0 20px ${alpha(theme.palette.success.main, 0.2)}`,
+                }}
               >
                 Welcome back
               </Typography>
-              <Typography variant="body2" sx={{ mt: 1, color: mutedText }}>
-                Use your Google account to continue securely.
+              <Typography
+                variant="body2"
+                sx={{ color: mutedText, fontWeight: 500 }}
+              >
+                Use your registered credentials to launch the POS.
               </Typography>
-            </Box>
+            </Stack>
 
+            {/* Glassmorphic Security Feature Card */}
             <Paper
               elevation={0}
               sx={{
-                p: { xs: 2, sm: 2.5 },
-                borderRadius: 2,
-                border: "1px solid rgba(255,255,255,0.08)",
-                background: alpha(theme.palette.common.white, 0.035),
+                p: 2.5,
+                borderRadius: 3,
+                border: "1px solid rgba(255,255,255,0.04)",
+                background: "rgba(255,255,255,0.015)",
+                backdropFilter: "blur(4px)",
               }}
             >
-              <Stack spacing={1.4}>
+              <Stack spacing={1.5}>
                 <Stack direction="row" spacing={1.2} alignItems="center">
-                  <LockRoundedIcon color="primary" fontSize="small" />
+                  <Box
+                    sx={{
+                      width: 28,
+                      height: 28,
+                      borderRadius: 1,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      bgcolor: alpha(theme.palette.success.main, 0.08),
+                      border: `1px solid ${alpha(theme.palette.success.main, 0.16)}`,
+                      color: "success.main",
+                    }}
+                  >
+                    <LockRoundedIcon sx={{ fontSize: 16 }} />
+                  </Box>
                   <Typography
                     variant="subtitle2"
                     sx={{ color: "#f1f5f9", fontWeight: 800 }}
                   >
-                    Secure sign in
+                    Cloud Authorization
                   </Typography>
                 </Stack>
-                <Typography variant="body2" sx={{ color: mutedText }}>
-                  Your shop data stays connected to your approved Google login.
+                <Typography
+                  variant="caption"
+                  sx={{ color: mutedText, lineHeight: 1.5, display: "block" }}
+                >
+                  Every session is encrypted and securely linked to your account
+                  database under strict merchant access rules.
                 </Typography>
               </Stack>
             </Paper>
 
-            {error && <Alert severity="error">{error}</Alert>}
+            {error && (
+              <Alert severity="error" sx={{ borderRadius: 2 }}>
+                {error}
+              </Alert>
+            )}
 
-            <Stack spacing={2}>
+            {/* Login Action Area */}
+            <Stack spacing={2.5}>
               <Button
                 variant="contained"
                 startIcon={<GoogleIcon />}
                 onClick={handleGoogle}
                 size="large"
                 fullWidth
+                sx={{
+                  py: 1.75,
+                  borderRadius: 2.5,
+                  fontWeight: 900,
+                  fontSize: "0.95rem",
+                  background: `linear-gradient(120deg, ${theme.palette.primary.main} 0%, ${theme.palette.success.main} 100%)`,
+                  boxShadow: `0 8px 22px ${alpha(theme.palette.primary.main, 0.3)}`,
+                  "&:hover": {
+                    boxShadow: `0 12px 28px ${alpha(theme.palette.primary.main, 0.45)}`,
+                    transform: "translateY(-2px)",
+                  },
+                  transition: "all 0.25s ease",
+                }}
               >
                 Continue with Google
               </Button>
 
-              <Divider>
-                <Typography variant="caption" sx={{ color: mutedText }}>
-                  Dokan Pro Billing
+              <Divider sx={{ opacity: 0.12 }}>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: mutedText,
+                    fontWeight: 700,
+                    letterSpacing: "0.05em",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  Secure POS Gateway
                 </Typography>
               </Divider>
 
-              <Typography
-                variant="caption"
-                sx={{ color: mutedText, textAlign: "center" }}
+              <Stack
+                direction="row"
+                alignItems="center"
+                justifyContent="center"
+                spacing={1}
               >
-                Version 1.0
-              </Typography>
+                <Box
+                  sx={{
+                    width: 6,
+                    height: 6,
+                    borderRadius: "50%",
+                    bgcolor: "success.main",
+                    boxShadow: `0 0 8px ${theme.palette.success.main}`,
+                    "@keyframes pulseIndicator": {
+                      "0%": { opacity: 0.4 },
+                      "50%": { opacity: 1 },
+                      "100%": { opacity: 0.4 },
+                    },
+                    animation: "pulseIndicator 2s infinite ease-in-out",
+                  }}
+                />
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: mutedText,
+                    textAlign: "center",
+                    fontWeight: 700,
+                  }}
+                >
+                  Version 2.3.0 - Kinetic Release
+                </Typography>
+              </Stack>
             </Stack>
           </Stack>
         </Box>

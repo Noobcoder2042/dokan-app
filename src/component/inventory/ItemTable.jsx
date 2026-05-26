@@ -76,9 +76,6 @@ const ItemTable = ({
     <>
       <Paper
         sx={{
-          borderRadius: 1,
-          border: "1px solid rgba(148, 163, 184, 0.2)",
-          boxShadow: "0 12px 28px rgba(15, 23, 42, 0.06)",
           overflow: "hidden",
         }}
       >

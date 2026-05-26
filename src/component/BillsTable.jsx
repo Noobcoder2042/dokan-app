@@ -53,13 +53,7 @@ const BillsTable = ({
     <Paper
       elevation={0}
       sx={{
-        borderRadius: 4,
-        border: `1px solid ${theme.palette.divider}`,
         overflow: "hidden",
-        background: theme.palette.mode === "dark" 
-          ? alpha(theme.palette.background.paper, 0.6) 
-          : theme.palette.background.paper,
-        backdropFilter: theme.palette.mode === "dark" ? "blur(12px)" : "none",
       }}
     >
       <TableContainer sx={{ maxHeight: 560, overflowX: "auto" }}>
@@ -106,18 +100,57 @@ const BillsTable = ({
                   </Typography>
                 </TableCell>
                 <TableCell>
-                  <Chip 
-                    label="Paid" 
-                    size="small" 
-                    color="success" 
-                    sx={{ 
-                      fontWeight: 600, 
-                      borderRadius: 1.5,
-                      backgroundColor: alpha(theme.palette.success.main, 0.1),
-                      color: 'success.main',
-                      border: 'none'
-                    }} 
-                  />
+                  {(() => {
+                    const dueAmt = bill.dueAmount !== undefined ? Number(bill.dueAmount) : Number(bill.totalAmount || 0);
+                    const totalAmt = Number(bill.totalAmount || 0);
+                    
+                    if (dueAmt <= 0) {
+                      return (
+                        <Chip 
+                          label="Paid" 
+                          size="small" 
+                          color="success" 
+                          sx={{ 
+                            fontWeight: 600, 
+                            borderRadius: 1.5,
+                            backgroundColor: alpha(theme.palette.success.main, 0.1),
+                            color: 'success.main',
+                            border: 'none'
+                          }} 
+                        />
+                      );
+                    } else if (dueAmt < totalAmt) {
+                      return (
+                        <Chip 
+                          label="Partial" 
+                          size="small" 
+                          color="warning" 
+                          sx={{ 
+                            fontWeight: 600, 
+                            borderRadius: 1.5,
+                            backgroundColor: alpha(theme.palette.warning.main, 0.1),
+                            color: 'warning.main',
+                            border: 'none'
+                          }} 
+                        />
+                      );
+                    } else {
+                      return (
+                        <Chip 
+                          label="Due" 
+                          size="small" 
+                          color="error" 
+                          sx={{ 
+                            fontWeight: 600, 
+                            borderRadius: 1.5,
+                            backgroundColor: alpha(theme.palette.error.main, 0.1),
+                            color: 'error.main',
+                            border: 'none'
+                          }} 
+                        />
+                      );
+                    }
+                  })()}
                 </TableCell>
                 <TableCell align="right">
                   <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'flex-end', flexWrap: 'wrap' }}>

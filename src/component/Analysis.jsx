@@ -9,7 +9,12 @@ import {
   Stack,
   TextField,
   Typography,
+  useTheme,
+  alpha,
 } from "@mui/material";
+import MonetizationOnRoundedIcon from "@mui/icons-material/MonetizationOnRounded";
+import ReceiptRoundedIcon from "@mui/icons-material/ReceiptRounded";
+import BarChartRoundedIcon from "@mui/icons-material/BarChartRounded";
 import { useAuth } from "../context/AuthContext";
 import { useShop } from "../context/ShopContext";
 import { subscribeToShopBills } from "../services/shopData";
@@ -36,6 +41,7 @@ const getBillDate = (bill) => {
 };
 
 const Analysis = () => {
+  const theme = useTheme();
   const { user } = useAuth();
   const { activeShopId } = useShop();
   const [bills, setBills] = useState([]);
@@ -169,15 +175,6 @@ const Analysis = () => {
       <Paper
         sx={{
           p: { xs: 2.5, md: 3.5 },
-          borderRadius: 1,
-          background: (theme) =>
-            theme.palette.mode === "dark"
-              ? "linear-gradient(135deg, rgba(12,20,16,0.96) 0%, rgba(18,26,22,0.98) 52%, rgba(12,20,16,0.96) 100%)"
-              : "linear-gradient(135deg, rgba(255,255,255,0.96) 0%, rgba(236,253,245,0.98) 52%, rgba(240,253,244,0.96) 100%)",
-          border: (theme) =>
-            theme.palette.mode === "dark"
-              ? "1px solid rgba(255, 255, 255, 0.1)"
-              : "1px solid rgba(148, 163, 184, 0.12)",
         }}
       >
         <Typography variant="h4">Sales</Typography>
@@ -226,33 +223,66 @@ const Analysis = () => {
 
       <Grid container spacing={2.5}>
         <Grid item xs={12} md={4}>
-          <Card>
-            <CardContent>
-              <Typography color="text.secondary">Total Sales</Typography>
-              <Typography variant="h4" sx={{ mt: 1 }}>
-                {summary.totalSales.toFixed(2)}
+          <Card sx={{ position: "relative", overflow: "hidden" }}>
+            <CardContent sx={{ position: "relative", zIndex: 2 }}>
+              <Typography color="success.main" sx={{ fontWeight: 600, fontSize: "0.85rem", textTransform: "uppercase", letterSpacing: "1px" }}>Total Sales</Typography>
+              <Typography variant="h4" sx={{ mt: 1, fontWeight: 800 }}>
+                Rs. {summary.totalSales.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </Typography>
             </CardContent>
+            <MonetizationOnRoundedIcon
+              sx={{
+                position: "absolute",
+                right: -10,
+                bottom: -10,
+                fontSize: "7rem",
+                color: alpha(theme.palette.success.main, 0.06),
+                transform: "rotate(-15deg)",
+                pointerEvents: "none",
+              }}
+            />
           </Card>
         </Grid>
         <Grid item xs={12} md={4}>
-          <Card>
-            <CardContent>
-              <Typography color="text.secondary">Total Bills</Typography>
-              <Typography variant="h4" sx={{ mt: 1 }}>
+          <Card sx={{ position: "relative", overflow: "hidden" }}>
+            <CardContent sx={{ position: "relative", zIndex: 2 }}>
+              <Typography color="primary.main" sx={{ fontWeight: 600, fontSize: "0.85rem", textTransform: "uppercase", letterSpacing: "1px" }}>Total Bills</Typography>
+              <Typography variant="h4" sx={{ mt: 1, fontWeight: 800 }}>
                 {summary.totalBills}
               </Typography>
             </CardContent>
+            <ReceiptRoundedIcon
+              sx={{
+                position: "absolute",
+                right: -10,
+                bottom: -10,
+                fontSize: "7rem",
+                color: alpha(theme.palette.primary.main, 0.06),
+                transform: "rotate(-15deg)",
+                pointerEvents: "none",
+              }}
+            />
           </Card>
         </Grid>
         <Grid item xs={12} md={4}>
-          <Card>
-            <CardContent>
-              <Typography color="text.secondary">Average Bill</Typography>
-              <Typography variant="h4" sx={{ mt: 1 }}>
-                {summary.avgBill.toFixed(2)}
+          <Card sx={{ position: "relative", overflow: "hidden" }}>
+            <CardContent sx={{ position: "relative", zIndex: 2 }}>
+              <Typography color="secondary.main" sx={{ fontWeight: 600, fontSize: "0.85rem", textTransform: "uppercase", letterSpacing: "1px" }}>Average Bill</Typography>
+              <Typography variant="h4" sx={{ mt: 1, fontWeight: 800 }}>
+                Rs. {summary.avgBill.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </Typography>
             </CardContent>
+            <BarChartRoundedIcon
+              sx={{
+                position: "absolute",
+                right: -10,
+                bottom: -10,
+                fontSize: "7rem",
+                color: alpha(theme.palette.secondary.main, 0.06),
+                transform: "rotate(-15deg)",
+                pointerEvents: "none",
+              }}
+            />
           </Card>
         </Grid>
       </Grid>

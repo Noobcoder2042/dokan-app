@@ -21,6 +21,14 @@ import {
   Typography,
 } from "@mui/material";
 import CloudDownloadOutlinedIcon from "@mui/icons-material/CloudDownloadOutlined";
+import MonetizationOnRoundedIcon from "@mui/icons-material/MonetizationOnRounded";
+import ReceiptLongRoundedIcon from "@mui/icons-material/ReceiptLongRounded";
+import AssignmentLateRoundedIcon from "@mui/icons-material/AssignmentLateRounded";
+import StarRoundedIcon from "@mui/icons-material/StarRounded";
+import PeopleAltRoundedIcon from "@mui/icons-material/PeopleAltRounded";
+import ShowChartRoundedIcon from "@mui/icons-material/ShowChartRounded";
+import TrendingUpRoundedIcon from "@mui/icons-material/TrendingUpRounded";
+import AccountBalanceWalletRoundedIcon from "@mui/icons-material/AccountBalanceWalletRounded";
 import dayjs from "dayjs";
 import LineChartWrapper from "../components/charts/LineChartWrapper";
 import BarChartWrapper from "../components/charts/BarChartWrapper";
@@ -520,14 +528,113 @@ const CustomerAnalytics = () => {
       </Card>
 
       <Grid container spacing={2}>
-        <Grid item xs={12} md={3}><StatCard label="Total Revenue" value={`Rs. ${totalRevenue.toFixed(2)}`} description="Click to see breakdown." onClick={openTotalSalesInsight} /></Grid>
-        <Grid item xs={12} md={3}><StatCard label="Total Bills" value={filteredOrders.length} description="Bills in current filter." onClick={openTotalSalesInsight} /></Grid>
-        <Grid item xs={12} md={3}><StatCard label="Pending Due" value={`Rs. ${totalDue.toFixed(2)}`} description="Outstanding dues. Click for due details." onClick={() => openInsight("Due Breakdown", "Pending due is sum of unpaid invoice amounts.", [{ label: "Total Pending", value: `Rs. ${dueStats.totalPending.toFixed(2)}` }, { label: "Overdue 30+ days", value: dueStats.overdue.length }, { label: "Highest Due", value: dueStats.highestDue ? `${dueStats.highestDue.customer} (Rs. ${dueStats.highestDue.due.toFixed(2)})` : "-" }], dueStats.dues.slice(0, 10).map((d) => ({ name: d.customer, detailA: `${d.overdueDays} days`, detailB: `Rs. ${d.due.toFixed(2)}` })))} /></Grid>
-        <Grid item xs={12} md={3}><StatCard label="Top Item" value={performance.top?.name || "-"} description="Click to understand why it is top." onClick={openTopProductInsight} /></Grid>
-        <Grid item xs={12} md={3}><StatCard label="Active Customers" value={uniqueCustomers} description="Unique buyers in dataset." onClick={openCustomerInsight} /></Grid>
-        <Grid item xs={12} md={3}><StatCard label="Average Order" value={`Rs. ${averageOrder.toFixed(2)}`} description="Average bill amount." onClick={openTotalSalesInsight} /></Grid>
-        <Grid item xs={12} md={3}><StatCard label="Growth" value={`${growthStats.growthPercent >= 0 ? "↑" : "↓"} ${Math.abs(growthStats.growthPercent)}%`} description={`Vs last ${comparisonRange}. Click for formula.`} onClick={openGrowthInsight} /></Grid>
-        <Grid item xs={12} md={3}><StatCard label="Gross Profit (Est.)" value={`Rs. ${grossProfit.toFixed(2)}`} description={highestProfitItem ? `Best: ${highestProfitItem.name}` : "Add purchase price for richer profit view"} onClick={() => openInsight("Profit Estimation", "Estimated profit = selling revenue - estimated cost from purchase/cost price fields.", [{ label: "Gross Profit", value: `Rs. ${grossProfit.toFixed(2)}` }, { label: "Highest Profit Item", value: highestProfitItem ? `${highestProfitItem.name} (Rs. ${Number(highestProfitItem.profit || 0).toFixed(2)})` : "-" }], products.slice(0, 10).map((p) => ({ name: p.name, detailA: `${p.qty} qty`, detailB: `Rs. ${Number(p.profit || 0).toFixed(2)}` })))} /></Grid>
+        <Grid item xs={12} md={3}>
+          <StatCard
+            label="Total Revenue"
+            value={`Rs. ${totalRevenue.toFixed(2)}`}
+            description="Click to see breakdown."
+            onClick={openTotalSalesInsight}
+            icon={<MonetizationOnRoundedIcon />}
+            iconColor="#06b6d4"
+          />
+        </Grid>
+        <Grid item xs={12} md={3}>
+          <StatCard
+            label="Total Bills"
+            value={filteredOrders.length}
+            description="Bills in current filter."
+            onClick={openTotalSalesInsight}
+            icon={<ReceiptLongRoundedIcon />}
+            iconColor="#6366f1"
+          />
+        </Grid>
+        <Grid item xs={12} md={3}>
+          <StatCard
+            label="Pending Due"
+            value={`Rs. ${totalDue.toFixed(2)}`}
+            description="Outstanding dues. Click for due details."
+            onClick={() =>
+              openInsight(
+                "Due Breakdown",
+                "Pending due is sum of unpaid invoice amounts.",
+                [
+                  { label: "Total Pending", value: `Rs. ${dueStats.totalPending.toFixed(2)}` },
+                  { label: "Overdue 30+ days", value: dueStats.overdue.length },
+                  {
+                    label: "Highest Due",
+                    value: dueStats.highestDue ? `${dueStats.highestDue.customer} (Rs. ${dueStats.highestDue.due.toFixed(2)})` : "-",
+                  },
+                ],
+                dueStats.dues.slice(0, 10).map((d) => ({ name: d.customer, detailA: `${d.overdueDays} days`, detailB: `Rs. ${d.due.toFixed(2)}` }))
+              )
+            }
+            icon={<AssignmentLateRoundedIcon />}
+            iconColor="#f43f5e"
+          />
+        </Grid>
+        <Grid item xs={12} md={3}>
+          <StatCard
+            label="Top Item"
+            value={performance.top?.name || "-"}
+            description="Click to understand why it is top."
+            onClick={openTopProductInsight}
+            icon={<StarRoundedIcon />}
+            iconColor="#eab308"
+          />
+        </Grid>
+        <Grid item xs={12} md={3}>
+          <StatCard
+            label="Active Customers"
+            value={uniqueCustomers}
+            description="Unique buyers in dataset."
+            onClick={openCustomerInsight}
+            icon={<PeopleAltRoundedIcon />}
+            iconColor="#a855f7"
+          />
+        </Grid>
+        <Grid item xs={12} md={3}>
+          <StatCard
+            label="Average Order"
+            value={`Rs. ${averageOrder.toFixed(2)}`}
+            description="Average bill amount."
+            onClick={openTotalSalesInsight}
+            icon={<ShowChartRoundedIcon />}
+            iconColor="#ec4899"
+          />
+        </Grid>
+        <Grid item xs={12} md={3}>
+          <StatCard
+            label="Growth"
+            value={`${growthStats.growthPercent >= 0 ? "↑" : "↓"} ${Math.abs(growthStats.growthPercent)}%`}
+            description={`Vs last ${comparisonRange}. Click for formula.`}
+            onClick={openGrowthInsight}
+            icon={<TrendingUpRoundedIcon />}
+            iconColor="#22c55e"
+          />
+        </Grid>
+        <Grid item xs={12} md={3}>
+          <StatCard
+            label="Gross Profit (Est.)"
+            value={`Rs. ${grossProfit.toFixed(2)}`}
+            description={highestProfitItem ? `Best: ${highestProfitItem.name}` : "Add purchase price for richer profit view"}
+            onClick={() =>
+              openInsight(
+                "Profit Estimation",
+                "Estimated profit = selling revenue - estimated cost from purchase/cost price fields.",
+                [
+                  { label: "Gross Profit", value: `Rs. ${grossProfit.toFixed(2)}` },
+                  {
+                    label: "Highest Profit Item",
+                    value: highestProfitItem ? `${highestProfitItem.name} (Rs. ${Number(highestProfitItem.profit || 0).toFixed(2)})` : "-",
+                  },
+                ],
+                products.slice(0, 10).map((p) => ({ name: p.name, detailA: `${p.qty} qty`, detailB: `Rs. ${Number(p.profit || 0).toFixed(2)}` }))
+              )
+            }
+            icon={<AccountBalanceWalletRoundedIcon />}
+            iconColor="#f97316"
+          />
+        </Grid>
 
         <Grid item xs={12} md={8}>
           <Card>

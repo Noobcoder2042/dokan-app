@@ -28,6 +28,8 @@ import {
   Stack,
   TextField,
   Typography,
+  useTheme,
+  alpha,
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -35,6 +37,9 @@ import ClearIcon from "@mui/icons-material/Clear";
 import PrintIcon from "@mui/icons-material/Print";
 import WhatsAppIcon from "@mui/icons-material/WhatsApp";
 import LockRoundedIcon from "@mui/icons-material/LockRounded";
+import ContactPageRoundedIcon from "@mui/icons-material/ContactPageRounded";
+import ReceiptLongRoundedIcon from "@mui/icons-material/ReceiptLongRounded";
+import HistoryToggleOffRoundedIcon from "@mui/icons-material/HistoryToggleOffRounded";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
 import CustomerDetails from "./CustomerDetails";
@@ -58,6 +63,7 @@ import {
 import { subscribeCategories } from "../services/firebase";
 
 const Calculator = () => {
+  const theme = useTheme();
   const [itemName, setItemName] = useState("");
   const [itemPrice, setItemPrice] = useState("");
   const [quantity, setQuantity] = useState("");
@@ -1663,10 +1669,11 @@ const Calculator = () => {
       <Paper
         sx={{
           p: { xs: 2.5, md: 3.5 },
-          borderRadius: 1,
-          background:
-            "linear-gradient(135deg, rgba(10, 15, 13, 0.97) 0%, rgba(22, 101, 52, 0.95) 56%, rgba(6, 95, 70, 0.92) 100%)",
+          borderRadius: 3,
+          background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.95)} 0%, ${alpha(theme.palette.success.main, 0.85)} 100%)`,
           color: "white",
+          boxShadow: `0 12px 30px ${alpha(theme.palette.primary.main, 0.25)}`,
+          border: "none",
         }}
       >
         <Stack
@@ -1701,14 +1708,7 @@ const Calculator = () => {
       <Grid container spacing={4}>
         <Grid item xs={12} lg={8}>
           <Stack spacing={4}>
-            <Card
-              sx={{
-                borderRadius: 1,
-                boxShadow: "0 4px 20px rgba(0,0,0,0.04)",
-                border: "1px solid",
-                borderColor: "divider",
-              }}
-            >
+            <Card sx={{ position: "relative", overflow: "hidden" }}>
               <CardContent sx={{ p: { xs: 2, md: 3 } }}>
                 <Stack spacing={3}>
                   <Box>
@@ -1978,15 +1978,19 @@ const Calculator = () => {
                   </Grid>
                 </Stack>
               </CardContent>
+              <ContactPageRoundedIcon
+                sx={{
+                  position: "absolute",
+                  right: -10,
+                  bottom: -10,
+                  fontSize: "8.5rem",
+                  color: alpha(theme.palette.primary.main, 0.05),
+                  transform: "rotate(-15deg)",
+                  pointerEvents: "none",
+                }}
+              />
             </Card>
-            <Card
-              sx={{
-                borderRadius: 1,
-                boxShadow: "0 4px 20px rgba(0,0,0,0.04)",
-                border: "1px solid",
-                borderColor: "divider",
-              }}
-            >
+            <Card sx={{ position: "relative", overflow: "hidden" }}>
               <CardContent sx={{ p: { xs: 2, md: 3 } }}>
                 <Stack spacing={2}>
                   <Stack
@@ -2069,6 +2073,17 @@ const Calculator = () => {
                   )}
                 </Stack>
               </CardContent>
+              <ReceiptLongRoundedIcon
+                sx={{
+                  position: "absolute",
+                  right: -10,
+                  bottom: -10,
+                  fontSize: "8.5rem",
+                  color: alpha(theme.palette.success.main, 0.05),
+                  transform: "rotate(-15deg)",
+                  pointerEvents: "none",
+                }}
+              />
             </Card>
           </Stack>
         </Grid>
@@ -2277,14 +2292,7 @@ const Calculator = () => {
                 </Stack>
               </CardContent>
             </Card>
-            <Card
-              sx={{
-                borderRadius: 1,
-                boxShadow: "0 4px 20px rgba(0,0,0,0.04)",
-                border: "1px solid",
-                borderColor: "divider",
-              }}
-            >
+            <Card sx={{ position: "relative", overflow: "hidden" }}>
               <CardContent sx={{ p: { xs: 2, md: 3 } }}>
                 <Stack spacing={2}>
                   <List
@@ -2419,6 +2427,17 @@ const Calculator = () => {
                   </List>
                 </Stack>
               </CardContent>
+              <HistoryToggleOffRoundedIcon
+                sx={{
+                  position: "absolute",
+                  right: -10,
+                  bottom: -10,
+                  fontSize: "8.5rem",
+                  color: alpha(theme.palette.secondary.main, 0.05),
+                  transform: "rotate(-15deg)",
+                  pointerEvents: "none",
+                }}
+              />
             </Card>
           </Stack>
         </Grid>

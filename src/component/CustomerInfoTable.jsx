@@ -71,13 +71,7 @@ const CustomerInfoTable = ({
     <Paper
       elevation={0}
       sx={{
-        borderRadius: 4,
-        border: `1px solid ${theme.palette.divider}`,
         overflow: "hidden",
-        background: theme.palette.mode === "dark" 
-          ? alpha(theme.palette.background.paper, 0.6) 
-          : theme.palette.background.paper,
-        backdropFilter: theme.palette.mode === "dark" ? "blur(12px)" : "none",
       }}
     >
       <TableContainer sx={{ overflowX: "auto" }}>

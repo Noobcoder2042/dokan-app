@@ -1,20 +1,38 @@
 import { BrowserRouter as Router, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Box, CircularProgress, Container, CssBaseline, ThemeProvider, createTheme } from "@mui/material";
+import {
+  Box,
+  CircularProgress,
+  Container,
+  CssBaseline,
+  ThemeProvider,
+  createTheme,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  Typography,
+  Stack,
+  Chip,
+  alpha
+} from "@mui/material";
 import AuthScreen from "./component/AuthScreen";
 import Analysis from "./component/Analysis";
 import AnalyticsDashboard from "./pages/AnalyticsDashboard";
 import Calculator from "./component/Calculator";
 import Dashboard from "./component/Dashboard";
+import DueLedger from "./component/DueLedger";
 import ErrorBoundary from "./component/ErrorBoundary";
 import Inventory from "./component/Inventory";
 import Navbar from "./component/Navbar";
 import ShopSettings from "./component/ShopSettings";
 import SplashScreen from "./component/SplashScreen";
 import UserGuide from "./component/UserGuide";
+import FuturisticLoader from "./component/FuturisticLoader";
 import { useAuth } from "./context/AuthContext";
-import { useUIExperience } from "./context/UIExperienceContext";
+import { useUIExperience, THEME_PRESETS } from "./context/UIExperienceContext";
 
 const AppRoutes = () => {
   const location = useLocation();
@@ -30,6 +48,7 @@ const AppRoutes = () => {
         <Routes location={location}>
           <Route path="/" element={<Calculator />} />
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/dues" element={<DueLedger />} />
           <Route path="/inventory" element={<Inventory />} />
           <Route path="/sales" element={<Analysis />} />
           <Route path="/analytics" element={<AnalyticsDashboard />} />
@@ -43,108 +62,220 @@ const AppRoutes = () => {
   );
 };
 
+const CHANGELOG = {
+  version: "2.3.0",
+  title: "The Cybernetic HUD & Print Privacy Update",
+  releaseDate: "May 26, 2026",
+  features: [
+    {
+      title: "Collapsible Sidebar & Floating Toggle",
+      desc: "Upgraded the top navigation into a collapsible left sidebar with automatic localStorage state caching and a floating border double-arrow that rotates 180 degrees.",
+      icon: "🧭",
+    },
+    {
+      title: "Futuristic Loading & Splash Screen HUDs",
+      desc: "Replaced boring circular spinners with a premium cybernetic HUD console loading animation, dynamic percentage counters, cosmic shifting nebula orbs, and live boot sequence logs.",
+      icon: "⚡",
+    },
+    {
+      title: "Privacy-Aware Customer Prints",
+      desc: "New receipts printed from the POS Billing Desk omit the customer's phone and address to protect privacy, while range duplicate prints from the Sales Dashboard display full customer details.",
+      icon: "🖨️",
+    },
+    {
+      title: "Frosted Glass Dialog Modals",
+      desc: "Overrode global MUI properties to render every modal, editor popup, and receipt preview with organic rounded corners and rich backdrop-blur frosting overlays.",
+      icon: "✨",
+    },
+  ]
+};
+
 const App = () => {
   const { authLoading, user } = useAuth();
-  const { themeMode, immersiveEnabled, playSound } = useUIExperience();
+  const { themeMode, themePreset, immersiveEnabled, playSound } = useUIExperience();
   const [showSplash, setShowSplash] = useState(true);
+  const [showUpdateModal, setShowUpdateModal] = useState(false);
 
-  const theme = useMemo(
-    () =>
-      createTheme({
-        palette: {
-          mode: themeMode,
-          primary: { main: themeMode === "dark" ? "#4ade80" : "#15803d" },
-          secondary: { main: themeMode === "dark" ? "#86efac" : "#166534" },
-          success: { main: themeMode === "dark" ? "#22c55e" : "#16a34a" },
-          warning: { main: themeMode === "dark" ? "#fbbf24" : "#d97706" },
-          error: { main: themeMode === "dark" ? "#f87171" : "#dc2626" },
-          background: {
-            default: themeMode === "dark" ? "#0a0f0d" : "#f6f8f7",
-            paper: themeMode === "dark" ? "#121a17" : "#ffffff",
-          },
-          text: {
-            primary: themeMode === "dark" ? "#f1f5f9" : "#0f172a",
-            secondary: themeMode === "dark" ? "#94a3b8" : "#475569",
-          },
-          divider: themeMode === "dark" ? "rgba(255,255,255,0.08)" : "rgba(15,23,42,0.10)",
+  const currentPresetColors = useMemo(() => {
+    return THEME_PRESETS[themePreset]?.colors[themeMode] || THEME_PRESETS.emerald.colors[themeMode];
+  }, [themePreset, themeMode]);
+
+  const theme = useMemo(() => {
+    const isBmw = themePreset === "bmw";
+    const borderRad = isBmw ? 0 : 8;
+    const paperRad = isBmw ? 0 : 16;
+    const cardRad = isBmw ? 0 : 16;
+    const dialogRad = isBmw ? 0 : 20;
+
+    const paperBorder = isBmw 
+      ? "1px solid #3c3c3c"
+      : (themeMode === "dark" ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(15,23,42,0.08)");
+
+    const dialogBorder = isBmw
+      ? "1px solid #3c3c3c"
+      : (themeMode === "dark" ? "1px solid rgba(255,255,255,0.12)" : "1px solid rgba(15,23,42,0.12)");
+
+    const paperShadow = isBmw 
+      ? "none" 
+      : (themeMode === "dark" ? "0 20px 40px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255,255,255,0.05)" : "0 16px 36px rgba(15, 23, 42, 0.04), inset 0 1px 0 rgba(255,255,255,0.6)");
+
+    const cardShadow = isBmw
+      ? "none"
+      : (themeMode === "dark" ? "0 12px 30px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255,255,255,0.04)" : "0 10px 24px rgba(15, 23, 42, 0.03), inset 0 1px 0 rgba(255,255,255,0.5)");
+
+    const dialogShadow = isBmw
+      ? "none"
+      : (themeMode === "dark" ? "0 24px 60px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255,255,255,0.06)" : "0 20px 48px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255,255,255,0.8)");
+
+    const cardBackground = isBmw
+      ? "#1a1a1a"
+      : (themeMode === "dark" ? "linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%)" : "linear-gradient(135deg, rgba(255,255,255,0.7) 0%, rgba(255,255,255,0.4) 100%)");
+
+    const dialogBackground = isBmw
+      ? "#000000"
+      : (themeMode === "dark" ? "linear-gradient(135deg, rgba(20,28,24,0.98) 0%, rgba(10,15,13,0.99) 100%)" : "linear-gradient(135deg, rgba(255,255,255,0.98) 0%, rgba(243,244,246,0.99) 100%)");
+
+    return createTheme({
+      palette: {
+        mode: themeMode,
+        primary: { main: currentPresetColors.primary },
+        secondary: { main: currentPresetColors.secondary },
+        success: { main: currentPresetColors.success },
+        warning: { main: themeMode === "dark" ? "#fbbf24" : "#d97706" },
+        error: { main: themeMode === "dark" ? "#f87171" : "#dc2626" },
+        background: {
+          default: currentPresetColors.background.default,
+          paper: currentPresetColors.background.paper,
         },
-        shape: { borderRadius: 8 },
-        typography: {
-          fontFamily: `"Plus Jakarta Sans", "Segoe UI", "Inter", sans-serif`,
-          h4: { fontWeight: 700, letterSpacing: "-0.03em" },
-          h5: { fontWeight: 700 },
-          h6: { fontWeight: 700 },
-          button: { textTransform: "none", fontWeight: 700 },
+        text: {
+          primary: isBmw ? "#ffffff" : (themeMode === "dark" ? "#f1f5f9" : "#0f172a"),
+          secondary: isBmw ? "#bbbbbb" : (themeMode === "dark" ? "#cbd5e1" : "#334155"),
         },
-        components: {
-          MuiPaper: {
-            styleOverrides: {
-              root: {
-                backgroundImage: "none",
-                backdropFilter: "blur(14px)",
-                border: themeMode === "dark" ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(148,163,184,0.14)",
-                boxShadow: themeMode === "dark" ? "0 24px 64px rgba(0, 0, 0, 0.45)" : "0 20px 54px rgba(15, 23, 42, 0.08)",
+        divider: isBmw ? "#3c3c3c" : (themeMode === "dark" ? "rgba(255,255,255,0.08)" : "rgba(15,23,42,0.10)"),
+      },
+      shape: { borderRadius: borderRad },
+      typography: {
+        fontFamily: isBmw ? `"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif` : `"Plus Jakarta Sans", "Segoe UI", "Inter", sans-serif`,
+        h4: { fontWeight: 700, letterSpacing: isBmw ? "-0.5px" : "-0.03em", textTransform: isBmw ? "uppercase" : "none" },
+        h5: { fontWeight: 700, textTransform: isBmw ? "uppercase" : "none", letterSpacing: isBmw ? "0.5px" : "normal" },
+        h6: { fontWeight: 700, textTransform: isBmw ? "uppercase" : "none", letterSpacing: isBmw ? "0.5px" : "normal" },
+        button: { textTransform: isBmw ? "uppercase" : "none", fontWeight: 700, letterSpacing: isBmw ? "1.5px" : "normal" },
+      },
+      components: {
+        MuiPaper: {
+          styleOverrides: {
+            root: {
+              backgroundImage: "none",
+              backdropFilter: isBmw ? "none" : "blur(18px)",
+              borderRadius: paperRad,
+              border: paperBorder,
+              boxShadow: paperShadow,
+              transition: "transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease, border-color 0.3s ease",
+            },
+          },
+        },
+        MuiCard: {
+          styleOverrides: {
+            root: {
+              borderRadius: cardRad,
+              backgroundImage: "none",
+              background: cardBackground,
+              border: paperBorder,
+              boxShadow: cardShadow,
+              transition: "transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease, border-color 0.3s ease",
+              "&:hover": {
+                transform: isBmw ? "none" : "translateY(-6px)",
+                boxShadow: isBmw ? "none" : (themeMode === "dark"
+                  ? `0 24px 48px rgba(0, 0, 0, 0.45), 0 0 20px ${currentPresetColors.primary}26`
+                  : `0 20px 40px rgba(15, 23, 42, 0.08), 0 0 16px ${currentPresetColors.primary}1f`),
+                borderColor: isBmw ? "#ffffff" : (themeMode === "dark" 
+                  ? `rgba(255,255,255, 0.15)`
+                  : `rgba(15,23,42, 0.15)`),
               },
             },
           },
-          MuiCard: { styleOverrides: { root: { borderRadius: 8 } } },
-          MuiButton: {
-            defaultProps: { disableElevation: true },
-            styleOverrides: {
-              root: {
-                borderRadius: 8,
-                minHeight: 40,
-                transition: "all .2s ease",
-                "&.Mui-disabled": {
-                  opacity: themeMode === "dark" ? 0.52 : 0.42,
-                  color: themeMode === "dark" ? "#94a3b8" : undefined,
-                },
+        },
+        MuiDialog: {
+          styleOverrides: {
+            paper: {
+              borderRadius: dialogRad,
+              backgroundImage: "none",
+              background: dialogBackground,
+              border: dialogBorder,
+              boxShadow: dialogShadow,
+              backdropFilter: isBmw ? "none" : "blur(24px)",
+            },
+          },
+        },
+        MuiBackdrop: {
+          styleOverrides: {
+            root: {
+              backgroundColor: isBmw ? "rgba(0,0,0,0.85)" : (themeMode === "dark" ? "rgba(4,6,5,0.65)" : "rgba(15,23,42,0.35)"),
+              backdropFilter: isBmw ? "none" : "blur(8px)",
+            },
+          },
+        },
+        MuiButton: {
+          defaultProps: { disableElevation: true },
+          styleOverrides: {
+            root: {
+              borderRadius: borderRad,
+              minHeight: 40,
+              transition: "all .2s ease",
+              "&.Mui-disabled": {
+                opacity: themeMode === "dark" ? 0.52 : 0.42,
+                color: themeMode === "dark" ? "#cbd5e1" : undefined,
               },
-              containedPrimary: {
-                background:
-                  themeMode === "dark"
-                    ? "linear-gradient(120deg, #22c55e 0%, #16a34a 100%)"
-                    : "linear-gradient(120deg, #16a34a 0%, #15803d 100%)",
+            },
+            containedPrimary: {
+              background: isBmw ? "#000000" : `linear-gradient(120deg, ${currentPresetColors.primary} 0%, ${currentPresetColors.success} 100%)`,
+              color: "#ffffff",
+              border: isBmw ? "1px solid #ffffff" : "none",
+              boxShadow: isBmw ? "none" : (themeMode === "dark"
+                ? `0 8px 22px ${currentPresetColors.primary}3b`
+                : `0 8px 20px ${currentPresetColors.primary}28`),
+              "&:hover": {
+                background: isBmw ? "#ffffff" : undefined,
+                color: isBmw ? "#000000" : undefined,
+                boxShadow: isBmw ? "none" : (themeMode === "dark"
+                  ? `0 10px 26px ${currentPresetColors.primary}4f`
+                  : `0 10px 24px ${currentPresetColors.primary}3d`),
+              },
+            },
+          },
+        },
+        MuiOutlinedInput: {
+          styleOverrides: {
+            root: {
+              borderRadius: borderRad,
+              backgroundColor: isBmw ? "#1a1a1a !important" : (themeMode === "dark" ? "rgba(10,15,13,0.5) !important" : "rgba(255,255,255,0.85)"),
+              backdropFilter: isBmw ? "none" : "blur(4px)",
+              color: "#ffffff",
+              border: isBmw ? "1px solid #3c3c3c" : undefined,
+              "& .MuiOutlinedInput-input": {
                 color: "#ffffff",
-                boxShadow:
-                  themeMode === "dark"
-                    ? "0 8px 22px rgba(34,197,94,0.35)"
-                    : "0 8px 20px rgba(22,163,74,0.28)",
-                "&:hover": {
-                  boxShadow:
-                    themeMode === "dark"
-                      ? "0 10px 26px rgba(34,197,94,0.45)"
-                      : "0 10px 24px rgba(22,163,74,0.36)",
-                },
-              },
-            },
-          },
-          MuiOutlinedInput: {
-            styleOverrides: {
-              root: {
-                borderRadius: 8,
-                backgroundColor: themeMode === "dark" ? "rgba(18,26,22,0.95) !important" : "#ffffff",
-                color: themeMode === "dark" ? "#ffffff" : "#0f172a",
-                "& .MuiOutlinedInput-input": {
-                  color: themeMode === "dark" ? "#ffffff" : "#0f172a",
-                  WebkitTextFillColor: themeMode === "dark" ? "#ffffff" : "#0f172a",
+                WebkitTextFillColor: "#ffffff",
                 },
                 "& .MuiSelect-select": {
                   color: themeMode === "dark" ? "#ffffff" : "#0f172a",
                 },
                 "& .MuiOutlinedInput-notchedOutline": {
-                  borderColor: themeMode === "dark" ? "rgba(255,255,255,0.18)" : "rgba(15,23,42,0.2)",
+                  borderColor: themeMode === "dark" ? "rgba(255,255,255,0.12)" : "rgba(15,23,42,0.14)",
                 },
                 "&:hover .MuiOutlinedInput-notchedOutline": {
-                  borderColor: themeMode === "dark" ? "rgba(74,222,128,0.55)" : "rgba(22,163,74,0.45)",
+                  borderColor: themeMode === "dark" 
+                    ? `${currentPresetColors.primary}8c`
+                    : `${currentPresetColors.primary}73`,
                 },
                 "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                  borderColor: themeMode === "dark" ? "#4ade80" : "#16a34a",
-                  boxShadow: themeMode === "dark" ? "0 0 0 3px rgba(74,222,128,0.22)" : "0 0 0 3px rgba(22,163,74,0.14)",
+                  borderColor: currentPresetColors.primary,
+                  boxShadow: themeMode === "dark" 
+                    ? `0 0 0 3px ${currentPresetColors.primary}38` 
+                    : `0 0 0 3px ${currentPresetColors.primary}22`,
                 },
                 "& input:-webkit-autofill": {
                   WebkitBoxShadow: themeMode === "dark"
-                    ? "0 0 0 100px rgba(18,26,22,0.95) inset"
+                    ? "0 0 0 100px rgba(10,15,13,0.95) inset"
                     : "0 0 0 100px #ffffff inset",
                   WebkitTextFillColor: themeMode === "dark" ? "#ffffff" : "#0f172a",
                   transition: "background-color 9999s ease-out 0s",
@@ -161,7 +292,7 @@ const App = () => {
                   color: themeMode === "dark" ? "#e2e8f0" : undefined,
                 },
                 "&.Mui-focused": {
-                  color: themeMode === "dark" ? "#86efac" : undefined,
+                  color: currentPresetColors.secondary,
                 },
               },
             },
@@ -186,7 +317,7 @@ const App = () => {
             styleOverrides: {
               input: {
                 "::placeholder": {
-                  color: themeMode === "dark" ? "#94a3b8" : "#64748b",
+                  color: themeMode === "dark" ? "#cbd5e1" : "#64748b",
                   opacity: 1,
                 },
                 '&[type="number"]': {
@@ -205,17 +336,20 @@ const App = () => {
           },
           MuiMenuItem: {
             styleOverrides: {
-              root: themeMode === "dark" ? {
-                color: "#e2e8f0",
-                "&.Mui-selected": { backgroundColor: "rgba(74,222,128,0.16)" },
-                "&:hover": { backgroundColor: "rgba(74,222,128,0.12)" },
-              } : undefined,
+              root: {
+                color: themeMode === "dark" ? "#e2e8f0" : "#0f172a",
+                "&.Mui-selected": { 
+                  backgroundColor: `${currentPresetColors.primary}29` 
+                },
+                "&:hover": { 
+                  backgroundColor: `${currentPresetColors.primary}1e` 
+                },
+              },
             },
           },
         },
-      }),
-    [themeMode]
-  );
+      });
+    }, [themeMode, currentPresetColors, themePreset]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -224,6 +358,21 @@ const App = () => {
     }, immersiveEnabled ? 1700 : 900);
     return () => window.clearTimeout(timer);
   }, [immersiveEnabled, playSound]);
+
+  useEffect(() => {
+    if (!showSplash && user) {
+      const lastVersion = localStorage.getItem("dokan-app-version");
+      if (lastVersion !== CHANGELOG.version) {
+        setShowUpdateModal(true);
+      }
+    }
+  }, [showSplash, user]);
+
+  const handleCloseUpdateModal = () => {
+    localStorage.setItem("dokan-app-version", CHANGELOG.version);
+    setShowUpdateModal(false);
+    playSound?.("click");
+  };
 
   if (showSplash && immersiveEnabled) {
     return (
@@ -238,17 +387,15 @@ const App = () => {
     return (
       <ThemeProvider theme={theme}>
         <CssBaseline />
-        <Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center" }}>
-          <CircularProgress />
-        </Box>
+        <FuturisticLoader />
       </ThemeProvider>
     );
   }
 
   const appBackground =
     themeMode === "dark"
-      ? "radial-gradient(circle at 20% 12%, rgba(34,197,94,0.14), transparent 42%), radial-gradient(circle at 82% 24%, rgba(22,163,74,0.10), transparent 48%), linear-gradient(180deg,#0a0f0d 0%, #0d1411 52%, #0a0f0d 100%)"
-      : "radial-gradient(circle at 20% 14%, rgba(34,197,94,0.10), transparent 40%), radial-gradient(circle at 82% 22%, rgba(22,163,74,0.08), transparent 46%), linear-gradient(180deg,#f8faf9 0%, #f0f5f2 48%, #ecf2ee 100%)";
+      ? `radial-gradient(circle at 20% 12%, ${currentPresetColors.radial}, transparent 42%), radial-gradient(circle at 82% 24%, ${currentPresetColors.radialSecondary}, transparent 48%), ${currentPresetColors.linear}`
+      : `radial-gradient(circle at 20% 14%, ${currentPresetColors.radial}, transparent 40%), radial-gradient(circle at 82% 22%, ${currentPresetColors.radialSecondary}, transparent 46%), ${currentPresetColors.linear}`;
 
   if (!user) {
     return (
@@ -266,12 +413,143 @@ const App = () => {
       <CssBaseline />
       <ErrorBoundary>
         <Router>
-          <Box sx={{ minHeight: "100vh", background: appBackground }}>
+          <Box
+            sx={{
+              minHeight: "100vh",
+              background: appBackground,
+              display: "flex",
+              flexDirection: { xs: "column", md: "row" },
+            }}
+          >
             <Navbar />
-            <Container maxWidth="xl" sx={{ py: { xs: 2, md: 4 } }}>
+            <Box
+              component="main"
+              sx={{
+                flexGrow: 1,
+                minWidth: 0,
+                py: { xs: 2.5, md: 4.5 },
+                px: { xs: 2.5, md: 4.5 },
+              }}
+            >
               <AppRoutes />
-            </Container>
+            </Box>
           </Box>
+
+          {/* Frosted Glass "What's New" Release Notes Update Dialog */}
+          <Dialog
+            open={showUpdateModal}
+            onClose={handleCloseUpdateModal}
+            maxWidth="sm"
+            fullWidth
+            PaperProps={{
+              sx: {
+                borderRadius: 4,
+                p: 1.5,
+                bgcolor: themeMode === "dark" 
+                  ? "rgba(10, 18, 14, 0.95)" 
+                  : "rgba(255, 255, 255, 0.95)",
+                border: themeMode === "dark" 
+                  ? `1px solid ${alpha(currentPresetColors.primary, 0.25)}` 
+                  : `1px solid ${alpha(currentPresetColors.primary, 0.18)}`,
+                boxShadow: themeMode === "dark"
+                  ? `0 24px 60px rgba(0, 0, 0, 0.7), 0 0 32px ${currentPresetColors.primary}26`
+                  : `0 20px 48px rgba(15, 23, 42, 0.1), 0 0 20px ${currentPresetColors.primary}15`,
+              }
+            }}
+          >
+            <DialogTitle sx={{ pb: 1, pt: 3 }}>
+              <Stack direction="row" spacing={1.5} alignItems="center" justifyContent="space-between">
+                <Stack spacing={0.5}>
+                  <Typography variant="h5" sx={{ fontWeight: 900, letterSpacing: "-0.02em" }}>
+                    What's New
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: "text.secondary", fontWeight: 700 }}>
+                    {CHANGELOG.title}
+                  </Typography>
+                </Stack>
+                <Chip
+                  label={`v${CHANGELOG.version}`}
+                  color="primary"
+                  size="small"
+                  sx={{
+                    fontWeight: 900,
+                    px: 1,
+                    background: `linear-gradient(120deg, ${currentPresetColors.primary} 0%, ${currentPresetColors.success} 100%)`,
+                    color: "white"
+                  }}
+                />
+              </Stack>
+            </DialogTitle>
+
+            <DialogContent sx={{ py: 2 }}>
+              <Stack spacing={2.5} sx={{ mt: 1 }}>
+                {CHANGELOG.features.map((feature, idx) => (
+                  <Stack 
+                    key={idx} 
+                    direction="row" 
+                    spacing={2} 
+                    alignItems="flex-start"
+                    sx={{
+                      p: 2,
+                      borderRadius: 3,
+                      bgcolor: themeMode === "dark" ? "rgba(255,255,255,0.02)" : "rgba(15,23,42,0.02)",
+                      border: themeMode === "dark" ? "1px solid rgba(255,255,255,0.03)" : "1px solid rgba(15,23,42,0.03)",
+                      transition: "all 0.2s",
+                      "&:hover": {
+                        transform: "translateX(4px)",
+                        bgcolor: themeMode === "dark" ? "rgba(255,255,255,0.04)" : "rgba(15,23,42,0.04)",
+                        borderColor: alpha(currentPresetColors.primary, 0.25)
+                      }
+                    }}
+                  >
+                    <Box 
+                      sx={{ 
+                        fontSize: "1.8rem", 
+                        lineHeight: 1,
+                        p: 1.25,
+                        borderRadius: 2,
+                        bgcolor: themeMode === "dark" ? "rgba(255,255,255,0.04)" : "rgba(15,23,42,0.04)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center"
+                      }}
+                    >
+                      {feature.icon}
+                    </Box>
+                    <Stack spacing={0.5} sx={{ flexGrow: 1 }}>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 800, color: "text.primary" }}>
+                        {feature.title}
+                      </Typography>
+                      <Typography variant="caption" sx={{ color: "text.secondary", lineHeight: 1.5, fontWeight: 500 }}>
+                        {feature.desc}
+                      </Typography>
+                    </Stack>
+                  </Stack>
+                ))}
+              </Stack>
+            </DialogContent>
+
+            <DialogActions sx={{ px: 3, pb: 3, pt: 1 }}>
+              <Button
+                variant="contained"
+                onClick={handleCloseUpdateModal}
+                fullWidth
+                sx={{
+                  py: 1.5,
+                  borderRadius: 2.5,
+                  fontWeight: 900,
+                  fontSize: "0.95rem",
+                  background: `linear-gradient(120deg, ${currentPresetColors.primary} 0%, ${currentPresetColors.success} 100%)`,
+                  boxShadow: `0 8px 22px ${currentPresetColors.primary}3b`,
+                  "&:hover": {
+                    boxShadow: `0 10px 26px ${currentPresetColors.primary}4f`,
+                  }
+                }}
+              >
+                Acknowledge & Continue
+              </Button>
+            </DialogActions>
+          </Dialog>
         </Router>
       </ErrorBoundary>
     </ThemeProvider>

@@ -1,13 +1,15 @@
-export const CHART_PRIMARY = "#22c55e";
-export const CHART_PRIMARY_DARK = "#16a34a";
+export const CHART_PRIMARY = "#06b6d4";
+export const CHART_PRIMARY_DARK = "#0284c7";
 
 export const CHART_COLORS = [
-  "#22c55e",
-  "#16a34a",
-  "#4ade80",
-  "#f59e0b",
-  "#64748b",
-  "#86efac",
+  "#06b6d4", // Electric Cyan
+  "#6366f1", // Indigo Blue
+  "#22c55e", // Emerald Green
+  "#f43f5e", // Rose Pink
+  "#f97316", // Solar Orange
+  "#eab308", // Solar Yellow
+  "#a855f7", // Violet
+  "#ec4899", // Magenta Pink
 ];
 
 export const getChartTheme = (mode = "dark") => {

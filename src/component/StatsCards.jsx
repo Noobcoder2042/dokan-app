@@ -4,12 +4,16 @@ import {
   Grid,
   Stack,
   Typography,
+  useTheme,
+  Box,
+  alpha,
 } from "@mui/material";
 import CurrencyRupeeRoundedIcon from "@mui/icons-material/CurrencyRupeeRounded";
 import ReceiptRoundedIcon from "@mui/icons-material/ReceiptRounded";
 import PeopleAltRoundedIcon from "@mui/icons-material/PeopleAltRounded";
 
 const StatsCards = ({ bills }) => {
+  const theme = useTheme();
   const today = new Date();
 
   const getBillDate = (bill) => {
@@ -48,24 +52,24 @@ const StatsCards = ({ bills }) => {
   const stats = [
     {
       title: "Today's Sales",
-      value: `Rs. ${totalSales.toFixed(2)}`,
+      value: `Rs. ${totalSales.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
       caption: "Live from bills created today",
-      icon: <CurrencyRupeeRoundedIcon />,
-      accent: "linear-gradient(135deg, #16a34a 0%, #22c55e 100%)",
+      icon: <CurrencyRupeeRoundedIcon sx={{ fontSize: "7rem" }} />,
+      color: theme.palette.success.main,
     },
     {
       title: "Total Bills",
       value: bills.length,
       caption: "Bills inside the active filter",
-      icon: <ReceiptRoundedIcon />,
-      accent: "linear-gradient(135deg, #0f766e 0%, #14b8a6 100%)",
+      icon: <ReceiptRoundedIcon sx={{ fontSize: "7rem" }} />,
+      color: theme.palette.primary.main,
     },
     {
       title: "Customers",
-      value: new Set(bills.map((bill) => bill.phoneNumber)).size,
+      value: new Set(bills.map((bill) => bill.phoneNumber).filter(Boolean)).size,
       caption: "Unique customer numbers",
-      icon: <PeopleAltRoundedIcon />,
-      accent: "linear-gradient(135deg, #f59e0b 0%, #f97316 100%)",
+      icon: <PeopleAltRoundedIcon sx={{ fontSize: "7rem" }} />,
+      color: theme.palette.warning.main,
     },
   ];
 
@@ -76,43 +80,56 @@ const StatsCards = ({ bills }) => {
           <Card
             sx={{
               height: "100%",
-              border: "1px solid rgba(148, 163, 184, 0.12)",
+              borderRadius: 3,
+              bgcolor: alpha(stat.color, 0.05),
+              border: `1px solid ${alpha(stat.color, 0.15)}`,
               position: "relative",
               overflow: "hidden",
+              boxShadow: "none",
+              transition: "transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease",
+              "&:hover": {
+                transform: "translateY(-4px)",
+                borderColor: alpha(stat.color, 0.35),
+                boxShadow: `0 12px 28px ${alpha(stat.color, 0.1)}`,
+              },
             }}
           >
-            <CardContent sx={{ p: 3 }}>
-              <Stack
-                direction="row"
-                justifyContent="space-between"
-                alignItems="flex-start"
-                spacing={2}
-              >
-                <Stack spacing={0.8}>
-                  <Typography variant="body2" color="text.secondary">
-                    {stat.title}
-                  </Typography>
-                  <Typography variant="h4">{stat.value}</Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {stat.caption}
-                  </Typography>
-                </Stack>
-                <Stack
+            <CardContent sx={{ p: 3, position: "relative", zIndex: 2 }}>
+              <Stack spacing={1}>
+                <Typography
                   sx={{
-                    width: 52,
-                    height: 52,
-                    borderRadius: 1,
-                    alignItems: "center",
-                    justifyContent: "center",
-                    color: "white",
-                    background: stat.accent,
-                    boxShadow: "0 12px 24px rgba(15, 23, 42, 0.18)",
+                    color: stat.color,
+                    fontWeight: 600,
+                    fontSize: "0.85rem",
+                    textTransform: "uppercase",
+                    letterSpacing: "1px",
                   }}
                 >
-                  {stat.icon}
-                </Stack>
+                  {stat.title}
+                </Typography>
+                <Typography variant="h4" sx={{ fontWeight: 800, color: theme.palette.text.primary }}>
+                  {stat.value}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {stat.caption}
+                </Typography>
               </Stack>
             </CardContent>
+            <Box
+              sx={{
+                position: "absolute",
+                right: -10,
+                bottom: -10,
+                color: alpha(stat.color, 0.06),
+                transform: "rotate(-15deg)",
+                pointerEvents: "none",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              {stat.icon}
+            </Box>
           </Card>
         </Grid>
       ))}
@@ -121,4 +138,3 @@ const StatsCards = ({ bills }) => {
 };
 
 export default StatsCards;
-

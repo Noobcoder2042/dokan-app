@@ -4,6 +4,8 @@ export const buildThermalBillHtml = ({
   billDate = "",
   billTime = "",
   customerName = "",
+  customerPhone = "",
+  customerAddress = "",
   items = [],
   extraChargeEntries = [],
   subtotal = 0,
@@ -12,6 +14,7 @@ export const buildThermalBillHtml = ({
   gstAmount = 0,
   extraTotal = 0,
   grandTotal = 0,
+  showCustomerDetails = false,
 }) => {
   const rows = items
     .map(
@@ -200,16 +203,14 @@ export const buildThermalBillHtml = ({
         ${heading ? `<div class="copy-heading">${heading}</div>` : ""}
 
         <div class="meta-row">
-          <div class="meta-left">
-            Party: ${customerName}
+          <div class="meta-left" style="line-height: 1.4;">
+            <strong>Party:</strong> ${customerName}<br/>
+            ${showCustomerDetails && customerPhone ? `<strong>Phone:</strong> ${customerPhone}<br/>` : ""}
+            ${showCustomerDetails && customerAddress ? `<strong>Addr:</strong> ${customerAddress}` : ""}
           </div>
 
-          <div class="meta-right">
-            ${billDate ? `Date: ${billDate}` : ""}
-          </div>
-        </div>
-
-          <div class="meta-right">
+          <div class="meta-right" style="line-height: 1.4; min-width: 80px;">
+            ${billDate ? `Date: ${billDate}<br/>` : ""}
             ${billTime ? `Time: ${billTime}` : ""}
           </div>
         </div>
