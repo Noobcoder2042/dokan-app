@@ -567,11 +567,18 @@ const App = () => {
 };
 
 const LiveBroadcastHUD = () => {
+  const { user } = useAuth();
   const { themeMode } = useUIExperience();
   const theme = useTheme();
   const [activeAlert, setActiveAlert] = useState(null);
 
+  const getStorageKey = () => {
+    return user ? `seen-broadcasts-${user.uid}` : "seen-broadcasts-anonymous";
+  };
+
   useEffect(() => {
+    if (!user) return;
+
     // Listen to the latest 5 system announcements
     const q = query(
       collection(db, "notifications"),
@@ -587,8 +594,8 @@ const LiveBroadcastHUD = () => {
 
       if (list.length === 0) return;
 
-      // Find the first notification that hasn't been acknowledged/seen by this device
-      const seenIds = JSON.parse(localStorage.getItem("seen-broadcasts") || "[]");
+      // Find the first notification that hasn't been acknowledged/seen by this specific user
+      const seenIds = JSON.parse(localStorage.getItem(getStorageKey()) || "[]");
       const unseen = list.find((not) => !seenIds.includes(not.id));
 
       if (unseen) {
@@ -599,13 +606,14 @@ const LiveBroadcastHUD = () => {
     });
 
     return unsubscribe;
-  }, []);
+  }, [user]);
 
   const handleAcknowledge = () => {
-    if (!activeAlert) return;
-    const seenIds = JSON.parse(localStorage.getItem("seen-broadcasts") || "[]");
+    if (!activeAlert || !user) return;
+    const key = getStorageKey();
+    const seenIds = JSON.parse(localStorage.getItem(key) || "[]");
     seenIds.push(activeAlert.id);
-    localStorage.setItem("seen-broadcasts", JSON.stringify(seenIds));
+    localStorage.setItem(key, JSON.stringify(seenIds));
     setActiveAlert(null);
   };
 

@@ -12,6 +12,7 @@ service cloud.firestore {
     // Consumes 0 document reads! Instant evaluation.
     function isShopMember(shopId) {
       return signedIn() && (
+        shopId == "shop-" + request.auth.uid ||
         request.auth.token.shopId == shopId ||
         // Profile reference fallback
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.currentShopId == shopId
@@ -21,6 +22,7 @@ service cloud.firestore {
     // 3. Cost-Free Ownership Check (Verifies token role claim)
     function isShopOwner(shopId) {
       return signedIn() && (
+        shopId == "shop-" + request.auth.uid ||
         (request.auth.token.shopId == shopId && (request.auth.token.role == "owner" || request.auth.token.role == "shop_owner")) ||
         // Profile reference fallback
         (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.currentShopId == shopId &&
