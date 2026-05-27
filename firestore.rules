@@ -78,9 +78,10 @@ service cloud.firestore {
         allow create: if isShopMember(shopId)
           && request.resource.data.shopId == shopId
           && request.resource.data.userId == request.auth.uid;
-        allow update: if isShopMember(shopId)
-          && resource.data.userId == request.auth.uid
-          && request.resource.data.userId == request.auth.uid;
+        allow update: if isShopMember(shopId) && (
+          (resource.data.userId == request.auth.uid && request.resource.data.userId == request.auth.uid) ||
+          isShopOwner(shopId)
+        );
         // Block invoice deletions entirely to prevent internal cash theft
         allow delete: if false;
       }
