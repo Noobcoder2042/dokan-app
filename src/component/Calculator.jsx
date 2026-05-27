@@ -30,6 +30,8 @@ import {
   Typography,
   useTheme,
   alpha,
+  Tabs,
+  Tab,
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -1664,6 +1666,8 @@ const Calculator = () => {
     openToast(`Bill ${bill.id} resumed for editing`, "success");
   };
 
+  const [billingMobileTab, setBillingMobileTab] = useState(0);
+
   return (
     <Stack spacing={3}>
       <Paper
@@ -1705,277 +1709,325 @@ const Calculator = () => {
         </Stack>
       </Paper>
 
+      {/* Premium Multi-Step Tab Controller for Mobile APK Experience */}
+      <Tabs
+        value={billingMobileTab}
+        onChange={(e, val) => setBillingMobileTab(val)}
+        variant="fullWidth"
+        sx={{
+          display: { xs: "flex", lg: "none" },
+          mb: 1.5,
+          borderRadius: 3,
+          bgcolor: theme.palette.mode === "dark" ? "rgba(255, 255, 255, 0.03)" : "rgba(15, 23, 42, 0.03)",
+          backdropFilter: "blur(12px)",
+          border: `1px solid ${theme.palette.divider}`,
+          p: 0.5,
+          "& .MuiTabs-indicator": {
+            height: "100%",
+            borderRadius: 2,
+            zIndex: -1,
+            background: `linear-gradient(120deg, ${theme.palette.primary.main} 0%, ${theme.palette.success.main} 100%)`,
+            boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.3)}`,
+          },
+          "& .MuiTab-root": {
+            borderRadius: 2,
+            fontWeight: 800,
+            fontSize: "0.82rem",
+            minHeight: 38,
+            py: 1,
+            color: theme.palette.mode === "dark" ? "rgba(255,255,255,0.7)" : "rgba(15,23,42,0.7)",
+            transition: "all 0.25s ease",
+            "&.Mui-selected": {
+              color: "white",
+            }
+          }
+        }}
+      >
+        <Tab label="1. Customer" />
+        <Tab label="2. Add Items" />
+        <Tab label="3. Summary" />
+      </Tabs>
+
       <Grid container spacing={4}>
         <Grid item xs={12} lg={8}>
           <Stack spacing={4}>
             <Card sx={{ position: "relative", overflow: "hidden" }}>
               <CardContent sx={{ p: { xs: 2, md: 3 } }}>
                 <Stack spacing={3}>
-                  <Box>
-                    <Typography variant="h6">Customer Details</Typography>
-                    <Typography
-                      variant="body2"
-                      color="text.secondary"
-                      sx={{ mt: 0.5 }}
-                    >
-                      Select an existing customer or create a new one in a few
-                      taps.
-                    </Typography>
-                    <Typography
-                      variant="caption"
-                      color="text.secondary"
-                      sx={{ mt: 0.75, display: "block" }}
-                    >
-                      Keyboard: Enter moves Name {"->"} Phone {"->"} Address{" "}
-                      {"->"} Item Name
-                    </Typography>
-                  </Box>
+                  {/* Customer Details Block */}
+                  <Box sx={{ display: { xs: billingMobileTab === 0 ? "block" : "none", lg: "block" } }}>
+                    <Box sx={{ mb: 2 }}>
+                      <Typography variant="h6">Customer Details</Typography>
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                        sx={{ mt: 0.5 }}
+                      >
+                        Select an existing customer or create a new one in a few
+                        taps.
+                      </Typography>
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        sx={{ mt: 0.75, display: "block" }}
+                      >
+                        Keyboard: Enter moves Name {"->"} Phone {"->"} Address{" "}
+                        {"->"} Item Name
+                      </Typography>
+                    </Box>
 
-                  <Grid container spacing={2}>
-                    <CustomerDetails
-                      customerName={customerName}
-                      customerPhone={customerPhone}
-                      customerAddress={customerAddress}
-                      customerOptions={mergedCustomerOptions}
-                      onNameChange={handleCustomerNameChange}
-                      onPhoneChange={handleCustomerPhoneChange}
-                      onAddressChange={handleCustomerAddressChange}
-                      onCustomerSelect={handleCustomerSelect}
-                      nameInputRef={customerNameRef}
-                      phoneInputRef={customerPhoneRef}
-                      addressInputRef={customerAddressRef}
-                      onNameKeyDown={(event) =>
-                        handleKeyPress(event, customerPhoneRef)
-                      }
-                      onPhoneKeyDown={(event) =>
-                        handleKeyPress(event, customerAddressRef)
-                      }
-                      onAddressKeyDown={(event) =>
-                        handleKeyPress(event, itemNameRef)
-                      }
-                    />
-                  </Grid>
-
-                  <Divider />
-
-                  <Box>
-                    <Typography variant="h6">Item Entry</Typography>
-                    <Typography
-                      variant="body2"
-                      color="text.secondary"
-                      sx={{ mt: 0.5 }}
-                    >
-                      Add product lines quickly and keep the bill moving.
-                    </Typography>
-                    <Typography
-                      variant="caption"
-                      color="text.secondary"
-                      sx={{ mt: 0.75, display: "block" }}
-                    >
-                      Keyboard: Enter moves fields and Enter on
-                      Quantity/Quantity Unit adds item.
-                    </Typography>
-                  </Box>
-
-                  <Grid container spacing={2}>
-                    <Grid item xs={12}>
-                      <Autocomplete
-                        freeSolo
-                        options={itemNameOptions}
-                        inputValue={itemName}
-                        getOptionLabel={(option) =>
-                          typeof option === "string" ? option : option.name
+                    <Grid container spacing={2}>
+                      <CustomerDetails
+                        customerName={customerName}
+                        customerPhone={customerPhone}
+                        customerAddress={customerAddress}
+                        customerOptions={mergedCustomerOptions}
+                        onNameChange={handleCustomerNameChange}
+                        onPhoneChange={handleCustomerPhoneChange}
+                        onAddressChange={handleCustomerAddressChange}
+                        onCustomerSelect={handleCustomerSelect}
+                        nameInputRef={customerNameRef}
+                        phoneInputRef={customerPhoneRef}
+                        addressInputRef={customerAddressRef}
+                        onNameKeyDown={(event) =>
+                          handleKeyPress(event, customerPhoneRef)
                         }
-                        filterOptions={(options, state) => {
-                          const term = normalizeValue(state.inputValue);
-                          if (!term) return options.slice(0, 100);
-                          return options.filter((option) => {
-                            const optionName = normalizeValue(option.name);
-                            const optionCode = normalizeValue(option.code);
-                            return (
-                              optionName.includes(term) ||
-                              optionCode.includes(term)
-                            );
-                          });
-                        }}
-                        onInputChange={(_, value) => {
-                          setItemName(value);
-                          const codeMatch = findInventoryItemByCode(value);
-                          if (codeMatch) applyInventoryAutofill(codeMatch.name);
-                        }}
-                        onChange={(_, value) => {
-                          if (typeof value === "string") {
-                            applyInventoryAutofill(value);
-                            return;
+                        onPhoneKeyDown={(event) =>
+                          handleKeyPress(event, customerAddressRef)
+                        }
+                        onAddressKeyDown={(event) =>
+                          handleKeyPress(event, itemNameRef)
+                        }
+                      />
+                    </Grid>
+                  </Box>
+
+                  <Divider sx={{ display: { xs: "none", lg: "block" } }} />
+
+                  {/* Item Entry Block */}
+                  <Box sx={{ display: { xs: billingMobileTab === 1 ? "block" : "none", lg: "block" } }}>
+                    <Box sx={{ mb: 2 }}>
+                      <Typography variant="h6">Item Entry</Typography>
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                        sx={{ mt: 0.5 }}
+                      >
+                        Add product lines quickly and keep the bill moving.
+                      </Typography>
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        sx={{ mt: 0.75, display: "block" }}
+                      >
+                        Keyboard: Enter moves fields and Enter on
+                        Quantity/Quantity Unit adds item.
+                      </Typography>
+                    </Box>
+
+                    <Grid container spacing={2}>
+                      <Grid item xs={12}>
+                        <Autocomplete
+                          freeSolo
+                          options={itemNameOptions}
+                          inputValue={itemName}
+                          getOptionLabel={(option) =>
+                            typeof option === "string" ? option : option.name
                           }
-                          if (value?.name) applyInventoryAutofill(value.name);
-                        }}
-                        renderOption={(props, option) => (
-                          <li {...props}>
-                            {option.name}
-                            {option.code ? ` (${option.code})` : ""}
-                          </li>
-                        )}
-                        renderInput={(params) => (
-                          <TextField
-                            {...params}
-                            label="Item Name or Code"
-                            fullWidth
-                            inputRef={itemNameRef}
-                            onKeyDown={(event) => {
-                              if (event.key === "Enter") {
-                                const codeMatch =
-                                  findInventoryItemByCode(itemName);
-                                if (codeMatch) {
-                                  applyInventoryAutofill(codeMatch.name);
-                                }
-                              }
+                          filterOptions={(options, state) => {
+                            const term = normalizeValue(state.inputValue);
+                            if (!term) return options.slice(0, 100);
+                            return options.filter((option) => {
+                              const optionName = normalizeValue(option.name);
+                              const optionCode = normalizeValue(option.code);
+                              return (
+                                optionName.includes(term) ||
+                                optionCode.includes(term)
+                              );
+                            });
+                          }}
+                          onInputChange={(_, value) => {
+                            setItemName(value);
+                            const codeMatch = findInventoryItemByCode(value);
+                            if (codeMatch) applyInventoryAutofill(codeMatch.name);
+                          }}
+                          onChange={(_, value) => {
+                            if (typeof value === "string") {
+                              applyInventoryAutofill(value);
+                              return;
+                            }
+                            if (value?.name) applyInventoryAutofill(value.name);
+                          }}
+                          renderOption={(props, option) => (
+                            <li {...props}>
+                              {option.name}
+                              {option.code ? ` (${option.code})` : ""}
+                            </li>
+                          )}
+                          renderInput={(params) => (
+                            <TextField
+                              {...params}
+                              label="Item Name or Code"
+                              fullWidth
+                              inputRef={itemNameRef}
+                              onKeyDown={(event) => {
+                                  if (event.key === "Enter") {
+                                    const codeMatch =
+                                      findInventoryItemByCode(itemName);
+                                    if (codeMatch) {
+                                      applyInventoryAutofill(codeMatch.name);
+                                    }
+                                  }
+                                  handleAddMoreShortcut(event);
+                                  handleUnitShortcut(event);
+                                  handleKeyPress(event, itemPriceRef);
+                                }}
+                            />
+                          )}
+                        />
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <TextField
+                          label="Item Price"
+                          type="number"
+                          value={itemPrice}
+                          onChange={handleItemPriceChange}
+                          onKeyDown={(event) => {
                               handleAddMoreShortcut(event);
                               handleUnitShortcut(event);
-                              handleKeyPress(event, itemPriceRef);
+                              handleKeyPress(event, quantityRef);
                             }}
-                          />
-                        )}
-                      />
-                    </Grid>
-                    <Grid item xs={12} sm={6}>
-                      <TextField
-                        label="Item Price"
-                        type="number"
-                        value={itemPrice}
-                        onChange={handleItemPriceChange}
-                        onKeyDown={(event) => {
-                          handleAddMoreShortcut(event);
-                          handleUnitShortcut(event);
-                          handleKeyPress(event, quantityRef);
-                        }}
-                        fullWidth
-                        inputRef={itemPriceRef}
-                      />
-                    </Grid>
-                    <Grid item xs={12} sm={6}>
-                      <FormControl fullWidth>
-                        <InputLabel>Price Unit</InputLabel>
-                        <Select
-                          value={priceUnit}
-                          onChange={handlePriceUnitChange}
+                          fullWidth
+                          inputRef={itemPriceRef}
+                        />
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <FormControl fullWidth>
+                          <InputLabel>Price Unit</InputLabel>
+                          <Select
+                            value={priceUnit}
+                            onChange={handlePriceUnitChange}
+                            onKeyDown={(event) => {
+                                handleAddMoreShortcut(event);
+                                handleUnitShortcut(event);
+                                handleKeyPress(event, quantityRef);
+                              }}
+                            label="Price Unit"
+                          >
+                            <MenuItem value="piece">Per Piece</MenuItem>
+                            <MenuItem value="dozen">Per Dozen</MenuItem>
+                          </Select>
+                        </FormControl>
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <TextField
+                          label="Quantity"
+                          type="number"
+                          value={quantity}
+                          onChange={handleQuantityChange}
                           onKeyDown={(event) => {
-                            handleAddMoreShortcut(event);
-                            handleUnitShortcut(event);
-                            handleKeyPress(event, quantityRef);
-                          }}
-                          label="Price Unit"
-                        >
-                          <MenuItem value="piece">Per Piece</MenuItem>
-                          <MenuItem value="dozen">Per Dozen</MenuItem>
-                        </Select>
-                      </FormControl>
+                              handleAddMoreShortcut(event);
+                              handleUnitShortcut(event);
+                              handleEnterAddItem(event);
+                            }}
+                          fullWidth
+                          inputRef={quantityRef}
+                        />
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <FormControl fullWidth>
+                          <InputLabel>Quantity Unit</InputLabel>
+                          <Select
+                            value={quantityUnit}
+                            onChange={handleQuantityUnitChange}
+                            onKeyDown={(event) => {
+                                handleAddMoreShortcut(event);
+                                handleUnitShortcut(event);
+                                handleEnterAddItem(event);
+                              }}
+                            label="Quantity Unit"
+                          >
+                            <MenuItem value="piece">Piece</MenuItem>
+                            <MenuItem value="dozen">Dozen</MenuItem>
+                          </Select>
+                        </FormControl>
+                      </Grid>
                     </Grid>
-                    <Grid item xs={12} sm={6}>
-                      <TextField
-                        label="Quantity"
-                        type="number"
-                        value={quantity}
-                        onChange={handleQuantityChange}
-                        onKeyDown={(event) => {
-                          handleAddMoreShortcut(event);
-                          handleUnitShortcut(event);
-                          handleEnterAddItem(event);
-                        }}
-                        fullWidth
-                        inputRef={quantityRef}
-                      />
-                    </Grid>
-                    <Grid item xs={12} sm={6}>
-                      <FormControl fullWidth>
-                        <InputLabel>Quantity Unit</InputLabel>
-                        <Select
-                          value={quantityUnit}
-                          onChange={handleQuantityUnitChange}
-                          onKeyDown={(event) => {
-                            handleAddMoreShortcut(event);
-                            handleUnitShortcut(event);
-                            handleEnterAddItem(event);
-                          }}
-                          label="Quantity Unit"
-                        >
-                          <MenuItem value="piece">Piece</MenuItem>
-                          <MenuItem value="dozen">Dozen</MenuItem>
-                        </Select>
-                      </FormControl>
-                    </Grid>
-                  </Grid>
 
-                  <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
-                    <Button
-                      variant="contained"
-                      onClick={() => addItem(false)}
-                      disabled={!itemName || !itemPrice || !quantity}
-                    >
-                      Add Item
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      color="secondary"
-                      onClick={() => addItem(true)}
-                      disabled={!itemName || !itemPrice || !quantity}
-                    >
-                      Add More of Same Item
-                    </Button>
-                    <Button variant="text" color="inherit" onClick={resetForm}>
-                      Reset Fields
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      color="error"
-                      onClick={resetAllFields}
-                    >
-                      Reset All
-                    </Button>
-                  </Stack>
-
-                  <Divider />
-
-                  <Box>
-                    <Typography variant="h6">Extra Charges</Typography>
-                    <Typography
-                      variant="body2"
-                      color="text.secondary"
-                      sx={{ mt: 0.5 }}
-                    >
-                      Add transport or delivery charges before the final bill.
-                    </Typography>
+                    <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} sx={{ mt: 3 }}>
+                      <Button
+                        variant="contained"
+                        onClick={() => addItem(false)}
+                        disabled={!itemName || !itemPrice || !quantity}
+                      >
+                        Add Item
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        color="secondary"
+                        onClick={() => addItem(true)}
+                        disabled={!itemName || !itemPrice || !quantity}
+                      >
+                        Add More of Same Item
+                      </Button>
+                      <Button variant="text" color="inherit" onClick={resetForm}>
+                        Reset Fields
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        color="error"
+                        onClick={resetAllFields}
+                      >
+                        Reset All
+                      </Button>
+                    </Stack>
                   </Box>
 
-                  <Grid container spacing={2}>
-                    <Grid item xs={12} md={4}>
-                      <TextField
-                        label="Colie Cost"
-                        type="number"
-                        value={extraCharges.rickshaw}
-                        onChange={handleExtraChargeChange("rickshaw")}
-                        fullWidth
-                      />
+                  <Divider sx={{ display: { xs: "none", lg: "block" } }} />
+
+                  {/* Extra Charges Block */}
+                  <Box sx={{ display: { xs: billingMobileTab === 0 ? "block" : "none", lg: "block" } }}>
+                    <Box sx={{ mb: 2 }}>
+                      <Typography variant="h6">Extra Charges</Typography>
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                        sx={{ mt: 0.5 }}
+                      >
+                        Add transport or delivery charges before the final bill.
+                      </Typography>
+                    </Box>
+
+                    <Grid container spacing={2}>
+                      <Grid item xs={12} md={4}>
+                        <TextField
+                          label="Colie Cost"
+                          type="number"
+                          value={extraCharges.rickshaw}
+                          onChange={handleExtraChargeChange("rickshaw")}
+                          fullWidth
+                        />
+                      </Grid>
+                      <Grid item xs={12} md={4}>
+                        <TextField
+                          label="Bus Cost"
+                          type="number"
+                          value={extraCharges.bus}
+                          onChange={handleExtraChargeChange("bus")}
+                          fullWidth
+                        />
+                      </Grid>
+                      <Grid item xs={12} md={4}>
+                        <TextField
+                          label="Other Charges"
+                          type="number"
+                          value={extraCharges.other}
+                          onChange={handleExtraChargeChange("other")}
+                          fullWidth
+                        />
+                      </Grid>
                     </Grid>
-                    <Grid item xs={12} md={4}>
-                      <TextField
-                        label="Bus Cost"
-                        type="number"
-                        value={extraCharges.bus}
-                        onChange={handleExtraChargeChange("bus")}
-                        fullWidth
-                      />
-                    </Grid>
-                    <Grid item xs={12} md={4}>
-                      <TextField
-                        label="Other Charges"
-                        type="number"
-                        value={extraCharges.other}
-                        onChange={handleExtraChargeChange("other")}
-                        fullWidth
-                      />
-                    </Grid>
-                  </Grid>
+                  </Box>
                 </Stack>
               </CardContent>
               <ContactPageRoundedIcon
@@ -1990,104 +2042,106 @@ const Calculator = () => {
                 }}
               />
             </Card>
-            <Card sx={{ position: "relative", overflow: "hidden" }}>
-              <CardContent sx={{ p: { xs: 2, md: 3 } }}>
-                <Stack spacing={2}>
-                  <Stack
-                    direction="row"
-                    justifyContent="space-between"
-                    alignItems="center"
-                  >
-                    <Box>
-                      <Typography variant="h6">Bill Items</Typography>
-                      <Typography
-                        variant="body2"
-                        color="text.secondary"
-                        sx={{ mt: 0.5 }}
-                      >
-                        Review, edit, and remove line items before the final
-                        print.
-                      </Typography>
-                    </Box>
-                    {items.length > 0 && (
-                      <Button
+            <Box sx={{ display: { xs: billingMobileTab === 2 ? "block" : "none", lg: "block" } }}>
+              <Card sx={{ position: "relative", overflow: "hidden" }}>
+                <CardContent sx={{ p: { xs: 2, md: 3 } }}>
+                  <Stack spacing={2}>
+                    <Stack
+                      direction="row"
+                      justifyContent="space-between"
+                      alignItems="center"
+                    >
+                      <Box>
+                        <Typography variant="h6">Bill Items</Typography>
+                        <Typography
+                          variant="body2"
+                          color="text.secondary"
+                          sx={{ mt: 0.5 }}
+                        >
+                          Review, edit, and remove line items before the final
+                          print.
+                        </Typography>
+                      </Box>
+                      {items.length > 0 && (
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          onClick={toggleCheckAllItems}
+                        >
+                          {allItemsVerified() ? "Uncheck All" : "Check All Items"}
+                        </Button>
+                      )}
+                    </Stack>
+
+                    {items.length ? (
+                      <List sx={{ p: 0 }}>
+                        {items.map((item, index) => (
+                          <ListItem
+                            key={index}
+                            sx={{
+                              px: 0,
+                              py: 1.5,
+                              borderBottom:
+                                index === items.length - 1
+                                  ? "none"
+                                  : "1px solid rgba(226, 232, 240, 0.9)",
+                            }}
+                            secondaryAction={
+                              <Stack direction="row" spacing={0.5}>
+                                <Checkbox
+                                  checked={Boolean(verifiedItems[index])}
+                                  onChange={() => toggleVerifiedItem(index)}
+                                  color="success"
+                                />
+                                <IconButton onClick={() => editItem(index)}>
+                                  <EditIcon />
+                                </IconButton>
+                                <IconButton onClick={() => deleteItem(index)}>
+                                  <DeleteIcon />
+                                </IconButton>
+                              </Stack>
+                            }
+                          >
+                            <ListItemText
+                              primary={`${item.name} - ${item.price} ${item.priceUnit} x ${item.quantity} ${item.quantityUnit}`}
+                              secondary={`Total: Rs. ${item.totalPrice.toFixed(2)}${verifiedItems[index] ? " | Verified" : " | Pending check"}`}
+                            />
+                          </ListItem>
+                        ))}
+                      </List>
+                    ) : (
+                      <Paper
                         variant="outlined"
-                        size="small"
-                        onClick={toggleCheckAllItems}
+                        sx={{ p: 3, textAlign: "center" }}
                       >
-                        {allItemsVerified() ? "Uncheck All" : "Check All Items"}
-                      </Button>
+                        <Typography variant="h6">No items added yet</Typography>
+                        <Typography
+                          variant="body2"
+                          color="text.secondary"
+                          sx={{ mt: 1 }}
+                        >
+                          Add your first line item to start the bill.
+                        </Typography>
+                      </Paper>
                     )}
                   </Stack>
-
-                  {items.length ? (
-                    <List sx={{ p: 0 }}>
-                      {items.map((item, index) => (
-                        <ListItem
-                          key={index}
-                          sx={{
-                            px: 0,
-                            py: 1.5,
-                            borderBottom:
-                              index === items.length - 1
-                                ? "none"
-                                : "1px solid rgba(226, 232, 240, 0.9)",
-                          }}
-                          secondaryAction={
-                            <Stack direction="row" spacing={0.5}>
-                              <Checkbox
-                                checked={Boolean(verifiedItems[index])}
-                                onChange={() => toggleVerifiedItem(index)}
-                                color="success"
-                              />
-                              <IconButton onClick={() => editItem(index)}>
-                                <EditIcon />
-                              </IconButton>
-                              <IconButton onClick={() => deleteItem(index)}>
-                                <DeleteIcon />
-                              </IconButton>
-                            </Stack>
-                          }
-                        >
-                          <ListItemText
-                            primary={`${item.name} - ${item.price} ${item.priceUnit} x ${item.quantity} ${item.quantityUnit}`}
-                            secondary={`Total: Rs. ${item.totalPrice.toFixed(2)}${verifiedItems[index] ? " | Verified" : " | Pending check"}`}
-                          />
-                        </ListItem>
-                      ))}
-                    </List>
-                  ) : (
-                    <Paper
-                      variant="outlined"
-                      sx={{ p: 3, textAlign: "center" }}
-                    >
-                      <Typography variant="h6">No items added yet</Typography>
-                      <Typography
-                        variant="body2"
-                        color="text.secondary"
-                        sx={{ mt: 1 }}
-                      >
-                        Add your first line item to start the bill.
-                      </Typography>
-                    </Paper>
-                  )}
-                </Stack>
-              </CardContent>
-              <ReceiptLongRoundedIcon
-                sx={{
-                  position: "absolute",
-                  right: -10,
-                  bottom: -10,
-                  fontSize: "8.5rem",
-                  color: alpha(theme.palette.success.main, 0.05),
-                  transform: "rotate(-15deg)",
-                  pointerEvents: "none",
-                }}
-              />
-            </Card>
+                </CardContent>
+                <ReceiptLongRoundedIcon
+                  sx={{
+                    position: "absolute",
+                    right: -10,
+                    bottom: -10,
+                    fontSize: "8.5rem",
+                    color: alpha(theme.palette.success.main, 0.05),
+                    transform: "rotate(-15deg)",
+                    pointerEvents: "none",
+                  }}
+                />
+              </Card>
+            </Box>
           </Stack>
         </Grid>
-        <Grid item xs={12} lg={4}>
+        <Grid item xs={12} lg={4} sx={{ display: { xs: billingMobileTab === 2 ? "block" : "none", lg: "block" } }}>
           <Stack
             spacing={4}
             sx={{ position: { lg: "sticky" }, top: { lg: 104 } }}

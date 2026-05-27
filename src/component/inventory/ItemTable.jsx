@@ -74,12 +74,14 @@ const ItemTable = ({
 
   return (
     <>
-      <Paper
+      {/* Desktop View: Show classic Table */}
+      <TableContainer
+        component={Paper}
         sx={{
+          display: { xs: "none", md: "block" },
           overflow: "hidden",
         }}
       >
-        <TableContainer sx={{ maxHeight: 560 }}>
         <Table size="small" stickyHeader>
           <TableHead>
             <TableRow>
@@ -145,8 +147,96 @@ const ItemTable = ({
             ))}
           </TableBody>
         </Table>
-        </TableContainer>
-      </Paper>
+      </TableContainer>
+
+      {/* Mobile View: Show native APK-style Product Cards */}
+      <Stack
+        spacing={1.75}
+        sx={{
+          display: { xs: "flex", md: "none" },
+          mt: 1,
+        }}
+      >
+        {resolvedItems.map((item) => (
+          <Paper
+            key={item.id}
+            sx={{
+              p: 2,
+              borderRadius: 3,
+              background: "rgba(255, 255, 255, 0.03)",
+              backdropFilter: "blur(12px)",
+              border: "1px solid rgba(255, 255, 255, 0.08)",
+              position: "relative",
+              transition: "transform 0.2s, box-shadow 0.2s",
+              "&:active": {
+                transform: "scale(0.98)",
+              }
+            }}
+          >
+            <Stack direction="row" spacing={2} alignItems="center">
+              <Avatar
+                variant="rounded"
+                src={item.imageUrl || ""}
+                alt={item.name}
+                sx={{ width: 54, height: 54, borderRadius: 2 }}
+              />
+              <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+                <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
+                  <Typography variant="body1" fontWeight={750} noWrap sx={{ pr: 3 }}>
+                    {item.name}
+                  </Typography>
+                  <IconButton
+                    onClick={(event) => openMenu(event, item)}
+                    size="small"
+                    sx={{ position: "absolute", top: 12, right: 12 }}
+                  >
+                    <MoreVertIcon fontSize="small" />
+                  </IconButton>
+                </Stack>
+                
+                <Stack direction="row" spacing={0.5} sx={{ my: 0.5, flexWrap: "wrap", gap: 0.5 }}>
+                  {item.code ? <Chip label={item.code} size="small" sx={{ height: 18, fontSize: "0.65rem" }} /> : null}
+                  <Chip
+                    label={item.categoryName}
+                    size="small"
+                    variant="outlined"
+                    sx={{ height: 18, fontSize: "0.65rem", borderColor: "rgba(255,255,255,0.2)" }}
+                  />
+                  {item.subcategoryName ? (
+                    <Chip label={item.subcategoryName} size="small" variant="outlined" sx={{ height: 18, fontSize: "0.65rem", borderColor: "rgba(255,255,255,0.1)" }} />
+                  ) : null}
+                </Stack>
+
+                <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mt: 1.5 }}>
+                  <Stack direction="row" spacing={0.5} alignItems="center">
+                    <Typography variant="caption" color="text.secondary">
+                      Stock:
+                    </Typography>
+                    <Typography 
+                      variant="body2" 
+                      fontWeight={800} 
+                      color={
+                        Number(item.lowStockThreshold || 0) > 0 && Number(item.stockQty || 0) <= Number(item.lowStockThreshold || 0) 
+                          ? "warning.main" 
+                          : "text.primary"
+                      }
+                    >
+                      {Number(item.stockQty || 0).toLocaleString("en-IN")} {item.stockUnit || "piece"}
+                    </Typography>
+                    {Number(item.lowStockThreshold || 0) > 0 &&
+                    Number(item.stockQty || 0) <= Number(item.lowStockThreshold || 0) ? (
+                      <Chip size="small" color="warning" label="Low" sx={{ height: 16, fontSize: "0.58rem" }} />
+                    ) : null}
+                  </Stack>
+                  <Typography variant="subtitle2" fontWeight={900} color="primary.main">
+                    Rs. {Number(item.price || 0).toFixed(2)}
+                  </Typography>
+                </Stack>
+              </Box>
+            </Stack>
+          </Paper>
+        ))}
+      </Stack>
 
       <Menu anchorEl={menuAnchor} open={Boolean(menuAnchor)} onClose={closeMenu}>
         <MenuItem
