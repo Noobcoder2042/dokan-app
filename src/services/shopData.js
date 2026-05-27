@@ -128,6 +128,7 @@ export const subscribeToShopBills = (shopId, userId, onData, onError) => {
           ...billDoc.data(),
           items: billDoc.data().items || [],
         }))
+        .filter((bill) => bill.status !== "Voided") // Automatically exclude soft-deleted/voided bills
         .sort((a, b) => {
           const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
           const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
@@ -288,7 +289,10 @@ export const updateBillForShop = (shopId, billId, billPatch) =>
   });
 
 export const deleteBillForShop = (shopId, billId) =>
-  deleteDoc(getShopBillDocRef(shopId, billId));
+  updateDoc(getShopBillDocRef(shopId, billId), {
+    status: "Voided",
+    updatedAt: new Date().toISOString(),
+  });
 
 export const subscribeToShopCustomers = (shopId, onData, onError) => {
   const customersQuery = query(
