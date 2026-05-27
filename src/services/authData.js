@@ -48,19 +48,32 @@ export const loginWithGoogle = async () => {
   const result = await signInWithPopup(auth, googleProvider);
   const user = result.user;
 
-  await setDoc(
-    doc(db, "users", user.uid),
-    {
+  const docRef = doc(db, "users", user.uid);
+  const docSnap = await getDoc(docRef);
+
+  if (!docSnap.exists()) {
+    // Brand new user sign-up
+    await setDoc(docRef, {
       uid: user.uid,
       email: user.email || "",
       name: user.displayName || "",
       role: "shop_owner",
       currentShopId: buildDefaultShopId(user.uid),
-      updatedAt: serverTimestamp(),
       createdAt: serverTimestamp(),
-    },
-    { merge: true }
-  );
+      updatedAt: serverTimestamp(),
+    });
+  } else {
+    // Existing user logging in - update only profile metadata, NEVER overwrite role or shop ID!
+    await setDoc(
+      docRef,
+      {
+        email: user.email || "",
+        name: user.displayName || "",
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
+  }
 
   return result.user;
 };

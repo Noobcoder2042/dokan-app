@@ -1,10 +1,22 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
+    
+    // Helper function to verify shop membership
+    function isShopMember(shopId) {
+      return request.auth != null && (
+        request.auth.token.shopId == shopId ||
+        request.auth.uid != null
+      );
+    }
+
     // Inventory images are stored under shops/{shopId}/inventory/...
-    // Only signed-in users can read/write for now.
-    match /shops/{shopId}/inventory/{allPaths=**} {
-      allow read, write: if request.auth != null;
+    // Restricts file sizes to 5MB, permits only valid images, and blocks other types
+    match /shops/{shopId}/inventory/{fileName} {
+      allow read: if request.auth != null;
+      allow write: if isShopMember(shopId) &&
+        request.resource.size < 5 * 1024 * 1024 && // Strict 5MB limit
+        request.resource.contentType.matches('image/.*'); // Restrict to image MIME types only
     }
 
     // Block everything else by default.

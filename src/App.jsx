@@ -16,7 +16,8 @@ import {
   Typography,
   Stack,
   Chip,
-  alpha
+  alpha,
+  useTheme
 } from "@mui/material";
 import AuthScreen from "./component/AuthScreen";
 import Analysis from "./component/Analysis";
@@ -31,8 +32,13 @@ import ShopSettings from "./component/ShopSettings";
 import SplashScreen from "./component/SplashScreen";
 import UserGuide from "./component/UserGuide";
 import FuturisticLoader from "./component/FuturisticLoader";
+import AdminPanel from "./component/AdminPanel";
+import AdminGuard from "./component/AdminGuard";
 import { useAuth } from "./context/AuthContext";
 import { useUIExperience, THEME_PRESETS } from "./context/UIExperienceContext";
+import { collection, onSnapshot, query, orderBy, limit } from "firebase/firestore";
+import { db } from "./Firebase/firebase";
+import CampaignRoundedIcon from "@mui/icons-material/CampaignRounded";
 
 const AppRoutes = () => {
   const location = useLocation();
@@ -55,6 +61,7 @@ const AppRoutes = () => {
           <Route path="/analysis" element={<Navigate to="/sales" replace />} />
           <Route path="/guide" element={<UserGuide />} />
           <Route path="/settings" element={<ShopSettings />} />
+          <Route path="/admin" element={<AdminGuard><AdminPanel /></AdminGuard>} />
           <Route path="*" element={<Dashboard />} />
         </Routes>
       </motion.div>
@@ -429,6 +436,7 @@ const App = () => {
                 minWidth: 0,
                 py: { xs: 2.5, md: 4.5 },
                 px: { xs: 2.5, md: 4.5 },
+                mb: { xs: 8, md: 0 },
               }}
             >
               <AppRoutes />
@@ -550,9 +558,163 @@ const App = () => {
               </Button>
             </DialogActions>
           </Dialog>
+          {/* Real-time System Broadcast Overlay for All Logged-In Merchants */}
+          <LiveBroadcastHUD />
         </Router>
       </ErrorBoundary>
     </ThemeProvider>
+  );
+};
+
+const LiveBroadcastHUD = () => {
+  const { themeMode } = useUIExperience();
+  const theme = useTheme();
+  const [activeAlert, setActiveAlert] = useState(null);
+
+  useEffect(() => {
+    // Listen to the latest 5 system announcements
+    const q = query(
+      collection(db, "notifications"),
+      orderBy("createdAt", "desc"),
+      limit(5)
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const list = [];
+      snapshot.forEach((doc) => {
+        list.push({ id: doc.id, ...doc.data() });
+      });
+
+      if (list.length === 0) return;
+
+      // Find the first notification that hasn't been acknowledged/seen by this device
+      const seenIds = JSON.parse(localStorage.getItem("seen-broadcasts") || "[]");
+      const unseen = list.find((not) => !seenIds.includes(not.id));
+
+      if (unseen) {
+        setActiveAlert(unseen);
+      } else {
+        setActiveAlert(null);
+      }
+    });
+
+    return unsubscribe;
+  }, []);
+
+  const handleAcknowledge = () => {
+    if (!activeAlert) return;
+    const seenIds = JSON.parse(localStorage.getItem("seen-broadcasts") || "[]");
+    seenIds.push(activeAlert.id);
+    localStorage.setItem("seen-broadcasts", JSON.stringify(seenIds));
+    setActiveAlert(null);
+  };
+
+  if (!activeAlert) return null;
+
+  const getSeverityGlow = (severity) => {
+    switch (severity) {
+      case "high":
+        return `0 8px 32px ${alpha(theme.palette.error.main, 0.45)}, inset 0 1px 0 rgba(255,255,255,0.1)`;
+      case "medium":
+        return `0 8px 32px ${alpha(theme.palette.warning.main, 0.35)}, inset 0 1px 0 rgba(255,255,255,0.1)`;
+      default:
+        return `0 8px 32px ${alpha(theme.palette.primary.main, 0.35)}, inset 0 1px 0 rgba(255,255,255,0.1)`;
+    }
+  };
+
+  const getBorderColor = (severity) => {
+    switch (severity) {
+      case "high": return theme.palette.error.main;
+      case "medium": return theme.palette.warning.main;
+      default: return theme.palette.primary.main;
+    }
+  };
+
+  return (
+    <AnimatePresence>
+      {activeAlert && (
+        <motion.div
+          initial={{ opacity: 0, y: 50, scale: 0.95, filter: "blur(6px)" }}
+          animate={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
+          exit={{ opacity: 0, y: 20, scale: 0.95, filter: "blur(4px)" }}
+          transition={{ duration: 0.35, ease: "easeOut" }}
+          style={{
+            position: "fixed",
+            bottom: 24,
+            right: 24,
+            zIndex: 9999,
+            width: "360px",
+            maxWidth: "calc(100vw - 48px)",
+          }}
+        >
+          <Box
+            sx={{
+              p: 2.5,
+              borderRadius: 3,
+              backdropFilter: "blur(24px)",
+              bgcolor: themeMode === "dark" ? "rgba(10,18,14,0.96)" : "rgba(255,255,255,0.96)",
+              border: `1.5px solid ${getBorderColor(activeAlert.severity)}`,
+              boxShadow: getSeverityGlow(activeAlert.severity),
+              position: "relative",
+              overflow: "hidden",
+            }}
+          >
+            {/* Saffron, White, Green Patriot indicator strip for Indian Dukandars */}
+            <Stack direction="row" sx={{ position: "absolute", top: 0, left: 0, right: 0, height: 3.5 }}>
+              <Box sx={{ flexGrow: 1, bgcolor: "#FF9933" }} />
+              <Box sx={{ flexGrow: 1, bgcolor: "#FFFFFF" }} />
+              <Box sx={{ flexGrow: 1, bgcolor: "#138808" }} />
+            </Stack>
+
+            <Stack direction="row" spacing={2} alignItems="flex-start" sx={{ mt: 0.5 }}>
+              <motion.div
+                animate={{ rotate: [0, -10, 10, -10, 10, 0] }}
+                transition={{ repeat: Infinity, duration: 2.5, repeatDelay: 1 }}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: 44,
+                  height: 44,
+                  borderRadius: "50%",
+                  backgroundColor: alpha(getBorderColor(activeAlert.severity), 0.1),
+                  flexShrink: 0,
+                }}
+              >
+                <CampaignRoundedIcon sx={{ color: getBorderColor(activeAlert.severity) }} />
+              </motion.div>
+
+              <Stack spacing={0.5} sx={{ flexGrow: 1, minWidth: 0 }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 900, color: "text.primary" }} noWrap>
+                  {activeAlert.title}
+                </Typography>
+                <Typography variant="caption" sx={{ color: "text.secondary", lineHeight: 1.4, display: "block" }}>
+                  {activeAlert.message}
+                </Typography>
+                <Box sx={{ mt: 1.5, display: "flex", justifyContent: "flex-end" }}>
+                  <Button
+                    size="small"
+                    variant="contained"
+                    onClick={handleAcknowledge}
+                    sx={{
+                      fontSize: "0.75rem",
+                      fontWeight: 800,
+                      px: 2,
+                      py: 0.5,
+                      borderRadius: 1.5,
+                      background: `linear-gradient(120deg, ${getBorderColor(activeAlert.severity)} 0%, ${theme.palette.success.main} 100%)`,
+                      color: "white",
+                    }}
+                  >
+                    Got it, close
+                  </Button>
+                </Box>
+              </Stack>
+            </Stack>
+          </Box>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 };
 

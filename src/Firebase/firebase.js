@@ -12,13 +12,15 @@ import { getStorage } from "firebase/storage";
 // https://firebase.google.com/docs/web/setup#available-libraries
 
 // Your web app's Firebase configuration
+// NOTE: These are client-side public keys intentionally exposed to load the database SDK in the browser.
+// They are sourced securely from the local environment (.env) to prevent repository key leaks.
 const firebaseConfig = {
-  apiKey: "AIzaSyA5tfS9ceOknq7fRvMB__SGfMU_aUa48zA",
-  authDomain: "dokan-app-56585.firebaseapp.com",
-  projectId: "dokan-app-56585",
-  storageBucket: "dokan-app-56585.firebasestorage.app",
-  messagingSenderId: "556501176148",
-  appId: "1:556501176148:web:e6aa623394017bf34ec2c1",
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
 // Initialize Firebase

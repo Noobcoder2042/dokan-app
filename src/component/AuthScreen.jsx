@@ -212,24 +212,35 @@ const AuthScreen = () => {
 
             {/* Core Message */}
             <Box>
-              <Chip
-                size="small"
-                icon={
-                  <ReceiptLongRoundedIcon
-                    style={{ color: theme.palette.success.main }}
-                  />
-                }
-                label="Version 2.3.0 - Ready"
-                variant="outlined"
-                sx={{
-                  mb: 2.5,
-                  color: "success.main",
-                  fontWeight: 800,
-                  borderColor: alpha(theme.palette.success.main, 0.35),
-                  background: alpha(theme.palette.success.main, 0.08),
-                  backdropFilter: "blur(4px)",
-                }}
-              />
+              <Stack direction="row" spacing={1.5} flexWrap="wrap" useFlexGap sx={{ mb: 2.5 }}>
+                <Chip
+                  size="small"
+                  icon={<ReceiptLongRoundedIcon style={{ color: theme.palette.success.main }} />}
+                  label="Version 2.3.0 - Ready"
+                  variant="outlined"
+                  sx={{
+                    color: "success.main",
+                    fontWeight: 800,
+                    borderColor: alpha(theme.palette.success.main, 0.35),
+                    background: alpha(theme.palette.success.main, 0.08),
+                    backdropFilter: "blur(4px)",
+                  }}
+                />
+                <Chip
+                  size="small"
+                  icon={<AutoAwesomeRoundedIcon style={{ color: "#ff9933", fontSize: 16 }} />}
+                  label="Made by an Indian Dukandar for Indian Dukans 🇮🇳"
+                  variant="outlined"
+                  sx={{
+                    color: "#ffffff",
+                    fontWeight: 800,
+                    borderColor: "rgba(255, 153, 51, 0.3)",
+                    background: "linear-gradient(90deg, rgba(255,153,51,0.1) 0%, rgba(255,255,255,0.05) 50%, rgba(19,136,8,0.1) 100%)",
+                    backdropFilter: "blur(4px)",
+                    boxShadow: "0 0 12px rgba(255,153,51,0.05)",
+                  }}
+                />
+              </Stack>
               <Typography
                 variant="h3"
                 sx={{
