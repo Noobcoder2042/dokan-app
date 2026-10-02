@@ -1773,8 +1773,18 @@ const Calculator = () => {
         />
       </Box>
 
-      <Grid container spacing={{ xs: 2, sm: 3, md: 4 }}>
-        <Grid item xs={12} lg={8}>
+      <Grid
+        container
+        spacing={{ xs: 0, lg: 4 }}
+        sx={{
+          m: 0,
+          width: "100%",
+          "& > .MuiGrid-item": {
+            p: { xs: 0, lg: 2 },
+          },
+        }}
+      >
+        <Grid item xs={12} lg={8} sx={{ p: 0 }}>
           <Stack spacing={{ xs: 2, md: 4 }}>
             <Card sx={{ position: "relative", overflow: "hidden" }}>
               <CardContent sx={{ p: { xs: 2, md: 3 } }}>
@@ -1824,7 +1834,18 @@ const Calculator = () => {
                     ) : null}
 
                     <Box sx={{ display: { xs: customerName ? "none" : "block", lg: "block" } }}>
-                      <Grid container spacing={2}>
+                      <Grid
+                        container
+                        spacing={{ xs: 1.5, sm: 2 }}
+                        sx={{
+                          m: 0,
+                          width: "100%",
+                          "& > .MuiGrid-item": {
+                            pl: { xs: 0, sm: 1 },
+                            pr: { xs: 0, sm: 1 },
+                          },
+                        }}
+                      >
                       <CustomerDetails
                         customerName={customerName}
                         customerPhone={customerPhone}
@@ -1874,7 +1895,18 @@ const Calculator = () => {
                       </Typography>
                     </Box>
 
-                    <Grid container spacing={2}>
+                    <Grid
+                      container
+                      spacing={{ xs: 1.5, sm: 2 }}
+                      sx={{
+                        m: 0,
+                        width: "100%",
+                        "& > .MuiGrid-item": {
+                          pl: { xs: 0, sm: 1 },
+                          pr: { xs: 0, sm: 1 },
+                        },
+                      }}
+                    >
                       <Grid item xs={12}>
                         <Autocomplete
                           freeSolo

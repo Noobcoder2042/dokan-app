@@ -435,8 +435,10 @@ const App = () => {
                 flexGrow: 1,
                 minWidth: 0,
                 py: { xs: 2, md: 4.5 },
-                px: { xs: 1.5, sm: 2.5, md: 4.5 },
+                px: { xs: 2, sm: 2.5, md: 4.5 },
                 mb: { xs: 16, md: 0 },
+                overflowX: "hidden",
+                boxSizing: "border-box",
               }}
             >
               <AppRoutes />
