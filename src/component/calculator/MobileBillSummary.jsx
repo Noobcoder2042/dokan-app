@@ -1,14 +1,17 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   Box,
   Button,
   Card,
   CardContent,
   Chip,
+  Collapse,
   Divider,
+  Grid,
   IconButton,
   Paper,
   Stack,
+  TextField,
   Typography,
   alpha,
   useTheme,
@@ -23,6 +26,7 @@ import UndoRoundedIcon from "@mui/icons-material/UndoRounded";
 import RedoRoundedIcon from "@mui/icons-material/RedoRounded";
 import ReceiptRoundedIcon from "@mui/icons-material/ReceiptRounded";
 import ClearRoundedIcon from "@mui/icons-material/ClearRounded";
+import LocalShippingRoundedIcon from "@mui/icons-material/LocalShippingRounded";
 
 /**
  * MobileBillSummary
@@ -41,6 +45,8 @@ const MobileBillSummary = ({
   gstRate = 0,
   gstAmount = 0,
   extraChargesTotal = 0,
+  extraCharges = { rickshaw: "", bus: "", other: "" },
+  onExtraChargeChange,
   grandTotal = 0,
   activeBillMeta = null,
   onGenerateBill,
@@ -58,6 +64,13 @@ const MobileBillSummary = ({
   onDeleteBill,
 }) => {
   const theme = useTheme();
+  const [showExtraInputs, setShowExtraInputs] = useState(
+    Boolean(
+      Number(extraCharges?.rickshaw || 0) > 0 ||
+        Number(extraCharges?.bus || 0) > 0 ||
+        Number(extraCharges?.other || 0) > 0
+    )
+  );
 
   return (
     <Stack spacing={2}>
@@ -224,16 +237,97 @@ const MobileBillSummary = ({
               </Stack>
             )}
 
-            {extraChargesTotal > 0 && (
-              <Stack direction="row" justifyContent="space-between">
-                <Typography variant="body2" color="text.secondary">
-                  Extra Charges
-                </Typography>
+            <Stack direction="row" justifyContent="space-between" alignItems="center">
+              <Typography variant="body2" color="text.secondary">
+                Extra Charges
+              </Typography>
+              <Stack direction="row" spacing={1} alignItems="center">
                 <Typography variant="body2" sx={{ fontWeight: 700 }}>
                   ₹{extraChargesTotal.toFixed(2)}
                 </Typography>
+                <Button
+                  size="small"
+                  variant="text"
+                  onClick={() => setShowExtraInputs((prev) => !prev)}
+                  sx={{
+                    minHeight: 28,
+                    py: 0.25,
+                    px: 0.75,
+                    fontSize: "0.72rem",
+                    textTransform: "none",
+                    fontWeight: 700,
+                  }}
+                >
+                  {showExtraInputs ? "Done" : "+ Edit"}
+                </Button>
               </Stack>
-            )}
+            </Stack>
+
+            <Collapse in={showExtraInputs}>
+              <Box
+                sx={{
+                  p: 1.5,
+                  mt: 0.5,
+                  mb: 1,
+                  borderRadius: 2,
+                  bgcolor: alpha(theme.palette.action.hover, 0.05),
+                  border: `1px dashed ${theme.palette.divider}`,
+                }}
+              >
+                <Typography
+                  variant="caption"
+                  sx={{
+                    fontWeight: 700,
+                    display: "block",
+                    mb: 1,
+                    color: "text.secondary",
+                  }}
+                >
+                  Delivery & Transport Charges
+                </Typography>
+                <Grid container spacing={1}>
+                  <Grid item xs={4}>
+                    <TextField
+                      size="small"
+                      label="Colie"
+                      type="number"
+                      value={extraCharges?.rickshaw || ""}
+                      onChange={onExtraChargeChange?.("rickshaw")}
+                      fullWidth
+                      inputProps={{
+                        style: { fontSize: "0.85rem", padding: "8px 10px" },
+                      }}
+                    />
+                  </Grid>
+                  <Grid item xs={4}>
+                    <TextField
+                      size="small"
+                      label="Bus"
+                      type="number"
+                      value={extraCharges?.bus || ""}
+                      onChange={onExtraChargeChange?.("bus")}
+                      fullWidth
+                      inputProps={{
+                        style: { fontSize: "0.85rem", padding: "8px 10px" },
+                      }}
+                    />
+                  </Grid>
+                  <Grid item xs={4}>
+                    <TextField
+                      size="small"
+                      label="Other"
+                      type="number"
+                      value={extraCharges?.other || ""}
+                      onChange={onExtraChargeChange?.("other")}
+                      fullWidth
+                      inputProps={{
+                        style: { fontSize: "0.85rem", padding: "8px 10px" },
+                      }}
+                    />
+                  </Grid>
+                </Grid>
+              </Box>
+            </Collapse>
 
             <Divider sx={{ my: 0.5 }} />
 

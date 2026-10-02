@@ -1700,7 +1700,7 @@ const Calculator = () => {
   const [billingMobileTab, setBillingMobileTab] = useState(0);
 
   return (
-    <Stack spacing={3}>
+    <Stack spacing={3} sx={{ pb: { xs: 20, lg: 0 }, width: "100%", maxWidth: "100%" }}>
       {/* Compact Header for Mobile (<1200px) */}
       <Box sx={{ display: { xs: "block", lg: "none" } }}>
         <MobileBillingHeader
@@ -2063,8 +2063,8 @@ const Calculator = () => {
 
                   <Divider sx={{ display: { xs: "none", lg: "block" } }} />
 
-                  {/* Extra Charges Block */}
-                  <Box sx={{ display: { xs: billingMobileTab === 0 ? "block" : "none", lg: "block" } }}>
+                  {/* Extra Charges Block (Desktop only, managed in MobileBillSummary on mobile) */}
+                  <Box sx={{ display: { xs: "none", lg: "block" } }}>
                     <Box sx={{ mb: 2 }}>
                       <Typography variant="h6">Extra Charges</Typography>
                       <Typography
@@ -2134,6 +2134,8 @@ const Calculator = () => {
                 gstRate={getGstRate()}
                 gstAmount={calculateGstAmount()}
                 extraChargesTotal={calculateExtraChargesTotal()}
+                extraCharges={extraCharges}
+                onExtraChargeChange={handleExtraChargeChange}
                 grandTotal={calculateRoundedGrandTotal()}
                 activeBillMeta={activeBillMeta}
                 onGenerateBill={generatePDF}

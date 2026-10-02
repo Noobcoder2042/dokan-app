@@ -34,28 +34,36 @@ const BillingBottomBar = ({
 
   return (
     <Paper
-      elevation={4}
+      elevation={8}
+      square
       sx={{
         display: { xs: "flex", lg: "none" },
         position: "fixed",
         bottom: "calc(60px + env(safe-area-inset-bottom))",
         left: 0,
         right: 0,
-        zIndex: 990,
+        width: "100%",
+        zIndex: 1100,
+        borderRadius: "0 !important",
         px: 2,
-        py: 1,
-        backdropFilter: "blur(20px)",
+        py: 1.25,
         bgcolor:
           theme.palette.mode === "dark"
-            ? "rgba(10, 18, 14, 0.96)"
-            : "rgba(255, 255, 255, 0.97)",
-        borderTop: `1px solid ${theme.palette.divider}`,
+            ? "#0f172a"
+            : "#ffffff",
+        backgroundImage: "none",
+        border: "none",
+        borderTop: `1px solid ${
+          theme.palette.mode === "dark"
+            ? "rgba(255, 255, 255, 0.12)"
+            : "rgba(15, 23, 42, 0.1)"
+        }`,
         alignItems: "center",
         justifyContent: "space-between",
         boxShadow:
           theme.palette.mode === "dark"
-            ? "0 -4px 20px rgba(0, 0, 0, 0.5)"
-            : "0 -4px 20px rgba(0, 0, 0, 0.08)",
+            ? "0 -6px 24px rgba(0, 0, 0, 0.6)"
+            : "0 -4px 16px rgba(0, 0, 0, 0.08)",
         transition: "all 0.2s ease-in-out",
       }}
     >
