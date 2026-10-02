@@ -29,6 +29,7 @@ import {
   TextField,
   Typography,
   useTheme,
+  useMediaQuery,
   alpha,
   Tabs,
   Tab,
@@ -45,6 +46,12 @@ import HistoryToggleOffRoundedIcon from "@mui/icons-material/HistoryToggleOffRou
 import jsPDF from "jspdf";
 import "jspdf-autotable";
 import CustomerDetails from "./CustomerDetails";
+import MobileBillingHeader from "./calculator/MobileBillingHeader";
+import BillingProgress from "./calculator/BillingProgress";
+import MobileCustomerCard from "./calculator/MobileCustomerCard";
+import MobileBillItem from "./calculator/MobileBillItem";
+import MobileBillSummary from "./calculator/MobileBillSummary";
+import BillingBottomBar from "./calculator/BillingBottomBar";
 import { buildThermalBillHtml } from "./calculator/thermalPrint";
 import {
   WHATSAPP_BILL_SHARE_MODES,
@@ -66,6 +73,7 @@ import { subscribeCategories } from "../services/firebase";
 
 const Calculator = () => {
   const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const [itemName, setItemName] = useState("");
   const [itemPrice, setItemPrice] = useState("");
   const [quantity, setQuantity] = useState("");
@@ -644,6 +652,29 @@ const Calculator = () => {
       current.filter((_, currentIndex) => currentIndex !== index),
     );
     openToast("Item deleted successfully");
+  };
+
+  const updateItemQuantity = (index, delta) => {
+    const item = items[index];
+    if (!item) return;
+    const currentQty = Number(item.quantity || 1);
+    const newQty = currentQty + delta;
+    if (newQty < 1) return;
+
+    const price = parseFloat(item.price);
+    const pricePerUnit = item.priceUnit === "dozen" ? price / 12 : price;
+    const totalQuantity = item.quantityUnit === "dozen" ? newQty * 12 : newQty;
+    const totalPrice = pricePerUnit * totalQuantity;
+
+    setItems((prevItems) => {
+      const copy = [...prevItems];
+      copy[index] = {
+        ...copy[index],
+        quantity: newQty,
+        totalPrice,
+      };
+      return copy;
+    });
   };
 
   const handleKeyPress = (event, ref) => {
@@ -1670,94 +1701,88 @@ const Calculator = () => {
 
   return (
     <Stack spacing={3}>
+      {/* Compact Header for Mobile (<1200px) */}
+      <Box sx={{ display: { xs: "block", lg: "none" } }}>
+        <MobileBillingHeader
+          itemCount={items.length}
+          totalAmount={calculateRoundedGrandTotal()}
+        />
+      </Box>
+
+      {/* Full Hero Banner for Desktop (>=1200px) */}
       <Paper
         sx={{
-          p: { xs: 2.5, md: 3.5 },
+          display: { xs: "none", lg: "block" },
+          p: 3.5,
           borderRadius: 3,
           background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.95)} 0%, ${alpha(theme.palette.success.main, 0.85)} 100%)`,
           color: "white",
-          boxShadow: `0 12px 30px ${alpha(theme.palette.primary.main, 0.25)}`,
+          boxShadow: `0 8px 24px ${alpha(theme.palette.primary.main, 0.2)}`,
           border: "none",
         }}
       >
         <Stack
-          direction={{ xs: "column", md: "row" }}
+          direction="row"
           justifyContent="space-between"
-          spacing={2}
+          alignItems="center"
+          spacing={1.5}
         >
           <Box>
-            <Typography variant="h4">Smart Billing Desk</Typography>
-            <Typography sx={{ mt: 1, color: "rgba(255,255,255,0.78)" }}>
-              Beautiful billing for real shop work with customer memory and fast
-              printing.
+            <Typography
+              variant="h5"
+              sx={{ fontWeight: 800, fontSize: "1.8rem", letterSpacing: "-0.02em" }}
+            >
+              Smart Billing Desk
+            </Typography>
+            <Typography
+              sx={{
+                mt: 0.5,
+                color: "rgba(255,255,255,0.8)",
+                fontSize: "0.9rem",
+              }}
+            >
+              Fast POS billing with instant customer memory, offline sync & print.
             </Typography>
           </Box>
-          <Stack direction="row" spacing={1} flexWrap="wrap">
+          <Stack direction="row" spacing={0.75} flexWrap="wrap" justifyContent="flex-end">
             <Chip
+              size="small"
               label={`${items.length} items`}
-              sx={{ bgcolor: "rgba(255,255,255,0.14)", color: "white" }}
+              sx={{ bgcolor: "rgba(255,255,255,0.2)", color: "white", fontWeight: 700 }}
             />
             <Chip
-              label={`${mergedCustomerOptions.length} customers`}
-              sx={{ bgcolor: "rgba(255,255,255,0.14)", color: "white" }}
-            />
-            <Chip
-              label={`${verifiedItems.filter(Boolean).length}/${items.length} verified`}
-              sx={{ bgcolor: "rgba(255,255,255,0.14)", color: "white" }}
+              size="small"
+              label={`₹${calculateRoundedGrandTotal()}`}
+              sx={{
+                bgcolor: "white",
+                color: theme.palette.primary.main,
+                fontWeight: 900,
+              }}
             />
           </Stack>
         </Stack>
       </Paper>
 
-      {/* Premium Multi-Step Tab Controller for Mobile APK Experience */}
-      <Tabs
-        value={billingMobileTab}
-        onChange={(e, val) => setBillingMobileTab(val)}
-        variant="fullWidth"
-        sx={{
-          display: { xs: "flex", lg: "none" },
-          mb: 1.5,
-          borderRadius: 3,
-          bgcolor: theme.palette.mode === "dark" ? "rgba(255, 255, 255, 0.03)" : "rgba(15, 23, 42, 0.03)",
-          backdropFilter: "blur(12px)",
-          border: `1px solid ${theme.palette.divider}`,
-          p: 0.5,
-          "& .MuiTabs-indicator": {
-            height: "100%",
-            borderRadius: 2,
-            zIndex: -1,
-            background: `linear-gradient(120deg, ${theme.palette.primary.main} 0%, ${theme.palette.success.main} 100%)`,
-            boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.3)}`,
-          },
-          "& .MuiTab-root": {
-            borderRadius: 2,
-            fontWeight: 800,
-            fontSize: "0.82rem",
-            minHeight: 38,
-            py: 1,
-            color: theme.palette.mode === "dark" ? "rgba(255,255,255,0.7)" : "rgba(15,23,42,0.7)",
-            transition: "all 0.25s ease",
-            "&.Mui-selected": {
-              color: "white",
-            }
-          }
-        }}
-      >
-        <Tab label="1. Customer" />
-        <Tab label="2. Add Items" />
-        <Tab label="3. Summary" />
-      </Tabs>
+      {/* Compact Step Progress Indicator for Mobile (<1200px) */}
+      <Box sx={{ display: { xs: "block", lg: "none" } }}>
+        <BillingProgress
+          currentStep={billingMobileTab}
+          onStepClick={(val) => setBillingMobileTab(val)}
+          isCustomerCompleted={Boolean(customerName && customerPhone)}
+          isItemsCompleted={items.length > 0}
+        />
+      </Box>
 
-      <Grid container spacing={4}>
+      <Grid container spacing={{ xs: 2, sm: 3, md: 4 }}>
         <Grid item xs={12} lg={8}>
-          <Stack spacing={4}>
+          <Stack spacing={{ xs: 2, md: 4 }}>
             <Card sx={{ position: "relative", overflow: "hidden" }}>
               <CardContent sx={{ p: { xs: 2, md: 3 } }}>
                 <Stack spacing={3}>
                   {/* Customer Details Block */}
                   <Box sx={{ display: { xs: billingMobileTab === 0 ? "block" : "none", lg: "block" } }}>
                     <Box sx={{ mb: 2 }}>
-                      <Typography variant="h6">Customer Details</Typography>
+                      <Typography variant="h6" sx={{ fontWeight: 800 }}>Customer Details</Typography>
                       <Typography
                         variant="body2"
                         color="text.secondary"
@@ -1769,14 +1794,37 @@ const Calculator = () => {
                       <Typography
                         variant="caption"
                         color="text.secondary"
-                        sx={{ mt: 0.75, display: "block" }}
+                        sx={{ mt: 0.75, display: { xs: "none", md: "block" } }}
                       >
                         Keyboard: Enter moves Name {"->"} Phone {"->"} Address{" "}
                         {"->"} Item Name
                       </Typography>
                     </Box>
 
-                    <Grid container spacing={2}>
+                    {/* Customer Selected Card on Mobile */}
+                    {customerName ? (
+                      <Box sx={{ display: { xs: "block", lg: "none" }, mb: 2 }}>
+                        <MobileCustomerCard
+                          customer={{
+                            name: customerName,
+                            phoneNumber: customerPhone,
+                            address: customerAddress,
+                            totalDue:
+                              mergedCustomerOptions.find(
+                                (c) => c.name?.toLowerCase() === customerName?.toLowerCase()
+                              )?.totalDue || 0,
+                          }}
+                          onChangeCustomer={() => {
+                            setCustomerName("");
+                            setCustomerPhone("");
+                            setCustomerAddress("");
+                          }}
+                        />
+                      </Box>
+                    ) : null}
+
+                    <Box sx={{ display: { xs: customerName ? "none" : "block", lg: "block" } }}>
+                      <Grid container spacing={2}>
                       <CustomerDetails
                         customerName={customerName}
                         customerPhone={customerPhone}
@@ -1799,7 +1847,8 @@ const Calculator = () => {
                           handleKeyPress(event, itemNameRef)
                         }
                       />
-                    </Grid>
+                      </Grid>
+                    </Box>
                   </Box>
 
                   <Divider sx={{ display: { xs: "none", lg: "block" } }} />
@@ -1807,7 +1856,7 @@ const Calculator = () => {
                   {/* Item Entry Block */}
                   <Box sx={{ display: { xs: billingMobileTab === 1 ? "block" : "none", lg: "block" } }}>
                     <Box sx={{ mb: 2 }}>
-                      <Typography variant="h6">Item Entry</Typography>
+                      <Typography variant="h6" sx={{ fontWeight: 800 }}>Item Entry</Typography>
                       <Typography
                         variant="body2"
                         color="text.secondary"
@@ -1818,7 +1867,7 @@ const Calculator = () => {
                       <Typography
                         variant="caption"
                         color="text.secondary"
-                        sx={{ mt: 0.75, display: "block" }}
+                        sx={{ mt: 0.75, display: { xs: "none", md: "block" } }}
                       >
                         Keyboard: Enter moves fields and Enter on
                         Quantity/Quantity Unit adds item.
@@ -1959,6 +2008,7 @@ const Calculator = () => {
                         variant="contained"
                         onClick={() => addItem(false)}
                         disabled={!itemName || !itemPrice || !quantity}
+                        sx={{ minHeight: 46, fontWeight: 700 }}
                       >
                         Add Item
                       </Button>
@@ -1967,20 +2017,48 @@ const Calculator = () => {
                         color="secondary"
                         onClick={() => addItem(true)}
                         disabled={!itemName || !itemPrice || !quantity}
+                        sx={{ minHeight: 46 }}
                       >
                         Add More of Same Item
                       </Button>
-                      <Button variant="text" color="inherit" onClick={resetForm}>
+                      <Button variant="text" color="inherit" onClick={resetForm} sx={{ minHeight: 44 }}>
                         Reset Fields
                       </Button>
                       <Button
                         variant="outlined"
                         color="error"
                         onClick={resetAllFields}
+                        sx={{ minHeight: 44 }}
                       >
                         Reset All
                       </Button>
                     </Stack>
+
+                    {/* Live Added Items on Mobile (Instant Feedback with Steppers) */}
+                    {items.length > 0 && (
+                      <Box sx={{ display: { xs: "block", lg: "none" }, mt: 3, pt: 2, borderTop: `1px dashed ${theme.palette.divider}` }}>
+                        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
+                          <Typography variant="subtitle2" sx={{ fontWeight: 800, color: "text.primary" }}>
+                            Recently Added ({items.length})
+                          </Typography>
+                          <Typography variant="caption" color="primary.main" sx={{ fontWeight: 800, fontSize: "0.82rem" }}>
+                            Total: ₹{calculateTotalBill().toFixed(2)}
+                          </Typography>
+                        </Stack>
+                        <Stack spacing={1.25}>
+                          {items.map((item, index) => (
+                            <MobileBillItem
+                              key={index}
+                              item={item}
+                              index={index}
+                              onQtyChange={updateItemQuantity}
+                              onEdit={editItem}
+                              onDelete={deleteItem}
+                            />
+                          ))}
+                        </Stack>
+                      </Box>
+                    )}
                   </Box>
 
                   <Divider sx={{ display: { xs: "none", lg: "block" } }} />
@@ -2042,7 +2120,40 @@ const Calculator = () => {
                 }}
               />
             </Card>
-            <Box sx={{ display: { xs: billingMobileTab === 2 ? "block" : "none", lg: "block" } }}>
+            {/* Dedicated Mobile Bill Review & Summary (<1200px) */}
+            <Box sx={{ display: { xs: billingMobileTab === 2 ? "block" : "none", lg: "none" } }}>
+              <MobileBillSummary
+                customerName={customerName}
+                customerPhone={customerPhone}
+                customerAddress={customerAddress}
+                onEditCustomer={() => setBillingMobileTab(0)}
+                items={items}
+                onEditItem={editItem}
+                subtotal={calculateTotalBill()}
+                gstEnabled={isGstEnabled()}
+                gstRate={getGstRate()}
+                gstAmount={calculateGstAmount()}
+                extraChargesTotal={calculateExtraChargesTotal()}
+                grandTotal={calculateRoundedGrandTotal()}
+                activeBillMeta={activeBillMeta}
+                onGenerateBill={generatePDF}
+                onThermalPrintOriginal={() => printThermalBill("original")}
+                onThermalPrintPrivacy={() => printThermalBill("customer")}
+                onSaveDraft={saveBillForLaterEditing}
+                onSendWhatsApp={sendWhatsAppFromBilling}
+                canGenerate={Boolean(customerName && customerPhone && items.length > 0)}
+                onUndo={handleUndo}
+                onRedo={handleRedo}
+                canUndo={undoStack.length > 0}
+                canRedo={redoStack.length > 0}
+                savedBills={savedBills}
+                onLoadBill={loadBill}
+                onDeleteBill={deleteBill}
+              />
+            </Box>
+
+            {/* Desktop Items List (>=1200px) */}
+            <Box sx={{ display: { xs: "none", lg: "block" } }}>
               <Card sx={{ position: "relative", overflow: "hidden" }}>
                 <CardContent sx={{ p: { xs: 2, md: 3 } }}>
                   <Stack spacing={2}>
@@ -2141,7 +2252,7 @@ const Calculator = () => {
             </Box>
           </Stack>
         </Grid>
-        <Grid item xs={12} lg={4} sx={{ display: { xs: billingMobileTab === 2 ? "block" : "none", lg: "block" } }}>
+        <Grid item xs={12} lg={4} sx={{ display: { xs: "none", lg: "block" } }}>
           <Stack
             spacing={4}
             sx={{ position: { lg: "sticky" }, top: { lg: 104 } }}
@@ -2502,8 +2613,9 @@ const Calculator = () => {
         onClose={() => setIsDialogOpen(false)}
         fullWidth
         maxWidth="sm"
+        fullScreen={isMobile}
       >
-        <DialogTitle>Edit Item</DialogTitle>
+        <DialogTitle sx={{ fontWeight: 800 }}>Edit Item</DialogTitle>
         <DialogContent>
           <Grid container spacing={2} sx={{ mt: 0.5 }}>
             <Grid item xs={12}>
@@ -2565,11 +2677,21 @@ const Calculator = () => {
             </Grid>
           </Grid>
         </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2.5 }}>
-          <Button onClick={() => setIsDialogOpen(false)} color="inherit">
+        <DialogActions sx={{ px: 3, pb: 2.5, gap: 1 }}>
+          <Button
+            onClick={() => setIsDialogOpen(false)}
+            color="inherit"
+            sx={{ minHeight: 48, minWidth: 80, fontWeight: 700 }}
+          >
             Cancel
           </Button>
-          <Button onClick={updateItem}>Update</Button>
+          <Button
+            variant="contained"
+            onClick={updateItem}
+            sx={{ minHeight: 48, minWidth: 100, fontWeight: 800 }}
+          >
+            Update
+          </Button>
         </DialogActions>
       </Dialog>
 
@@ -2586,6 +2708,19 @@ const Calculator = () => {
           {snackbarMessage}
         </Alert>
       </Snackbar>
+
+      {/* Persistent Sticky Mobile Bottom Action Bar */}
+      <BillingBottomBar
+        step={billingMobileTab}
+        onStepChange={setBillingMobileTab}
+        itemCount={items.length}
+        totalAmount={calculateRoundedGrandTotal()}
+        customerName={customerName}
+        canProceedToSummary={items.length > 0}
+        canGenerateBill={Boolean(customerName && customerPhone && items.length > 0)}
+        onGenerateBill={generatePDF}
+        isEditing={Boolean(activeBillMeta?.id)}
+      />
     </Stack>
   );
 };

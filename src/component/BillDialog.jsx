@@ -11,6 +11,7 @@ import {
   Stack,
   Typography,
   useTheme,
+  useMediaQuery,
   alpha,
 } from "@mui/material";
 import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
@@ -153,9 +154,23 @@ const BillDialog = ({ bill, onClose }) => {
   const gstRate = Number(bill?.gst?.rate || 0);
   const gstAmount = Number(bill?.gst?.amount || 0);
 
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+
   return (
-    <Dialog open={!!bill} onClose={onClose} fullWidth maxWidth="sm">
-      <DialogTitle sx={{ pb: 1 }}>Invoice Preview</DialogTitle>
+    <Dialog
+      open={!!bill}
+      onClose={onClose}
+      fullScreen={isMobile}
+      fullWidth
+      maxWidth="sm"
+      PaperProps={{
+        sx: {
+          borderRadius: isMobile ? 0 : 3,
+        },
+      }}
+    >
+      <DialogTitle sx={{ pb: 1, fontWeight: 800 }}>Invoice Preview</DialogTitle>
 
       <DialogContent sx={{ pb: 3 }}>
         {bill && (
@@ -237,14 +252,28 @@ const BillDialog = ({ bill, onClose }) => {
           </Stack>
         )}
       </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2.5 }}>
-        <Button onClick={onClose} color="inherit">
+      <DialogActions
+        sx={{
+          px: { xs: 2, sm: 3 },
+          py: 2,
+          borderTop: `1px solid ${theme.palette.divider}`,
+          gap: 1,
+          flexWrap: "wrap",
+          pb: isMobile ? "calc(16px + env(safe-area-inset-bottom))" : 2,
+        }}
+      >
+        <Button
+          onClick={onClose}
+          color="inherit"
+          sx={{ minHeight: 44, borderRadius: 2 }}
+        >
           Close
         </Button>
         <Button
           variant="outlined"
           startIcon={<PrintRoundedIcon />}
           onClick={() => printPreviousBill(bill)}
+          sx={{ minHeight: 44, borderRadius: 2, fontWeight: 700 }}
         >
           Print
         </Button>
@@ -252,6 +281,7 @@ const BillDialog = ({ bill, onClose }) => {
           variant="contained"
           startIcon={<DownloadRoundedIcon />}
           onClick={() => downloadPdfBill(bill)}
+          sx={{ minHeight: 44, borderRadius: 2, fontWeight: 700 }}
         >
           Download PDF
         </Button>

@@ -46,7 +46,9 @@ import {
 } from "../utils/whatsappUtils";
 import BillDialog from "./BillDialog";
 import BillsTable from "./BillsTable";
+import MobileBillsList from "./MobileBillsList";
 import CustomerInfoTable from "./CustomerInfoTable";
+import MobileCustomerList from "./MobileCustomerList";
 import StatsCards from "./StatsCards";
 import { useShop } from "../context/ShopContext";
 import { useAuth } from "../context/AuthContext";
@@ -1241,23 +1243,51 @@ const Dashboard = () => {
             </Stack>
           </Paper>
         ) : activeTab === "bills" ? (
-          <BillsTable
-            bills={filteredBills}
-            onPreview={setSelectedBill}
-            onEdit={(bill) => setEditingBill({ ...bill })}
-            onDelete={(bill) => openConfirm("deleteBill", bill)}
-            onWhatsApp={handleSendBillWhatsApp}
-          />
+          <>
+            <Box sx={{ display: { xs: "none", md: "block" } }}>
+              <BillsTable
+                bills={filteredBills}
+                onPreview={setSelectedBill}
+                onEdit={(bill) => setEditingBill({ ...bill })}
+                onDelete={(bill) => openConfirm("deleteBill", bill)}
+                onWhatsApp={handleSendBillWhatsApp}
+              />
+            </Box>
+            <Box sx={{ display: { xs: "block", md: "none" } }}>
+              <MobileBillsList
+                bills={filteredBills}
+                onPreview={setSelectedBill}
+                onEdit={(bill) => setEditingBill({ ...bill })}
+                onDelete={(bill) => openConfirm("deleteBill", bill)}
+                onWhatsApp={handleSendBillWhatsApp}
+              />
+            </Box>
+          </>
         ) : (
-          <CustomerInfoTable
-            customers={filteredCustomers}
-            onView={setViewingCustomer}
-            onEdit={(customer) => setEditingCustomer({ ...customer })}
-            onDelete={(customer) => openConfirm("deleteCustomer", customer)}
-            onCall={handleCallCustomer}
-            onWhatsApp={handleCustomerWhatsApp}
-            onCopyPhone={handleCopyPhone}
-          />
+          <>
+            <Box sx={{ display: { xs: "none", md: "block" } }}>
+              <CustomerInfoTable
+                customers={filteredCustomers}
+                onView={setViewingCustomer}
+                onEdit={(customer) => setEditingCustomer({ ...customer })}
+                onDelete={(customer) => openConfirm("deleteCustomer", customer)}
+                onCall={handleCallCustomer}
+                onWhatsApp={handleCustomerWhatsApp}
+                onCopyPhone={handleCopyPhone}
+              />
+            </Box>
+            <Box sx={{ display: { xs: "block", md: "none" } }}>
+              <MobileCustomerList
+                customers={filteredCustomers}
+                onView={setViewingCustomer}
+                onEdit={(customer) => setEditingCustomer({ ...customer })}
+                onDelete={(customer) => openConfirm("deleteCustomer", customer)}
+                onCall={handleCallCustomer}
+                onWhatsApp={handleCustomerWhatsApp}
+                onCopyPhone={handleCopyPhone}
+              />
+            </Box>
+          </>
         )}
       </Box>
 

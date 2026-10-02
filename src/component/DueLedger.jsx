@@ -35,6 +35,7 @@ import {
   TextField,
   Typography,
   useTheme,
+  useMediaQuery,
   alpha,
   Tooltip,
 } from "@mui/material";
@@ -64,6 +65,7 @@ import BillDialog from "./BillDialog";
 
 export default function DueLedger() {
   const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const { activeShopId, shop } = useShop();
   const { user } = useAuth();
   const { playSound } = useUIExperience();
@@ -393,7 +395,7 @@ export default function DueLedger() {
     }
   };
 
-  // Trigger WhatsApp Reminder
+  // Trigger WhatsApp Reminder for selected debtor
   const handleSendWhatsAppReminder = () => {
     playSound?.("click");
     if (!selectedDebtor || !selectedDebtor.phone) {
@@ -410,6 +412,27 @@ export default function DueLedger() {
     const rawDigits = selectedDebtor.phone.replace(/[^\d]/g, "");
     const success = openWhatsAppMessage(rawDigits, message);
     
+    if (success) {
+      openToast("Opening WhatsApp chat...");
+    } else {
+      openToast("Failed to compile WhatsApp link", "error");
+    }
+  };
+
+  // Trigger WhatsApp Reminder for card debtor on mobile
+  const sendDebtorWhatsAppReminder = (debtor) => {
+    playSound?.("click");
+    if (!debtor || !debtor.phone) {
+      openToast("No customer phone number available", "error");
+      return;
+    }
+
+    const shopName = shop?.name || "our shop";
+    const totalDueFormatted = Number(debtor.totalDue || 0).toFixed(2);
+    const message = `Hi ${debtor.name},\n\nThis is a friendly reminder from *${shopName}* regarding your outstanding balance of *Rs. ${totalDueFormatted}*.\n\nPlease clear your pending dues at your earliest convenience.\n\nThank you for your business! 🙏`;
+    
+    const rawDigits = debtor.phone.replace(/[^\d]/g, "");
+    const success = openWhatsAppMessage(rawDigits, message);
     if (success) {
       openToast("Opening WhatsApp chat...");
     } else {
@@ -795,61 +818,167 @@ export default function DueLedger() {
               </Typography>
             </Paper>
           ) : (
-            <TableContainer component={Paper} sx={{ overflowX: "auto" }}>
-              <Table>
-                <TableHead sx={{ bgcolor: theme.palette.mode === "dark" ? alpha(theme.palette.background.paper, 0.4) : alpha(theme.palette.background.default, 0.5) }}>
-                  <TableRow>
-                    <TableCell sx={{ fontWeight: 700 }}>Customer Detail</TableCell>
-                    <TableCell sx={{ fontWeight: 700 }}>Outstanding Bills</TableCell>
-                    <TableCell sx={{ fontWeight: 700 }}>Total Dues</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 700 }}>Actions</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {filteredDebtors.map((debtor) => (
-                    <TableRow
-                      key={debtor.key}
-                      hover
-                      onClick={() => handleOpenLedger(debtor.key)}
-                      sx={{ cursor: "pointer", "&:last-child td, &:last-child th": { border: 0 } }}
-                    >
-                      <TableCell>
-                        <Typography sx={{ fontWeight: 600 }}>{debtor.name}</Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          {debtor.phone || "No phone linked"}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
+            <>
+              {/* Desktop Table View */}
+              <TableContainer component={Paper} sx={{ display: { xs: "none", md: "block" }, overflowX: "auto" }}>
+                <Table>
+                  <TableHead sx={{ bgcolor: theme.palette.mode === "dark" ? alpha(theme.palette.background.paper, 0.4) : alpha(theme.palette.background.default, 0.5) }}>
+                    <TableRow>
+                      <TableCell sx={{ fontWeight: 700 }}>Customer Detail</TableCell>
+                      <TableCell sx={{ fontWeight: 700 }}>Outstanding Bills</TableCell>
+                      <TableCell sx={{ fontWeight: 700 }}>Total Dues</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 700 }}>Actions</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {filteredDebtors.map((debtor) => (
+                      <TableRow
+                        key={debtor.key}
+                        hover
+                        onClick={() => handleOpenLedger(debtor.key)}
+                        sx={{ cursor: "pointer", "&:last-child td, &:last-child th": { border: 0 } }}
+                      >
+                        <TableCell>
+                          <Typography sx={{ fontWeight: 600 }}>{debtor.name}</Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            {debtor.phone || "No phone linked"}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Chip
+                            label={`${debtor.bills.length} unpaid bill${debtor.bills.length > 1 ? "s" : ""}`}
+                            size="small"
+                            color="error"
+                            variant="outlined"
+                            sx={{ fontWeight: 500 }}
+                          />
+                        </TableCell>
+                        <TableCell sx={{ fontWeight: 700, color: theme.palette.error.main }}>
+                          Rs. {debtor.totalDue.toFixed(2)}
+                        </TableCell>
+                        <TableCell align="right" onClick={(e) => e.stopPropagation()}>
+                          <Stack direction="row" spacing={1} justifyContent="flex-end">
+                            <Tooltip title="View statement ledger">
+                              <IconButton
+                                size="small"
+                                onClick={() => handleOpenLedger(debtor.key)}
+                                color="primary"
+                                sx={{ border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`, borderRadius: 1.5 }}
+                              >
+                                <ArrowForwardIosRoundedIcon fontSize="small" sx={{ fontSize: "0.85rem" }} />
+                              </IconButton>
+                            </Tooltip>
+                          </Stack>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+
+              {/* Mobile Khatabook-Style Debtor Cards */}
+              <Stack spacing={2} sx={{ display: { xs: "flex", md: "none" }, width: "100%" }}>
+                {filteredDebtors.map((debtor) => (
+                  <Card
+                    key={debtor.key}
+                    elevation={0}
+                    onClick={() => handleOpenLedger(debtor.key)}
+                    sx={{
+                      borderRadius: 3,
+                      border: `1px solid ${theme.palette.divider}`,
+                      bgcolor: alpha(theme.palette.background.paper, 0.7),
+                      backdropFilter: "blur(12px)",
+                      cursor: "pointer",
+                      transition: "transform 0.18s ease, border-color 0.18s ease",
+                      "&:active": { transform: "scale(0.985)" },
+                    }}
+                  >
+                    <CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
+                      {/* Name & Phone */}
+                      <Stack direction="row" justifyContent="space-between" alignItems="flex-start" sx={{ mb: 1 }}>
+                        <Box sx={{ minWidth: 0, flexGrow: 1 }}>
+                          <Typography variant="subtitle1" sx={{ fontWeight: 800, lineHeight: 1.2 }}>
+                            {debtor.name}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
+                            {debtor.phone || "No phone linked"}
+                          </Typography>
+                        </Box>
                         <Chip
                           label={`${debtor.bills.length} unpaid bill${debtor.bills.length > 1 ? "s" : ""}`}
                           size="small"
                           color="error"
                           variant="outlined"
-                          sx={{ fontWeight: 500 }}
+                          sx={{ fontWeight: 700, fontSize: "0.72rem" }}
                         />
-                      </TableCell>
-                      <TableCell sx={{ fontWeight: 700, color: theme.palette.error.main }}>
-                        Rs. {debtor.totalDue.toFixed(2)}
-                      </TableCell>
-                      <TableCell align="right" onClick={(e) => e.stopPropagation()}>
-                        <Stack direction="row" spacing={1} justifyContent="flex-end">
-                          <Tooltip title="View statement ledger">
-                            <IconButton
-                              size="small"
-                              onClick={() => handleOpenLedger(debtor.key)}
-                              color="primary"
-                              sx={{ border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`, borderRadius: 1.5 }}
-                            >
-                              <ArrowForwardIosRoundedIcon fontSize="small" sx={{ fontSize: "0.85rem" }} />
-                            </IconButton>
-                          </Tooltip>
-                        </Stack>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
+                      </Stack>
+
+                      {/* Due Balance Banner */}
+                      <Stack
+                        direction="row"
+                        justifyContent="space-between"
+                        alignItems="center"
+                        sx={{
+                          my: 1.5,
+                          p: 1.5,
+                          borderRadius: 2,
+                          bgcolor: alpha(theme.palette.error.main, 0.08),
+                          border: `1px solid ${alpha(theme.palette.error.main, 0.2)}`,
+                        }}
+                      >
+                        <Typography variant="body2" color="error.main" fontWeight={750}>
+                          Total Due
+                        </Typography>
+                        <Typography variant="h6" color="error.main" fontWeight={900}>
+                          ₹{debtor.totalDue.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </Typography>
+                      </Stack>
+
+                      {/* Actions */}
+                      <Stack direction="row" spacing={1} sx={{ mt: 1.5 }} onClick={(e) => e.stopPropagation()}>
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          onClick={() => handleOpenLedger(debtor.key)}
+                          sx={{ flexGrow: 1, minHeight: 44, borderRadius: 2, fontWeight: 750, textTransform: "none" }}
+                        >
+                          View Ledger
+                        </Button>
+                        <Button
+                          variant="contained"
+                          color="success"
+                          size="small"
+                          startIcon={<PaymentRoundedIcon />}
+                          onClick={() => {
+                            setSelectedDebtorKey(debtor.key);
+                            handleOpenPayment(null);
+                          }}
+                          sx={{ flexGrow: 1, minHeight: 44, borderRadius: 2, fontWeight: 750, textTransform: "none" }}
+                        >
+                          Collect
+                        </Button>
+                        {debtor.phone && (
+                          <IconButton
+                            color="success"
+                            onClick={() => sendDebtorWhatsAppReminder(debtor)}
+                            sx={{
+                              minWidth: 44,
+                              minHeight: 44,
+                              borderRadius: 2,
+                              border: `1px solid ${alpha(theme.palette.success.main, 0.3)}`,
+                              bgcolor: alpha(theme.palette.success.main, 0.08),
+                            }}
+                            aria-label="Send WhatsApp Reminder"
+                          >
+                            <WhatsAppIcon fontSize="small" />
+                          </IconButton>
+                        )}
+                      </Stack>
+                    </CardContent>
+                  </Card>
+                ))}
+              </Stack>
+            </>
           )}
         </CardContent>
       </Card>
@@ -859,11 +988,12 @@ export default function DueLedger() {
         <Dialog
           open={ledgerOpen}
           onClose={handleCloseLedger}
+          fullScreen={isMobile}
           maxWidth="md"
           fullWidth
           PaperProps={{
             sx: {
-              borderRadius: 3,
+              borderRadius: isMobile ? 0 : 3,
               boxShadow: theme.shadows[24],
             },
           }}
@@ -943,81 +1073,154 @@ export default function DueLedger() {
                   <Typography color="text.secondary">All invoices have been fully settled!</Typography>
                 </Box>
               ) : (
-                <TableContainer component={Paper} sx={{ overflowX: "auto" }}>
-                  <Table size="small">
-                    <TableHead sx={{ bgcolor: theme.palette.mode === "dark" ? alpha(theme.palette.background.paper, 0.4) : alpha(theme.palette.background.default, 0.5) }}>
-                      <TableRow>
-                        <TableCell sx={{ fontWeight: 600 }}>Date</TableCell>
-                        <TableCell sx={{ fontWeight: 600 }}>Invoice ID</TableCell>
-                        <TableCell sx={{ fontWeight: 600 }}>Grand Total</TableCell>
-                        <TableCell sx={{ fontWeight: 600 }}>Remaining Due</TableCell>
-                        <TableCell align="right" sx={{ fontWeight: 600 }}>Action</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {selectedDebtor.bills.map((bill) => (
-                        <TableRow key={bill.id} hover>
-                          <TableCell>{bill.date || new Date(bill.createdAt).toLocaleDateString("en-IN")}</TableCell>
-                          <TableCell>
-                            <Typography
-                              onClick={() => {
-                                playSound?.("click");
-                                setViewedBill(bill);
-                              }}
-                              variant="body2"
-                              sx={{
-                                textDecoration: "underline",
-                                color: "primary.main",
-                                cursor: "pointer",
-                                fontWeight: 500,
-                              }}
-                            >
-                              {(bill.id || "").substring(0, 8)}...
-                            </Typography>
-                          </TableCell>
-                          <TableCell>Rs. {Number(bill.totalAmount || 0).toFixed(2)}</TableCell>
-                          <TableCell sx={{ fontWeight: 700, color: "error.main" }}>
-                            Rs. {bill.currentDue.toFixed(2)}
-                          </TableCell>
-                          <TableCell align="right">
-                            <Stack direction="row" spacing={1} justifyContent="flex-end" alignItems="center">
-                              <Button
-                                variant="contained"
-                                color="success"
-                                size="small"
-                                onClick={() => handleOpenPayment(bill)}
-                                startIcon={<PaymentRoundedIcon sx={{ fontSize: "1rem !important" }} />}
-                                sx={{ borderRadius: 1.5, py: 0.25, px: 1, textTransform: "none", fontSize: "0.75rem" }}
-                              >
-                                Pay Bill
-                              </Button>
-                              <Tooltip title="Edit due balance">
-                                <IconButton
-                                  size="small"
-                                  onClick={() => handleOpenEditDue(bill)}
-                                  color="warning"
-                                  sx={{ border: `1px solid ${alpha(theme.palette.warning.main, 0.2)}`, borderRadius: 1.5 }}
-                                >
-                                  <EditRoundedIcon fontSize="small" sx={{ fontSize: "0.85rem" }} />
-                                </IconButton>
-                              </Tooltip>
-                              <Tooltip title="Delete due entry">
-                                <IconButton
-                                  size="small"
-                                  onClick={() => handleOpenDeleteDue(bill)}
-                                  color="error"
-                                  sx={{ border: `1px solid ${alpha(theme.palette.error.main, 0.2)}`, borderRadius: 1.5 }}
-                                >
-                                  <DeleteRoundedIcon fontSize="small" sx={{ fontSize: "0.85rem" }} />
-                                </IconButton>
-                              </Tooltip>
-                            </Stack>
-                          </TableCell>
+                <>
+                  {/* Desktop Unpaid Invoices Table */}
+                  <TableContainer component={Paper} sx={{ display: { xs: "none", sm: "block" }, overflowX: "auto" }}>
+                    <Table size="small">
+                      <TableHead sx={{ bgcolor: theme.palette.mode === "dark" ? alpha(theme.palette.background.paper, 0.4) : alpha(theme.palette.background.default, 0.5) }}>
+                        <TableRow>
+                          <TableCell sx={{ fontWeight: 600 }}>Date</TableCell>
+                          <TableCell sx={{ fontWeight: 600 }}>Invoice ID</TableCell>
+                          <TableCell sx={{ fontWeight: 600 }}>Grand Total</TableCell>
+                          <TableCell sx={{ fontWeight: 600 }}>Remaining Due</TableCell>
+                          <TableCell align="right" sx={{ fontWeight: 600 }}>Action</TableCell>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
+                      </TableHead>
+                      <TableBody>
+                        {selectedDebtor.bills.map((bill) => (
+                          <TableRow key={bill.id} hover>
+                            <TableCell>{bill.date || new Date(bill.createdAt).toLocaleDateString("en-IN")}</TableCell>
+                            <TableCell>
+                              <Typography
+                                onClick={() => {
+                                  playSound?.("click");
+                                  setViewedBill(bill);
+                                }}
+                                variant="body2"
+                                sx={{
+                                  textDecoration: "underline",
+                                  color: "primary.main",
+                                  cursor: "pointer",
+                                  fontWeight: 500,
+                                }}
+                              >
+                                {(bill.id || "").substring(0, 8)}...
+                              </Typography>
+                            </TableCell>
+                            <TableCell>Rs. {Number(bill.totalAmount || 0).toFixed(2)}</TableCell>
+                            <TableCell sx={{ fontWeight: 700, color: "error.main" }}>
+                              Rs. {bill.currentDue.toFixed(2)}
+                            </TableCell>
+                            <TableCell align="right">
+                              <Stack direction="row" spacing={1} justifyContent="flex-end" alignItems="center">
+                                <Button
+                                  variant="contained"
+                                  color="success"
+                                  size="small"
+                                  onClick={() => handleOpenPayment(bill)}
+                                  startIcon={<PaymentRoundedIcon sx={{ fontSize: "1rem !important" }} />}
+                                  sx={{ borderRadius: 1.5, py: 0.25, px: 1, textTransform: "none", fontSize: "0.75rem" }}
+                                >
+                                  Pay Bill
+                                </Button>
+                                <Tooltip title="Edit due balance">
+                                  <IconButton
+                                    size="small"
+                                    onClick={() => handleOpenEditDue(bill)}
+                                    color="warning"
+                                    sx={{ border: `1px solid ${alpha(theme.palette.warning.main, 0.2)}`, borderRadius: 1.5 }}
+                                  >
+                                    <EditRoundedIcon fontSize="small" sx={{ fontSize: "0.85rem" }} />
+                                  </IconButton>
+                                </Tooltip>
+                                <Tooltip title="Delete due entry">
+                                  <IconButton
+                                    size="small"
+                                    onClick={() => handleOpenDeleteDue(bill)}
+                                    color="error"
+                                    sx={{ border: `1px solid ${alpha(theme.palette.error.main, 0.2)}`, borderRadius: 1.5 }}
+                                  >
+                                    <DeleteRoundedIcon fontSize="small" sx={{ fontSize: "0.85rem" }} />
+                                  </IconButton>
+                                </Tooltip>
+                              </Stack>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+
+                  {/* Mobile Unpaid Invoices Cards */}
+                  <Stack spacing={1.5} sx={{ display: { xs: "flex", sm: "none" } }}>
+                    {selectedDebtor.bills.map((bill) => (
+                      <Paper
+                        key={bill.id}
+                        variant="outlined"
+                        sx={{
+                          p: 2,
+                          borderRadius: 2.5,
+                          border: `1px solid ${theme.palette.divider}`,
+                          bgcolor: alpha(theme.palette.background.paper, 0.7),
+                        }}
+                      >
+                        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
+                          <Typography
+                            variant="subtitle2"
+                            onClick={() => {
+                              playSound?.("click");
+                              setViewedBill(bill);
+                            }}
+                            sx={{ fontWeight: 800, color: "primary.main", textDecoration: "underline", cursor: "pointer" }}
+                          >
+                            #{(bill.id || "").substring(0, 8)}...
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {bill.date || new Date(bill.createdAt).toLocaleDateString("en-IN")}
+                          </Typography>
+                        </Stack>
+
+                        <Stack direction="row" justifyContent="space-between" alignItems="baseline" sx={{ my: 1 }}>
+                          <Typography variant="body2" color="text.secondary">
+                            Total: Rs. {Number(bill.totalAmount || 0).toFixed(2)}
+                          </Typography>
+                          <Typography variant="subtitle1" sx={{ fontWeight: 900, color: "error.main" }}>
+                            Due: Rs. {bill.currentDue.toFixed(2)}
+                          </Typography>
+                        </Stack>
+
+                        <Stack direction="row" spacing={1} sx={{ mt: 1.5 }}>
+                          <Button
+                            variant="contained"
+                            color="success"
+                            size="small"
+                            onClick={() => handleOpenPayment(bill)}
+                            startIcon={<PaymentRoundedIcon fontSize="small" />}
+                            sx={{ flexGrow: 1, minHeight: 44, borderRadius: 2, textTransform: "none", fontWeight: 750 }}
+                          >
+                            Pay Bill
+                          </Button>
+                          <IconButton
+                            size="medium"
+                            onClick={() => handleOpenEditDue(bill)}
+                            sx={{ minWidth: 44, minHeight: 44, border: `1px solid ${theme.palette.divider}`, borderRadius: 2 }}
+                            aria-label="Edit due balance"
+                          >
+                            <EditRoundedIcon fontSize="small" color="warning" />
+                          </IconButton>
+                          <IconButton
+                            size="medium"
+                            onClick={() => handleOpenDeleteDue(bill)}
+                            sx={{ minWidth: 44, minHeight: 44, border: `1px solid ${theme.palette.divider}`, borderRadius: 2 }}
+                            aria-label="Delete due entry"
+                          >
+                            <DeleteRoundedIcon fontSize="small" color="error" />
+                          </IconButton>
+                        </Stack>
+                      </Paper>
+                    ))}
+                  </Stack>
+                </>
               )
             ) : paymentHistoryLogs.length === 0 ? (
               <Box sx={{ p: 4, textAlign: "center" }}>
@@ -1108,8 +1311,11 @@ export default function DueLedger() {
           playSound?.("click");
           setPaymentOpen(false);
         }}
+        fullScreen={isMobile}
+        fullWidth
+        maxWidth="xs"
         PaperProps={{
-          sx: { borderRadius: 3, width: 400 },
+          sx: { borderRadius: isMobile ? 0 : 3, width: isMobile ? "100%" : 400 },
         }}
       >
         <DialogTitle sx={{ fontWeight: 800 }}>
@@ -1207,8 +1413,11 @@ export default function DueLedger() {
           playSound?.("click");
           setCreateDueOpen(false);
         }}
+        fullScreen={isMobile}
+        fullWidth
+        maxWidth="sm"
         PaperProps={{
-          sx: { borderRadius: 3, width: 450 },
+          sx: { borderRadius: isMobile ? 0 : 3, width: isMobile ? "100%" : 450 },
         }}
       >
         <DialogTitle sx={{ fontWeight: 800 }}>Add Manual Due Entry</DialogTitle>

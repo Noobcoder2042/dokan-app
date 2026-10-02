@@ -257,12 +257,12 @@ const App = () => {
               borderRadius: borderRad,
               backgroundColor: isBmw ? "#1a1a1a !important" : (themeMode === "dark" ? "rgba(10,15,13,0.5) !important" : "rgba(255,255,255,0.85)"),
               backdropFilter: isBmw ? "none" : "blur(4px)",
-              color: "#ffffff",
+              color: themeMode === "dark" || isBmw ? "#ffffff" : "#0f172a",
               border: isBmw ? "1px solid #3c3c3c" : undefined,
               "& .MuiOutlinedInput-input": {
-                color: "#ffffff",
-                WebkitTextFillColor: "#ffffff",
-                },
+                color: themeMode === "dark" || isBmw ? "#ffffff" : "#0f172a",
+                WebkitTextFillColor: themeMode === "dark" || isBmw ? "#ffffff" : "#0f172a",
+              },
                 "& .MuiSelect-select": {
                   color: themeMode === "dark" ? "#ffffff" : "#0f172a",
                 },
@@ -434,9 +434,9 @@ const App = () => {
               sx={{
                 flexGrow: 1,
                 minWidth: 0,
-                py: { xs: 2.5, md: 4.5 },
-                px: { xs: 2.5, md: 4.5 },
-                mb: { xs: 8, md: 0 },
+                py: { xs: 2, md: 4.5 },
+                px: { xs: 1.5, sm: 2.5, md: 4.5 },
+                mb: { xs: 16, md: 0 },
               }}
             >
               <AppRoutes />

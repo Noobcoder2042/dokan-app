@@ -358,7 +358,6 @@ const CustomerDetails = ({
               sx={{
                 "& .MuiOutlinedInput-root": {
                   borderRadius: "8px",
-                  backgroundColor: "#fff",
                 },
               }}
             />
@@ -376,10 +375,13 @@ const CustomerDetails = ({
               zIndex: 1400,
               p: 1,
               borderRadius: "8px",
-              border: "1px solid rgba(148, 163, 184, 0.2)",
-              backgroundColor: "rgba(255,255,255,0.96)",
-              backdropFilter: "blur(8px)",
-              boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1)",
+              border: (theme) => `1px solid ${theme.palette.divider}`,
+              backgroundColor: "background.paper",
+              backdropFilter: "blur(12px)",
+              boxShadow: (theme) =>
+                theme.palette.mode === "dark"
+                  ? "0 10px 25px rgba(0, 0, 0, 0.6)"
+                  : "0 10px 15px -3px rgb(0 0 0 / 0.1)",
             }}
           >
             <Stack
@@ -453,7 +455,6 @@ const CustomerDetails = ({
           sx={{
             "& .MuiOutlinedInput-root": {
               borderRadius: "8px",
-              backgroundColor: "#fff",
             },
           }}
         />
@@ -471,7 +472,6 @@ const CustomerDetails = ({
           sx={{
             "& .MuiOutlinedInput-root": {
               borderRadius: "8px",
-              backgroundColor: "#fff",
             },
           }}
         />
