@@ -2183,6 +2183,9 @@ const Calculator = () => {
                 savedBills={savedBills}
                 onLoadBill={loadBill}
                 onDeleteBill={deleteBill}
+                verifiedItems={verifiedItems}
+                onToggleVerifiedItem={toggleVerifiedItem}
+                onToggleCheckAll={toggleCheckAllItems}
               />
             </Box>
 

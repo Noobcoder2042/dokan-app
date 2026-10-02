@@ -4,6 +4,7 @@ import {
   Button,
   Card,
   CardContent,
+  Checkbox,
   Chip,
   Collapse,
   Divider,
@@ -27,6 +28,7 @@ import RedoRoundedIcon from "@mui/icons-material/RedoRounded";
 import ReceiptRoundedIcon from "@mui/icons-material/ReceiptRounded";
 import ClearRoundedIcon from "@mui/icons-material/ClearRounded";
 import LocalShippingRoundedIcon from "@mui/icons-material/LocalShippingRounded";
+import CheckCircleRoundedIcon from "@mui/icons-material/CheckCircleRounded";
 
 /**
  * MobileBillSummary
@@ -62,8 +64,13 @@ const MobileBillSummary = ({
   savedBills = [],
   onLoadBill,
   onDeleteBill,
+  verifiedItems = [],
+  onToggleVerifiedItem,
+  onToggleCheckAll,
 }) => {
   const theme = useTheme();
+  const verifiedCount = verifiedItems.filter(Boolean).length;
+  const isAllVerified = items.length > 0 && verifiedCount === items.length;
   const [showExtraInputs, setShowExtraInputs] = useState(
     Boolean(
       Number(extraCharges?.rickshaw || 0) > 0 ||
@@ -163,37 +170,117 @@ const MobileBillSummary = ({
       >
         <CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
           <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
-            <Typography
-              variant="caption"
-              color="text.secondary"
-              sx={{ fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em" }}
-            >
-              Items ({items.length})
-            </Typography>
+            <Stack direction="row" spacing={1} alignItems="center">
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                sx={{ fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em" }}
+              >
+                Items ({items.length})
+              </Typography>
+              {items.length > 0 && (
+                <Chip
+                  size="small"
+                  color={isAllVerified ? "success" : "default"}
+                  label={`${verifiedCount}/${items.length} Checked`}
+                  sx={{ height: 20, fontSize: "0.68rem", fontWeight: 800 }}
+                />
+              )}
+            </Stack>
+
+            {items.length > 0 && (
+              <Button
+                size="small"
+                variant="text"
+                onClick={onToggleCheckAll}
+                sx={{
+                  minHeight: 32,
+                  py: 0.25,
+                  px: 1,
+                  fontSize: "0.75rem",
+                  fontWeight: 700,
+                  textTransform: "none",
+                }}
+              >
+                {isAllVerified ? "Uncheck All" : "Check All"}
+              </Button>
+            )}
           </Stack>
 
-          <Stack spacing={1.25} divider={<Divider sx={{ borderStyle: "dashed" }} />}>
-            {items.map((item, index) => (
-              <Stack
-                key={index}
-                direction="row"
-                justifyContent="space-between"
-                alignItems="center"
-              >
-                <Box sx={{ minWidth: 0, pr: 1.5 }}>
-                  <Typography variant="body2" sx={{ fontWeight: 750, lineHeight: 1.2 }} noWrap>
-                    {item.name}
+          <Stack spacing={0.75} divider={<Divider sx={{ borderStyle: "dashed" }} />}>
+            {items.map((item, index) => {
+              const isVerified = Boolean(verifiedItems[index]);
+              return (
+                <Stack
+                  key={index}
+                  direction="row"
+                  justifyContent="space-between"
+                  alignItems="center"
+                  onClick={() => onToggleVerifiedItem?.(index)}
+                  sx={{
+                    cursor: "pointer",
+                    py: 0.5,
+                    px: 0.75,
+                    borderRadius: 2,
+                    bgcolor: isVerified
+                      ? alpha(theme.palette.success.main, 0.08)
+                      : "transparent",
+                    transition: "background-color 0.2s ease",
+                  }}
+                >
+                  <Stack direction="row" spacing={0.75} alignItems="center" sx={{ minWidth: 0, flexGrow: 1, pr: 1 }}>
+                    <Checkbox
+                      checked={isVerified}
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        onToggleVerifiedItem?.(index);
+                      }}
+                      color="success"
+                      size="small"
+                      sx={{ p: 0.5 }}
+                    />
+                    <Box sx={{ minWidth: 0 }}>
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          fontWeight: 750,
+                          lineHeight: 1.2,
+                          textDecoration: isVerified ? "none" : "none",
+                        }}
+                        noWrap
+                      >
+                        {item.name}
+                      </Typography>
+                      <Stack direction="row" spacing={1} alignItems="center">
+                        <Typography variant="caption" color="text.secondary">
+                          {item.quantity} {item.quantityUnit === "dozen" ? "doz" : "pc"} × ₹
+                          {Number(item.price || 0).toFixed(2)}
+                        </Typography>
+                        {isVerified && (
+                          <Typography
+                            variant="caption"
+                            sx={{ fontWeight: 800, color: "success.main", fontSize: "0.68rem" }}
+                          >
+                            ✓ Verified
+                          </Typography>
+                        )}
+                      </Stack>
+                    </Box>
+                  </Stack>
+
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      fontWeight: 800,
+                      whiteSpace: "nowrap",
+                      color: isVerified ? "success.main" : "text.primary",
+                    }}
+                  >
+                    ₹{Number(item.totalPrice || 0).toFixed(2)}
                   </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {item.quantity} {item.quantityUnit === "dozen" ? "doz" : "pc"} × ₹
-                    {Number(item.price || 0).toFixed(2)}
-                  </Typography>
-                </Box>
-                <Typography variant="body2" sx={{ fontWeight: 800, whiteSpace: "nowrap" }}>
-                  ₹{Number(item.totalPrice || 0).toFixed(2)}
-                </Typography>
-              </Stack>
-            ))}
+                </Stack>
+              );
+            })}
           </Stack>
         </CardContent>
       </Card>
@@ -342,6 +429,29 @@ const MobileBillSummary = ({
                 ₹{grandTotal}
               </Typography>
             </Stack>
+
+            {items.length > 0 && (
+              <Stack
+                direction="row"
+                justifyContent="space-between"
+                alignItems="center"
+                sx={{
+                  pt: 1,
+                  mt: 0.5,
+                  borderTop: `1px dashed ${theme.palette.divider}`,
+                }}
+              >
+                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+                  Item Checklist
+                </Typography>
+                <Chip
+                  size="small"
+                  color={isAllVerified ? "success" : "default"}
+                  label={`${verifiedCount} of ${items.length} verified`}
+                  sx={{ height: 22, fontSize: "0.72rem", fontWeight: 750 }}
+                />
+              </Stack>
+            )}
           </Stack>
         </CardContent>
       </Card>
